@@ -1,18 +1,28 @@
 name: Release
 
-# Push a tag like v1.2.0 to build, test and publish a GitHub release with the jar attached.
+# Two ways to release version X.Y.Z (mod_version in gradle.properties must match):
+#   - push a tag vX.Y.Z               -> this creates the GitHub release with the jar attached
+#   - publish a release on GitHub     -> this builds the jar and attaches it to that release
+# Either way the jar is built from the tagged commit and has passed the unit tests and the GameTest.
 on:
   push:
     tags: ['v*']
+  release:
+    types: [published]
 
 permissions:
   contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || github.ref_name }}
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
 
       - uses: actions/setup-java@v5
         with:
@@ -24,8 +34,8 @@ jobs:
       - name: Check the tag matches mod_version
         run: |
           version=$(grep '^mod_version=' gradle.properties | cut -d= -f2)
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "Tag $GITHUB_REF_NAME does not match mod_version=$version in gradle.properties"
+          if [ "v$version" != "$TAG" ]; then
+            echo "Tag $TAG does not match mod_version=$version in gradle.properties"
             exit 1
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
@@ -39,11 +49,17 @@ jobs:
           test -s release-notes.md || echo "SharedWaypoints $VERSION" > release-notes.md
           cat release-notes.md
 
-      - name: Publish GitHub release
+      - name: Publish the jar
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "build/libs/sharedwaypoints-$VERSION.jar" \
-            --title "SharedWaypoints $VERSION" \
-            --notes-file release-notes.md \
-            --verify-tag
+          jar="build/libs/sharedwaypoints-$VERSION.jar"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "$jar" --clobber
+            # A release written by hand with no notes gets the changelog section.
+            if [ -z "$(gh release view "$TAG" --json body --jq .body)" ]; then
+              gh release edit "$TAG" --notes-file release-notes.md
+            fi
+          else
+            gh release create "$TAG" "$jar" --title "SharedWaypoints $VERSION" --notes-file release-notes.md --verify-tag
+          fi
