@@ -28,12 +28,21 @@ public class MenuClientGameTest implements FabricClientGameTest {
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		// Small view and simulation distance: Fabric allows 60 s for the world to load, and CI renders in software.
+		// Fabric allows 1200 client ticks for the world to load, and the server ticks in step with the client. On a
+		// 2-vCPU CI runner the software renderer used every core, so chunk generation starved and the load timed out.
+		// A low frame cap while loading leaves the CPU idle between ticks for world generation; blur is costly in
+		// software rendering.
 		context.runOnClient(client -> {
 			client.options.renderDistance().set(2);
 			client.options.simulationDistance().set(5);
+			client.options.menuBackgroundBlurriness().set(0);
+			client.options.framerateLimit().set(10);
 		});
 		try (TestSingleplayerContext world = context.worldBuilder().create()) {
+			context.runOnClient(client -> {
+				client.options.framerateLimit().set(60);
+				client.options.menuBackgroundBlurriness().set(5);
+			});
 			world.getClientWorld().waitForChunksRender();
 			world.getServer().runCommand("waypoints add \"Main Storage\" storage 12 -60 -30");
 			world.getServer().runCommand("waypoints describe \"Main Storage\" Sorted chests, bring shulkers");
