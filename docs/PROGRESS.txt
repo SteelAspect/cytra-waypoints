@@ -80,3 +80,15 @@
 [2026-09-29 02:45:07 UTC] BUILD PASS: 1.1.1 - 51/51 unit tests + GameTest
 [2026-09-29 02:45:07 UTC] RELEASE: pushing dev to main (fast-forward) as release 1.1.1
 [2026-09-29 02:45:34 UTC] DONE: main = dev = 60a779f (Release 1.1.1); release jar build/libs/sharedwaypoints-1.1.1.jar (1.1.1), dev jar sharedwaypoints-dev-1.1.1.jar (1.1.1+dev); release jar sent to user
+[2026-09-29 02:48:52 UTC] STARTED: 1.2.0 release - remove the old personal name (package io.github.steelaspect.sharedwaypoints, author SteelAspect, history rewrite), clean GitHub page, GitHub release with jar
+[2026-09-29 02:50:23 UTC] HISTORY: rewrote all commits - package now io.github.steelaspect.sharedwaypoints, author SteelAspect; verified no old-name mentions in any commit
+[2026-09-29 02:50:23 UTC] FILE MOVED: PROGRESS.txt -> docs/PROGRESS.txt; gradle.properties version 1.2.0
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: README.md
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: docs/DEVELOPMENT.md
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: CHANGELOG.md
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: .github/workflows/build.yml
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: .github/workflows/release.yml
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: src/main/resources/fabric.mod.json
+[2026-09-29 02:52:29 UTC] BUILD: clean build + unit tests + GameTest for 1.2.0
+[2026-09-29 02:53:24 UTC] BUILD PASS: 1.2.0 - 51/51 unit tests + GameTest
+[2026-09-29 02:53:24 UTC] RELEASE: force-pushing rewritten history (main, dev, claude branch, tags), then tag v1.2.0 for the Release workflow
