@@ -1,0 +1,17 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints-gametest",
+	"version": "1.0.0",
+	"name": "SharedWaypoints GameTests",
+	"description": "Integration tests for SharedWaypoints. Dev only, not shipped.",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"io.github.steelaspect.sharedwaypoints.gametest.SharedWaypointsGameTest"
+		]
+	},
+	"depends": {
+		"sharedwaypoints": "*",
+		"fabric-gametest-api-v1": "*"
+	}
+}

@@ -1,0 +1,99 @@
+plugins {
+	// 1.21.11 is the last obfuscated Minecraft release, so it needs the remapping flavour of Loom.
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// fabric-permissions-api is published to Maven Central.
+	mavenCentral()
+}
+
+sourceSets {
+	// Headless-server integration tests (Fabric GameTest, run with `./gradlew runGametest`).
+	// Kept in their own source set so they never end up in the released jar.
+	gametest {
+		compileClasspath += main.compileClasspath + main.output
+		runtimeClasspath += main.runtimeClasspath + main.output
+	}
+}
+
+loom {
+	// Server-side only mod: no client source set.
+	mods {
+		"sharedwaypoints" {
+			sourceSet sourceSets.main
+		}
+		"sharedwaypoints-gametest" {
+			sourceSet sourceSets.gametest
+		}
+	}
+
+	runs {
+		gametest {
+			server()
+			name = "Game Test"
+			// Runs the tests on a throwaway headless server, then exits (non-zero on failure).
+			vmArg "-Dfabric-api.gametest"
+			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.file('gametest/report.xml').get().asFile}"
+			runDir "build/gametest"
+			source sourceSets.gametest
+		}
+	}
+}
+
+tasks.named("runGametest") {
+	// Start every run from an empty waypoint list.
+	def waypointConfig = project.layout.buildDirectory.dir("gametest/config/sharedwaypoints")
+	doFirst {
+		waypointConfig.get().asFile.deleteDir()
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	// Official Mojang mappings (Yarn is not maintained past 1.21.11).
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Permissions API, bundled (jar-in-jar) so server owners don't need to install it separately.
+	// Without a permissions provider (e.g. LuckPerms) it falls back to vanilla op levels.
+	modImplementation "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
+	include "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
+
+	// JUnit 5 running inside Fabric Loader, so tests can use Minecraft classes.
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+	testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.0"
+}
+
+test {
+	useJUnitPlatform()
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+	it.options.encoding = "UTF-8"
+}
+
+java {
+	withSourcesJar()
+
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
