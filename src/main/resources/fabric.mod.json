@@ -12,6 +12,8 @@
 		"sources": "https://github.com/SteelAspect/sharedwaypoints",
 		"issues": "https://github.com/SteelAspect/sharedwaypoints/issues"
 	},
+	"license": "MIT",
+	"icon": "assets/sharedwaypoints/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
@@ -25,6 +27,8 @@
 		"fabric-api": "*"
 	},
 	"suggests": {
-		"luckperms": "*"
+		"luckperms": "*",
+		"bluemap": "*",
+		"squaremap": "*"
 	}
 }

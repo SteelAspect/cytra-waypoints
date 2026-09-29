@@ -8,14 +8,15 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * In-memory list of waypoints backed by {@code config/sharedwaypoints/waypoints.json}.
@@ -28,26 +29,39 @@ public final class WaypointStore {
 	/** 2 added {@code id} and {@code description}; version 1 files are upgraded on load. */
 	private static final int FORMAT_VERSION = 2;
 
-	/** Listing order: by category (enum order), then by name. */
-	private static final Comparator<Waypoint> DISPLAY_ORDER = Comparator
-			.comparing(Waypoint::category)
+	/** Listing order: by category (config order, unknown ids last), then by name. */
+	public static final Comparator<Waypoint> DISPLAY_ORDER = Comparator
+			.comparingInt((Waypoint waypoint) -> waypoint.category().order())
+			.thenComparing(waypoint -> waypoint.category().id())
 			.thenComparing(Waypoint::name, String.CASE_INSENSITIVE_ORDER);
 
 	private final Path file;
+	private final Supplier<CategoryRegistry> categories;
 	/** Keyed by lower-case name so lookups and uniqueness are case-insensitive. */
 	private final Map<String, Waypoint> byName = new HashMap<>();
 	private final Map<UUID, Waypoint> byId = new HashMap<>();
 	private final List<Consumer<Waypoint>> removalListeners = new ArrayList<>();
+	private final List<Runnable> changeListeners = new ArrayList<>();
 	/** True when the last save failed, so commands can warn that changes are only in memory. */
 	private boolean saveFailed;
 
-	public WaypointStore(Path file) {
+	/**
+	 * @param file       the JSON file
+	 * @param categories the current categories; stored category ids are resolved against it on load
+	 */
+	public WaypointStore(Path file, Supplier<CategoryRegistry> categories) {
 		this.file = file;
+		this.categories = categories;
 	}
 
 	/** Called with every waypoint that gets removed (favourites and navigation clean up through this). */
 	public void onRemoved(Consumer<Waypoint> listener) {
 		removalListeners.add(listener);
+	}
+
+	/** Called after every add, remove, edit and load (web-map markers refresh through this). */
+	public void onChanged(Runnable listener) {
+		changeListeners.add(listener);
 	}
 
 	// ---------------------------------------------------------------- queries
@@ -71,7 +85,7 @@ public final class WaypointStore {
 
 	public List<Waypoint> inCategory(Category category) {
 		return byName.values().stream()
-				.filter(waypoint -> waypoint.category() == category)
+				.filter(waypoint -> waypoint.category().id().equals(category.id()))
 				.sorted(DISPLAY_ORDER)
 				.toList();
 	}
@@ -87,13 +101,12 @@ public final class WaypointStore {
 				.toList();
 	}
 
-	public Map<Category, Integer> countsByCategory() {
-		Map<Category, Integer> counts = new EnumMap<>(Category.class);
-		for (Category category : Category.values()) {
-			counts.put(category, 0);
-		}
+	/** Number of waypoints per category id: every configured category (possibly 0), plus any unknown ids. */
+	public Map<String, Integer> countsByCategory() {
+		Map<String, Integer> counts = new LinkedHashMap<>();
+		categories.get().ids().forEach(id -> counts.put(id, 0));
 		for (Waypoint waypoint : byName.values()) {
-			counts.merge(waypoint.category(), 1, Integer::sum);
+			counts.merge(waypoint.category().id(), 1, Integer::sum);
 		}
 		return counts;
 	}
@@ -115,6 +128,7 @@ public final class WaypointStore {
 		}
 		put(waypoint);
 		save();
+		changed();
 		return true;
 	}
 
@@ -125,6 +139,7 @@ public final class WaypointStore {
 			byId.remove(removed.id());
 			save();
 			removalListeners.forEach(listener -> listener.accept(removed));
+			changed();
 		}
 		return Optional.ofNullable(removed);
 	}
@@ -140,6 +155,7 @@ public final class WaypointStore {
 		}
 		put(updated);
 		save();
+		changed();
 		return updated;
 	}
 
@@ -151,9 +167,10 @@ public final class WaypointStore {
 		byId.clear();
 		saveFailed = false;
 
-		Optional<StoreFile> data = JsonFiles.read(file, StoreFile.class, Gsons.GSON);
+		Optional<StoreFile> data = JsonFiles.read(file, StoreFile.class, Gsons.withCategories(categories.get()));
 		if (data.isEmpty()) {
 			SharedWaypoints.LOGGER.info("No readable waypoint file at {}; starting with an empty list", file);
+			changed();
 			return;
 		}
 		boolean upgraded = data.get().version < FORMAT_VERSION;
@@ -173,6 +190,7 @@ public final class WaypointStore {
 			save();
 		}
 		SharedWaypoints.LOGGER.info("Loaded {} shared waypoint(s) from {}", byName.size(), file);
+		changed();
 	}
 
 	/** Writes the current list to disk. Failures are logged and remembered in {@link #lastSaveFailed()}. */
@@ -180,7 +198,7 @@ public final class WaypointStore {
 		StoreFile data = new StoreFile();
 		data.waypoints = new ArrayList<>(all());
 		try {
-			JsonFiles.writeAtomically(file, data, Gsons.GSON);
+			JsonFiles.writeAtomically(file, data, Gsons.withCategories(categories.get()));
 			saveFailed = false;
 		} catch (IOException e) {
 			saveFailed = true;
@@ -189,6 +207,10 @@ public final class WaypointStore {
 	}
 
 	// ---------------------------------------------------------------- helpers
+
+	private void changed() {
+		changeListeners.forEach(Runnable::run);
+	}
 
 	private void put(Waypoint waypoint) {
 		byName.put(key(waypoint.name()), waypoint);
@@ -204,7 +226,7 @@ public final class WaypointStore {
 	}
 
 	/** Fills in defaults for a hand-edited or older entry; returns null if it can't be used at all. */
-	private static Waypoint sanitize(Waypoint raw) {
+	private Waypoint sanitize(Waypoint raw) {
 		if (raw == null || raw.name() == null || raw.dimension() == null) {
 			return null;
 		}
@@ -215,7 +237,7 @@ public final class WaypointStore {
 		return new Waypoint(
 				raw.id() != null ? raw.id() : UUID.randomUUID(),
 				name,
-				raw.category() != null ? raw.category() : Category.OTHER, // unknown category -> "other"
+				raw.category() != null ? raw.category() : categories.get().resolve(null),
 				raw.x(),
 				raw.y(),
 				raw.z(),

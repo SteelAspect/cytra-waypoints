@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0 — 2026-09-29
+
+**New**
+- **Web maps:** waypoints show up on **BlueMap** and **squaremap** in a toggleable "Shared Waypoints" layer. Pins
+  use the category colour, and clicking one shows its details. Changes appear immediately. Both maps are optional.
+- **Custom categories:** define your own in `config.json` (id, name, one of the 16 chat colours). The colour
+  carries over to chat, the compass, Xaero's Minimap and web maps.
+- **`/waypoints reload`** (op level 2, `sharedwaypoints.reload`) reloads the config, waypoints and favourites
+  without a restart.
+- Mod icon, and the mod is now MIT licensed.
+
+**Changed**
+- `/waypoints` replies are shown even when the server has `sendCommandFeedback` turned off.
+- A waypoint whose category was removed from the config keeps it (shown in gray) instead of being moved to
+  "other".
+
 ## 1.2.0 — 2026-09-29
 
 First public release. It contains everything from 1.0.0–1.1.1, plus:

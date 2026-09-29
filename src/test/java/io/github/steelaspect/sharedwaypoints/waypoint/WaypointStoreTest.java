@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.ChatFormatting;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -35,7 +36,7 @@ class WaypointStoreTest {
 	}
 
 	private WaypointStore loaded() {
-		WaypointStore store = new WaypointStore(file());
+		WaypointStore store = new WaypointStore(file(), () -> CategoryRegistry.DEFAULT);
 		store.load();
 		return store;
 	}
@@ -43,7 +44,7 @@ class WaypointStoreTest {
 	@Test
 	void savesOnChangeAndLoadsBack() throws IOException {
 		WaypointStore store = loaded();
-		Waypoint original = waypoint("Main Storage", Category.STORAGE).withDescription("Sorted chests");
+		Waypoint original = waypoint("Main Storage", TestCategories.STORAGE).withDescription("Sorted chests");
 		assertTrue(store.add(original));
 		assertTrue(Files.exists(file()), "file is written on the first change");
 
@@ -66,17 +67,17 @@ class WaypointStoreTest {
 	@Test
 	void namesAreCaseInsensitive() {
 		WaypointStore store = loaded();
-		store.add(waypoint("Iron Farm", Category.FARMS));
-		assertFalse(store.add(waypoint("iron farm", Category.FARMS)));
+		store.add(waypoint("Iron Farm", TestCategories.FARMS));
+		assertFalse(store.add(waypoint("iron farm", TestCategories.FARMS)));
 		assertTrue(store.get("IRON FARM").isPresent());
 	}
 
 	@Test
 	void updateKeepsIdAndPersists() {
 		WaypointStore store = loaded();
-		Waypoint old = waypoint("Old", Category.BASES);
+		Waypoint old = waypoint("Old", TestCategories.BASES);
 		store.add(old);
-		store.add(waypoint("Gone", Category.OTHER));
+		store.add(waypoint("Gone", TestCategories.OTHER));
 		store.update(old.withName("New Base").withDescription("  moved here  "));
 		store.remove("gone");
 
@@ -92,7 +93,7 @@ class WaypointStoreTest {
 		WaypointStore store = loaded();
 		List<String> removed = new ArrayList<>();
 		store.onRemoved(waypoint -> removed.add(waypoint.name()));
-		store.add(waypoint("Temp", Category.OTHER));
+		store.add(waypoint("Temp", TestCategories.OTHER));
 		store.remove("TEMP");
 		store.remove("missing");
 		assertEquals(List.of("Temp"), removed);
@@ -101,10 +102,10 @@ class WaypointStoreTest {
 	@Test
 	void listIsGroupedByCategoryThenName() {
 		WaypointStore store = loaded();
-		store.add(waypoint("zeta", Category.OTHER));
-		store.add(waypoint("Beta", Category.STORAGE));
-		store.add(waypoint("alpha", Category.STORAGE));
-		store.add(waypoint("Nether Hub", Category.PORTALS));
+		store.add(waypoint("zeta", TestCategories.OTHER));
+		store.add(waypoint("Beta", TestCategories.STORAGE));
+		store.add(waypoint("alpha", TestCategories.STORAGE));
+		store.add(waypoint("Nether Hub", TestCategories.PORTALS));
 		assertEquals(List.of("alpha", "Beta", "Nether Hub", "zeta"),
 				store.all().stream().map(Waypoint::name).toList());
 	}
@@ -112,9 +113,9 @@ class WaypointStoreTest {
 	@Test
 	void searchLooksAtNameDescriptionAndCreator() {
 		WaypointStore store = loaded();
-		store.add(waypoint("Iron Farm", Category.FARMS));
-		store.add(waypoint("Blaze", Category.FARMS).withDescription("XP and rods"));
-		store.add(new Waypoint(UUID.randomUUID(), "Shop", Category.BASES, 0, 0, 0, "minecraft:overworld", null,
+		store.add(waypoint("Iron Farm", TestCategories.FARMS));
+		store.add(waypoint("Blaze", TestCategories.FARMS).withDescription("XP and rods"));
+		store.add(new Waypoint(UUID.randomUUID(), "Shop", TestCategories.BASES, 0, 0, 0, "minecraft:overworld", null,
 				UUID.randomUUID(), "Alex", WHEN));
 		assertEquals(List.of("Iron Farm"), names(store.search("IRON")));
 		assertEquals(List.of("Blaze"), names(store.search("rods")));
@@ -136,11 +137,13 @@ class WaypointStoreTest {
 
 		Waypoint shop = store.get("shop").orElseThrow();
 		assertNotNull(shop.id(), "an id is generated");
-		assertEquals(Category.OTHER, shop.category(), "unknown category falls back to other");
+		assertEquals("shops", shop.category().id(), "a category missing from config.json keeps its id");
+		assertEquals(ChatFormatting.GRAY, shop.category().color(), "and is shown in gray");
 		assertEquals(Waypoint.SERVER_UUID, shop.creatorUuid());
 		assertEquals(Instant.ofEpochMilli(1790000000000L), shop.created());
 		assertEquals(1, store.size(), "the entry with an empty name is skipped");
 		assertEquals(shop.id(), loaded().get("shop").orElseThrow().id(), "the generated id was saved");
+		assertTrue(Files.readString(file()).contains("\"category\": \"shops\""), "the unknown category id is kept on disk");
 	}
 
 	@Test

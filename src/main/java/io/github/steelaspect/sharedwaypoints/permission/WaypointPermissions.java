@@ -24,6 +24,8 @@ public final class WaypointPermissions {
 	public static final String EDIT = "sharedwaypoints.edit";
 	/** Teleport to waypoints. Default: op level 2. */
 	public static final String TELEPORT = "sharedwaypoints.teleport";
+	/** Reload config.json, waypoints.json and favorites.json without a restart. Default: op level 2. */
+	public static final String RELOAD = "sharedwaypoints.reload";
 
 	/** Op level 2 ("gamemasters"), the level vanilla uses for commands like /tp and /give. */
 	private static final PermissionLevel MODERATE_DEFAULT = PermissionLevel.GAMEMASTERS;
@@ -41,6 +43,10 @@ public final class WaypointPermissions {
 
 	public static Predicate<CommandSourceStack> requireTeleport() {
 		return Permissions.require(TELEPORT, MODERATE_DEFAULT);
+	}
+
+	public static Predicate<CommandSourceStack> requireReload() {
+		return Permissions.require(RELOAD, MODERATE_DEFAULT);
 	}
 
 	/** For announcements: may this online player see waypoints at all? */
