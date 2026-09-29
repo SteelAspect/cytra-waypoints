@@ -1,10 +1,26 @@
 # SharedWaypoints
 
 A server-side Fabric mod for **Minecraft Java 1.21.11**. It keeps one shared list of server waypoints that players
-can browse in chat, copy, and add to **Xaero's Minimap** with a click.
+can browse in chat, copy, add to **Xaero's Minimap** with a click, and **navigate to with a live on-screen compass**.
+
+**Highlights**
+
+* **Live navigation:** `/waypoints go <name>` (or click **[Go]**) turns the boss bar into a compass. It shows an
+  arrow relative to where you're looking, the distance, how far up or down, and a progress bar. A particle
+  beacon marks the spot, and an **Arrived!** title with a sound plays when you get there. Between the Overworld and
+  the Nether it points at the matching portal spot (÷8 / ×8).
+* **Around you:** `/waypoints near` lists waypoints sorted by distance with a compass direction.
+  `/waypoints nearest [category]` finds the closest one.
+* **Rich chat:** hover a waypoint name for a card showing distance and direction, description, creator and age.
+  Your ★ favourites are marked. Long lists page with clickable **« Prev / Next »**.
+* **Sharing:** everyone online is told when a waypoint is added, with the usual buttons. `/waypoints search`
+  searches names, descriptions and creators. Waypoints can have a short description.
+* **Xaero's Minimap:** **[Add to Xaero]** opens Xaero's own add dialog (checked against Xaero 26.5.0).
+* **Ops:** a **[Teleport]** button and `/waypoints tp`.
 
 Only the server needs the mod. Vanilla clients and Xaero's Minimap clients join without installing anything. The mod
-uses only vanilla commands, vanilla argument types and vanilla chat click and hover events.
+uses only vanilla commands and argument types, chat click and hover events, boss bars, particles, titles and
+sounds.
 
 | | |
 |---|---|
@@ -27,7 +43,7 @@ uses only vanilla commands, vanilla argument types and vanilla chat click and ho
 ./gradlew build          # Windows: gradlew.bat build
 ```
 
-The jar to install is **`build/libs/sharedwaypoints-1.0.0.jar`**. `build/libs/sharedwaypoints-1.0.0-sources.jar` holds
+The jar to install is **`build/libs/sharedwaypoints-1.1.0.jar`**. `build/libs/sharedwaypoints-1.1.0-sources.jar` holds
 only the sources.
 
 `build` also runs the unit tests. To start a real headless 1.21.11 server and run the end-to-end tests:
@@ -38,55 +54,110 @@ only the sources.
 
 ## Installing
 
-Put `sharedwaypoints-1.0.0.jar` and Fabric API in the server's `mods/` folder and start the server. Waypoints are
-saved in `config/sharedwaypoints/waypoints.json`.
+Put `sharedwaypoints-1.1.0.jar` and Fabric API in the server's `mods/` folder and start the server. Files live in
+`config/sharedwaypoints/`: `waypoints.json`, `favorites.json` and `config.json`.
 
 ## Commands
 
 | Command | What it does | Permission (default) |
 |---|---|---|
-| `/waypoints` | List all waypoints, grouped by category | `sharedwaypoints.view` (everyone) |
-| `/waypoints <category>` | List one category: `storage`, `farms`, `bases`, `portals`, `other` | `sharedwaypoints.view` (everyone) |
+| `/waypoints [page <n>]` | List all waypoints, grouped by category, one page at a time | `sharedwaypoints.view` (everyone) |
+| `/waypoints <category> [page]` | List one category: `storage`, `farms`, `bases`, `portals`, `other` | `sharedwaypoints.view` (everyone) |
 | `/waypoints categories` | List the categories, how many waypoints each has, and its Xaero colour | `sharedwaypoints.view` (everyone) |
-| `/waypoints info <name>` | Coordinates, dimension, creator and date | `sharedwaypoints.view` (everyone) |
+| `/waypoints info <name>` | Details: coordinates, portal-side coordinates, distance, creator, date, description, buttons | `sharedwaypoints.view` (everyone) |
+| `/waypoints search <text>` | Search names, descriptions and creators | `sharedwaypoints.view` (everyone) |
+| `/waypoints near [radius]` | Waypoints around you, closest first (default radius 512) | `sharedwaypoints.view` (everyone) |
+| `/waypoints nearest [category]` | The closest waypoint, optionally of one category | `sharedwaypoints.view` (everyone) |
+| `/waypoints go <name>` | Start live navigation (boss-bar compass and beacon) | `sharedwaypoints.view` (everyone) |
+| `/waypoints stop` | Stop navigating | `sharedwaypoints.view` (everyone) |
+| `/waypoints favorite <name>` | Add or remove one of your ★ favourites | `sharedwaypoints.view` (everyone) |
+| `/waypoints favorites` | List your favourites | `sharedwaypoints.view` (everyone) |
+| `/waypoints xaero <name>` | Send yourself the Xaero share line. This is what **[Add to Xaero]** runs | `sharedwaypoints.view` (everyone) |
 | `/waypoints add <name> <category> [x y z] [dimension]` | Add a waypoint. Without coordinates it uses your block position and dimension. With coordinates it uses your current dimension unless you give one | `sharedwaypoints.add` (everyone) |
 | `/waypoints remove <name>` | Remove a waypoint | `sharedwaypoints.remove` (op level 2), **or** you created it |
-| `/waypoints rename <old> <new>` | Rename a waypoint | `sharedwaypoints.rename` (op level 2), **or** you created it |
-| `/waypoints xaero <name>` | Send yourself the Xaero share line. This is what **[Add to Xaero]** runs | `sharedwaypoints.view` (everyone) |
+| `/waypoints rename <old> <new>` | Rename a waypoint | `sharedwaypoints.edit` (op level 2), **or** you created it |
+| `/waypoints describe <name> [text]` | Set a short description (max 120 characters). Leave the text out to clear it | `sharedwaypoints.edit` (op level 2), **or** you created it |
+| `/waypoints tp <name>` | Teleport to a waypoint | `sharedwaypoints.teleport` (op level 2) |
 
 * Names are 1–32 characters. 32 is Xaero's limit for shared waypoints. Names are unique regardless of case, and
   `§`, `<` and `>` are not allowed. Put names with spaces in quotes: `/waypoints add "Main Storage" storage`.
 * Coordinates take normal vanilla syntax, including `~ ~ ~`. The dimension argument takes any dimension id,
   e.g. `minecraft:the_nether`.
 * Tab completion covers categories, waypoint names (quoted when needed, with coordinates as the tooltip),
-  coordinates and dimensions. `remove` and `rename` only suggest waypoints you're allowed to change.
-* From the console or a command block, `add` needs coordinates.
-* Tip: `/execute as @a run waypoints xaero "Spawn"` pushes a waypoint to every online Xaero user.
+  coordinates and dimensions. `remove`, `rename` and `describe` only suggest waypoints you're allowed to change.
+* From the console or a command block, `add` needs coordinates. `go`, `near`, `nearest`, `favorite` and `tp` need
+  a player.
+* Tip: `/execute as @a run waypoints xaero "Spawn"` pushes a waypoint to every online Xaero user, and
+  `/execute as @a run waypoints go "Event"` sends everyone's compass there.
+
+## Navigation
+
+`/waypoints go <name>`, or the **[Go]** button on any line, starts navigation for you only:
+
+```
+↗  Iron-Farm  224m  ▲12                       ← boss bar, in the category's colour
+```
+
+* **Arrow:** points relative to where you're looking (↑ straight ahead, → turn right, ↓ behind you) and updates
+  4 times a second.
+* **▲/▼:** how many blocks above or below you the waypoint is.
+* **Progress bar:** fills as you get closer.
+* **Beacon:** within 256 blocks, a column of end-rod sparks with a category-coloured base marks the spot. Only
+  the navigating player sees it.
+* **Arrival:** within `arrivalRadius` blocks (default 6) you get an **Arrived!** title, the level-up sound and a
+  chat message, and navigation ends.
+* **Overworld ↔ Nether:** the compass points at the matching spot on your side (Overworld ÷ 8, Nether × 8) with
+  "⟳ via Nether portal". When you reach it, it tells you to take a portal. `/waypoints info` shows the
+  portal-side coordinates with a copy button.
+* **Other dimensions** (the End, modded): the bar says which dimension to travel to.
+* Navigation survives respawning. It stops on `/waypoints stop`, on disconnect, or when the waypoint is
+  removed.
 
 ## Chat output
 
 Each waypoint is shown as:
 
 ```
-[Category] Name — X Y Z (dimension) [Add to Xaero] [Copy coords]
+[Category] Name — X Y Z (dimension) [Add to Xaero] [Copy coords] [Go]
 ```
+
+The format you asked for, plus **[Go]** at the end for players. A gold ★ follows the name if it's one of your
+favourites.
 
 For example, `/waypoints`:
 
 ```
 === Shared Waypoints (3) ===
 — Storage (1) —
-[Storage] Main Storage — 120 64 -340 (overworld) [Add to Xaero] [Copy coords]
+[Storage] Main Storage — 120 64 -340 (overworld) [Add to Xaero] [Copy coords] [Go]
 — Farms (1) —
-[Farms] Iron-Farm — 100 64 200 (overworld) [Add to Xaero] [Copy coords]
+[Farms] Iron-Farm — 100 64 200 (overworld) [Add to Xaero] [Copy coords] [Go]
 — Portals (1) —
-[Portals] Hub — 10 70 -20 (the_nether) [Add to Xaero] [Copy coords]
+[Portals] Hub ★ — 10 70 -20 (the_nether) [Add to Xaero] [Copy coords] [Go]
+```
+
+With more waypoints than `pageSize` (default 8), a footer `« Prev   Page 1/3   Next »` is added. The arrows are
+clickable.
+
+`/waypoints near`:
+
+```
+=== Within 512m (3) ===
+1m S [Storage] Main Storage — 0 64 0 (overworld) …
+179m NE ⟳ [Portals] Hub — 10 70 -20 (the_nether) …      ← through a Nether portal
+224m SE [Farms] Iron-Farm — 100 64 200 (overworld) …
 ```
 
 * **[Category]** uses the category colour. Clicking it lists that category.
-* **Name**: click for `/waypoints info`. Hover to see who added it.
+* **Name**: click for `/waypoints info`. Hover for a card with the distance and direction from you (or "via
+  Nether portal" or "In the_end"), the description, who added it and how long ago.
 * **[Add to Xaero]** runs `/waypoints xaero <name>` (see below).
 * **[Copy coords]** is a `copy_to_clipboard` click event that copies `X Y Z`.
+* **[Go]** starts navigation (see above).
+
+When someone adds a waypoint, everyone else online who has `sharedwaypoints.view` sees
+`✦ Steve shared a new waypoint:` followed by its line, buttons included. Turn this off with
+`announceNewWaypoints`.
 
 | Category | Chat colour | Xaero colour index |
 |---|---|---|
@@ -162,33 +233,59 @@ With a permissions mod such as LuckPerms, the nodes decide. Without one, the def
 | `sharedwaypoints.view` | everyone |
 | `sharedwaypoints.add` | everyone |
 | `sharedwaypoints.remove` | op level 2. The creator can always remove their own waypoints |
-| `sharedwaypoints.rename` | op level 2. The creator can always rename their own waypoints |
+| `sharedwaypoints.edit` | op level 2. The creator can always rename or describe their own waypoints |
+| `sharedwaypoints.teleport` | op level 2 |
 
 Like vanilla commands, the chat replies follow the `sendCommandFeedback` gamerule.
 
+## Configuration
+
+`config/sharedwaypoints/config.json` is created on first start and read each time the server starts:
+
+```json
+{
+  "announceNewWaypoints": true,
+  "navigationParticles": true,
+  "arrivalRadius": 6,
+  "pageSize": 8,
+  "nearRadius": 512
+}
+```
+
+| Option | Meaning |
+|---|---|
+| `announceNewWaypoints` | Tell everyone online when a waypoint is added |
+| `navigationParticles` | Show the particle beacon while navigating |
+| `arrivalRadius` | Blocks from the waypoint at which navigation counts as arrived (1–64) |
+| `pageSize` | Waypoint lines per page (3–30) |
+| `nearRadius` | Default radius for `/waypoints near` |
+
 ## Storage
 
-The file is `config/sharedwaypoints/waypoints.json`. It is loaded when the server starts and saved after every add,
+The waypoints file is `config/sharedwaypoints/waypoints.json`. It is loaded when the server starts and saved after every add,
 remove or rename. The mod writes a temporary file and then moves it into place, so a crash can't leave half-written
 JSON. If the file can't be parsed, the mod keeps a copy as `waypoints.json.broken-<time>` and starts with an empty
 list, so nothing is overwritten silently.
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "waypoints": [
     {
+      "id": "3f1c2b8e-6a0d-4e53-9d7c-2b1f6e4a9c10",
       "name": "Main Storage",
       "category": "storage",
       "x": 120,
       "y": 64,
       "z": -340,
       "dimension": "minecraft:overworld",
+      "description": "Sorted chests, bring shulkers",
       "creatorUuid": "8667ba71-b85a-4004-af54-457a9734eed7",
       "creatorName": "Steve",
       "created": "2026-09-29T12:00:00Z"
     },
     {
+      "id": "a7d9e0f4-1b2c-4d3e-8f5a-6b7c8d9e0f1a",
       "name": "Hub",
       "category": "portals",
       "x": 10,
@@ -203,10 +300,17 @@ list, so nothing is overwritten silently.
 }
 ```
 
+* `id` is a stable id. Favourites and navigation use it, so they survive renames. Version 1 files (from the first
+  release, without ids or descriptions) are upgraded automatically on load.
+* `description` is optional (`null` or missing means none).
 * `created` is an ISO-8601 UTC timestamp. Epoch milliseconds are also accepted when you edit the file by hand.
 * `creatorUuid` is all zeros for waypoints added from the console or a command block.
 * If you edit the file by hand, an unknown `category` becomes `other`. Entries with no name or dimension are skipped
   with a warning in the log. Hand edits are picked up on the next server start.
+
+Favourites are stored per player in `config/sharedwaypoints/favorites.json`, as
+`{"version": 1, "favorites": {"<player uuid>": ["<waypoint id>", ...]}}`. Removing a waypoint also removes it from
+everyone's favourites.
 
 ## Project layout
 
@@ -214,16 +318,23 @@ list, so nothing is overwritten silently.
 build.gradle, gradle.properties, settings.gradle, gradlew, gradlew.bat, gradle/wrapper/
 src/main/resources/fabric.mod.json
 src/main/java/io/github/steelaspect/sharedwaypoints/
-  SharedWaypoints.java               entrypoint: loads the store on server start, registers commands
+  SharedWaypoints.java               entrypoint: lifecycle, tick and disconnect events, commands
+  ModContext.java                    config + waypoints + favourites + navigation for the running server
   command/WaypointCommand.java       the /waypoints Brigadier tree and tab completion
+  config/ModConfig.java              config.json
+  nav/NavMath.java                   portal projection, distances, compass arrows (pure maths)
+  nav/NavigationManager.java         boss-bar compass, beacon particles, arrival
   permission/WaypointPermissions.java  permission nodes and fallbacks
-  text/WaypointText.java             chat lines, buttons, click and hover events
-  util/Dimensions.java               dimension id -> short name
+  text/WaypointText.java             chat lines, hover cards, buttons, page footers
+  text/Viewer.java                   who is reading (distance, favourites, which buttons)
+  text/Formats.java                  "3 days ago"
+  util/Dimensions.java, Gsons.java, JsonFiles.java, Page.java
   waypoint/Category.java             categories, chat colours, Xaero colour indexes
   waypoint/Waypoint.java             the waypoint record (also the JSON shape)
-  waypoint/WaypointStore.java        in-memory list, Gson load and save
+  waypoint/WaypointStore.java        in-memory list, search, Gson load and save
+  waypoint/FavoritesStore.java       per-player favourites
   xaero/XaeroShareFormat.java        builds xaero-waypoint: lines
-src/test/java/...                    unit tests (Xaero parser replica, JSON store)
+src/test/java/...                    unit tests (Xaero parser replica, stores, navigation maths, formats)
 src/gametest/...                     headless-server end-to-end test (not in the release jar)
 PROGRESS.txt                         build progress log
 ```
@@ -232,10 +343,13 @@ PROGRESS.txt                         build progress log
 
 * **Categories are fixed** to `storage`, `farms`, `bases`, `portals` and `other`, one per colour in the spec.
   `add` rejects anything else and lists the valid ones.
-* **Rename** has its own node, `sharedwaypoints.rename`, with the same rule as remove: op level 2, or the creator.
+* **Rename and describe** share the node `sharedwaypoints.edit`, with the same rule as remove: op level 2, or the
+  creator. (It was called `sharedwaypoints.rename` in the first build.)
 * **`/waypoints xaero <name>`** was added because **[Add to Xaero]** needs a server command to send the share line.
 * **`[dimension]`** can follow `x y z`, so waypoints can be added for other dimensions and from the console.
 * `fabric.mod.json` uses `"environment": "*"`, so the mod also works in singleplayer and LAN worlds. On a dedicated
   server, clients still don't need it. In singleplayer, every world shares the same `config/` waypoint list.
 * The waypoint Y is the block the player stands in (feet position, rounded down).
+* Distances in lists and hover cards are horizontal. Arrival also counts height.
+* The compass arrow uses 8 directions. Finer steps would change the bar text more often without being more useful.
 * No license is set. Add one to `fabric.mod.json` if you plan to publish the mod.

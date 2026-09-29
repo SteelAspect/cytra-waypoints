@@ -14,14 +14,16 @@ import net.minecraft.server.permissions.PermissionLevel;
  * the defaults below: {@code true} means everyone, a {@link PermissionLevel} means that vanilla op level.
  */
 public final class WaypointPermissions {
-	/** List waypoints, view info, and get the Xaero share line. Default: everyone. */
+	/** List, search, info, navigate, favourite and get the Xaero share line. Default: everyone. */
 	public static final String VIEW = "sharedwaypoints.view";
 	/** Add waypoints. Default: everyone. */
 	public static final String ADD = "sharedwaypoints.add";
 	/** Remove any waypoint. Default: op level 2. Creators can always remove their own. */
 	public static final String REMOVE = "sharedwaypoints.remove";
-	/** Rename any waypoint. Default: op level 2. Creators can always rename their own. */
-	public static final String RENAME = "sharedwaypoints.rename";
+	/** Rename or describe any waypoint. Default: op level 2. Creators can always edit their own. */
+	public static final String EDIT = "sharedwaypoints.edit";
+	/** Teleport to waypoints. Default: op level 2. */
+	public static final String TELEPORT = "sharedwaypoints.teleport";
 
 	/** Op level 2 ("gamemasters"), the level vanilla uses for commands like /tp and /give. */
 	private static final PermissionLevel MODERATE_DEFAULT = PermissionLevel.GAMEMASTERS;
@@ -37,14 +39,27 @@ public final class WaypointPermissions {
 		return Permissions.require(ADD, true);
 	}
 
+	public static Predicate<CommandSourceStack> requireTeleport() {
+		return Permissions.require(TELEPORT, MODERATE_DEFAULT);
+	}
+
+	/** For announcements: may this online player see waypoints at all? */
+	public static boolean canView(ServerPlayer player) {
+		return Permissions.check(player, VIEW, true);
+	}
+
+	public static boolean canTeleport(CommandSourceStack source) {
+		return Permissions.check(source, TELEPORT, MODERATE_DEFAULT);
+	}
+
 	/** Whether the source may remove this waypoint (has the node, or created it). */
 	public static boolean canRemove(CommandSourceStack source, Waypoint waypoint) {
 		return Permissions.check(source, REMOVE, MODERATE_DEFAULT) || isCreator(source, waypoint);
 	}
 
-	/** Whether the source may rename this waypoint (has the node, or created it). */
-	public static boolean canRename(CommandSourceStack source, Waypoint waypoint) {
-		return Permissions.check(source, RENAME, MODERATE_DEFAULT) || isCreator(source, waypoint);
+	/** Whether the source may rename or describe this waypoint (has the node, or created it). */
+	public static boolean canEdit(CommandSourceStack source, Waypoint waypoint) {
+		return Permissions.check(source, EDIT, MODERATE_DEFAULT) || isCreator(source, waypoint);
 	}
 
 	private static boolean isCreator(CommandSourceStack source, Waypoint waypoint) {

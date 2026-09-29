@@ -1,23 +1,11 @@
 package io.github.steelaspect.sharedwaypoints.waypoint;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonParseException;
-import com.google.gson.TypeAdapter;
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import com.google.gson.stream.JsonWriter;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
+import io.github.steelaspect.sharedwaypoints.util.Gsons;
+import io.github.steelaspect.sharedwaypoints.util.JsonFiles;
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -26,31 +14,30 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * In-memory list of waypoints backed by {@code config/sharedwaypoints/waypoints.json}.
  *
- * <p>The file is read when the server starts and rewritten after every change. Writes go to a temporary file
- * first and are then moved over the real file, so a crash mid-write can't leave half a JSON file behind.
- * All access happens on the server thread (commands and lifecycle events), so no locking is needed.
+ * <p>The file is read when the server starts and rewritten after every change (atomically, see
+ * {@link JsonFiles}). All access happens on the server thread (commands, ticks and lifecycle events), so no
+ * locking is needed.
  */
 public final class WaypointStore {
-	private static final int FORMAT_VERSION = 1;
+	/** 2 added {@code id} and {@code description}; version 1 files are upgraded on load. */
+	private static final int FORMAT_VERSION = 2;
 
 	/** Listing order: by category (enum order), then by name. */
 	private static final Comparator<Waypoint> DISPLAY_ORDER = Comparator
 			.comparing(Waypoint::category)
 			.thenComparing(Waypoint::name, String.CASE_INSENSITIVE_ORDER);
 
-	private static final Gson GSON = new GsonBuilder()
-			.setPrettyPrinting()
-			.disableHtmlEscaping()
-			.registerTypeAdapter(Instant.class, new InstantAdapter().nullSafe())
-			.create();
-
 	private final Path file;
 	/** Keyed by lower-case name so lookups and uniqueness are case-insensitive. */
-	private final Map<String, Waypoint> waypoints = new HashMap<>();
+	private final Map<String, Waypoint> byName = new HashMap<>();
+	private final Map<UUID, Waypoint> byId = new HashMap<>();
+	private final List<Consumer<Waypoint>> removalListeners = new ArrayList<>();
 	/** True when the last save failed, so commands can warn that changes are only in memory. */
 	private boolean saveFailed;
 
@@ -58,24 +45,44 @@ public final class WaypointStore {
 		this.file = file;
 	}
 
+	/** Called with every waypoint that gets removed (favourites and navigation clean up through this). */
+	public void onRemoved(Consumer<Waypoint> listener) {
+		removalListeners.add(listener);
+	}
+
 	// ---------------------------------------------------------------- queries
 
 	public Optional<Waypoint> get(String name) {
-		return Optional.ofNullable(waypoints.get(key(name)));
+		return Optional.ofNullable(byName.get(key(name)));
+	}
+
+	public Optional<Waypoint> get(UUID id) {
+		return Optional.ofNullable(byId.get(id));
 	}
 
 	public boolean contains(String name) {
-		return waypoints.containsKey(key(name));
+		return byName.containsKey(key(name));
 	}
 
 	/** All waypoints, sorted by category and then name. */
 	public List<Waypoint> all() {
-		return waypoints.values().stream().sorted(DISPLAY_ORDER).toList();
+		return byName.values().stream().sorted(DISPLAY_ORDER).toList();
 	}
 
 	public List<Waypoint> inCategory(Category category) {
-		return waypoints.values().stream()
+		return byName.values().stream()
 				.filter(waypoint -> waypoint.category() == category)
+				.sorted(DISPLAY_ORDER)
+				.toList();
+	}
+
+	/** Case-insensitive match on name, description or creator. */
+	public List<Waypoint> search(String query) {
+		String needle = query.trim().toLowerCase(Locale.ROOT);
+		return byName.values().stream()
+				.filter(waypoint -> contains(waypoint.name(), needle)
+						|| contains(waypoint.description(), needle)
+						|| contains(waypoint.creatorName(), needle))
 				.sorted(DISPLAY_ORDER)
 				.toList();
 	}
@@ -85,14 +92,14 @@ public final class WaypointStore {
 		for (Category category : Category.values()) {
 			counts.put(category, 0);
 		}
-		for (Waypoint waypoint : waypoints.values()) {
+		for (Waypoint waypoint : byName.values()) {
 			counts.merge(waypoint.category(), 1, Integer::sum);
 		}
 		return counts;
 	}
 
 	public int size() {
-		return waypoints.size();
+		return byName.size();
 	}
 
 	public boolean lastSaveFailed() {
@@ -106,86 +113,74 @@ public final class WaypointStore {
 		if (contains(waypoint.name())) {
 			return false;
 		}
-		waypoints.put(key(waypoint.name()), waypoint);
+		put(waypoint);
 		save();
 		return true;
 	}
 
 	/** Removes a waypoint by name and saves. Returns the removed waypoint, if there was one. */
 	public Optional<Waypoint> remove(String name) {
-		Waypoint removed = waypoints.remove(key(name));
+		Waypoint removed = byName.remove(key(name));
 		if (removed != null) {
+			byId.remove(removed.id());
 			save();
+			removalListeners.forEach(listener -> listener.accept(removed));
 		}
 		return Optional.ofNullable(removed);
 	}
 
 	/**
-	 * Renames a waypoint and saves. The caller must have checked that {@code newName} is valid and free
-	 * (a case-only change of the same waypoint is allowed).
+	 * Replaces a stored waypoint (same id) with an edited copy and saves. The caller must have checked that a
+	 * changed name is valid and free (a case-only change of the same waypoint is allowed).
 	 */
-	public Waypoint rename(Waypoint waypoint, String newName) {
-		Waypoint renamed = waypoint.withName(newName);
-		waypoints.remove(key(waypoint.name()));
-		waypoints.put(key(newName), renamed);
+	public Waypoint update(Waypoint updated) {
+		Waypoint previous = byId.get(updated.id());
+		if (previous != null) {
+			byName.remove(key(previous.name()));
+		}
+		put(updated);
 		save();
-		return renamed;
+		return updated;
 	}
 
 	// ------------------------------------------------------------ persistence
 
 	/** Replaces the in-memory list with the contents of the JSON file (if it exists). */
 	public void load() {
-		waypoints.clear();
+		byName.clear();
+		byId.clear();
 		saveFailed = false;
-		if (!Files.exists(file)) {
-			SharedWaypoints.LOGGER.info("No waypoint file at {} yet; it will be created on the first change", file);
+
+		Optional<StoreFile> data = JsonFiles.read(file, StoreFile.class, Gsons.GSON);
+		if (data.isEmpty()) {
+			SharedWaypoints.LOGGER.info("No readable waypoint file at {}; starting with an empty list", file);
 			return;
 		}
-
-		try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-			StoreFile data = GSON.fromJson(reader, StoreFile.class);
-			if (data != null && data.waypoints != null) {
-				for (Waypoint raw : data.waypoints) {
-					Waypoint waypoint = sanitize(raw);
-					if (waypoint == null) {
-						SharedWaypoints.LOGGER.warn("Skipping invalid waypoint entry in {}: {}", file, raw);
-					} else if (waypoints.putIfAbsent(key(waypoint.name()), waypoint) != null) {
-						SharedWaypoints.LOGGER.warn("Skipping duplicate waypoint name in {}: {}", file, waypoint.name());
-					}
-				}
+		boolean upgraded = data.get().version < FORMAT_VERSION;
+		for (Waypoint raw : data.get().waypoints == null ? List.<Waypoint>of() : data.get().waypoints) {
+			Waypoint waypoint = sanitize(raw);
+			if (waypoint == null) {
+				SharedWaypoints.LOGGER.warn("Skipping invalid waypoint entry in {}: {}", file, raw);
+			} else if (contains(waypoint.name()) || byId.containsKey(waypoint.id())) {
+				SharedWaypoints.LOGGER.warn("Skipping duplicate waypoint in {}: {}", file, waypoint.name());
+			} else {
+				upgraded |= raw.id() == null;
+				put(waypoint);
 			}
-			SharedWaypoints.LOGGER.info("Loaded {} shared waypoint(s) from {}", waypoints.size(), file);
-		} catch (IOException | JsonParseException e) {
-			// Keep a copy of the unreadable file; otherwise the next save would silently overwrite it.
-			Path backup = file.resolveSibling(file.getFileName() + ".broken-" + System.currentTimeMillis());
-			try {
-				Files.copy(file, backup, StandardCopyOption.REPLACE_EXISTING);
-			} catch (IOException copyError) {
-				e.addSuppressed(copyError);
-			}
-			SharedWaypoints.LOGGER.error("Could not read {}; starting with an empty list (original kept as {})",
-					file, backup, e);
-			waypoints.clear();
 		}
+		if (upgraded) {
+			// Write the generated ids back so they stay stable across restarts.
+			save();
+		}
+		SharedWaypoints.LOGGER.info("Loaded {} shared waypoint(s) from {}", byName.size(), file);
 	}
 
 	/** Writes the current list to disk. Failures are logged and remembered in {@link #lastSaveFailed()}. */
 	public void save() {
 		StoreFile data = new StoreFile();
 		data.waypoints = new ArrayList<>(all());
-
-		Path temp = file.resolveSibling(file.getFileName() + ".tmp");
 		try {
-			Files.createDirectories(file.getParent());
-			try (Writer writer = Files.newBufferedWriter(temp, StandardCharsets.UTF_8)) {
-				GSON.toJson(data, writer);
-			}
-			try {
-				Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-			} catch (AtomicMoveNotSupportedException e) {
-				Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
-			}
+			JsonFiles.writeAtomically(file, data, Gsons.GSON);
 			saveFailed = false;
 		} catch (IOException e) {
 			saveFailed = true;
@@ -195,8 +190,17 @@ public final class WaypointStore {
 
 	// ---------------------------------------------------------------- helpers
 
+	private void put(Waypoint waypoint) {
+		byName.put(key(waypoint.name()), waypoint);
+		byId.put(waypoint.id(), waypoint);
+	}
+
 	private static String key(String name) {
 		return name.toLowerCase(Locale.ROOT);
+	}
+
+	private static boolean contains(String haystack, String lowerCaseNeedle) {
+		return haystack != null && haystack.toLowerCase(Locale.ROOT).contains(lowerCaseNeedle);
 	}
 
 	/** Fills in defaults for a hand-edited or older entry; returns null if it can't be used at all. */
@@ -209,12 +213,14 @@ public final class WaypointStore {
 			return null;
 		}
 		return new Waypoint(
+				raw.id() != null ? raw.id() : UUID.randomUUID(),
 				name,
 				raw.category() != null ? raw.category() : Category.OTHER, // unknown category -> "other"
 				raw.x(),
 				raw.y(),
 				raw.z(),
 				raw.dimension(),
+				raw.description() == null || raw.description().isBlank() ? null : raw.description().trim(),
 				raw.creatorUuid() != null ? raw.creatorUuid() : Waypoint.SERVER_UUID,
 				raw.creatorName() != null ? raw.creatorName() : "Unknown",
 				raw.created() != null ? raw.created() : Instant.EPOCH);
@@ -224,26 +230,5 @@ public final class WaypointStore {
 	private static final class StoreFile {
 		int version = FORMAT_VERSION;
 		List<Waypoint> waypoints = new ArrayList<>();
-	}
-
-	/** Stores {@link Instant} as an ISO-8601 string; also accepts epoch milliseconds when reading. */
-	private static final class InstantAdapter extends TypeAdapter<Instant> {
-		@Override
-		public void write(JsonWriter out, Instant value) throws IOException {
-			out.value(value.toString());
-		}
-
-		@Override
-		public Instant read(JsonReader in) throws IOException {
-			if (in.peek() == JsonToken.NUMBER) {
-				return Instant.ofEpochMilli(in.nextLong());
-			}
-			String text = in.nextString();
-			try {
-				return Instant.parse(text);
-			} catch (DateTimeParseException e) {
-				throw new JsonParseException("Invalid timestamp: " + text, e);
-			}
-		}
 	}
 }
