@@ -110,3 +110,11 @@
 [2026-09-29 17:33:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.3.0), docs/DEVELOPMENT.md
 [2026-09-29 17:33:37 UTC] BUILD: final clean build + unit tests + GameTest (with squaremap) for 1.3.0
 [2026-09-29 17:35:57 UTC] BUILD PASS: 1.3.0 - 60/60 unit tests; GameTest passes with squaremap (markers verified) and without any map mod
+[2026-09-29 17:40:24 UTC] STARTED: 1.4.0 optional client menu (branch client-menu): keybind screen synced over a network channel, server stays authoritative
+[2026-09-29 17:43:30 UTC] FILES: network/ (SyncPayload, ActionPayload, ResultPayload, MenuNetworking), navigation change listener, lifecycle wiring
+[2026-09-29 17:48:22 UTC] FILES: client/ (SharedWaypointsClient, ClientWaypoints, WaypointMenuScreen, WaypointList, AddWaypointScreen, TextInputScreen, Colors), lang, client entrypoint
+[2026-09-29 17:48:51 UTC] BUILD: build + unit tests + server GameTest (menu network handler)
+[2026-09-29 17:52:43 UTC] FILES: clientgametest source set + MenuClientGameTest (real client under Xvfb, screenshots)
+[2026-09-29 17:52:53 UTC] BUILD: real client GameTest under Xvfb (downloads client assets on first run)
+[2026-09-29 17:53:17 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0
+[2026-09-29 17:53:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0

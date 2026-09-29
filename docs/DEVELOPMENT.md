@@ -22,6 +22,7 @@ obfuscated 1.21.11.
 ```bash
 ./gradlew build          # compile, unit tests, jar in build/libs/
 ./gradlew runGametest    # start a headless 1.21.11 server and run the end-to-end GameTest
+xvfb-run -a ./gradlew --no-daemon runClientGametest   # real client: opens the menu, saves screenshots
 ```
 
 - **Unit tests** (`src/test`) cover the Xaero share format against `XaeroParserReplica`, a copy of Xaero's Minimap
@@ -64,7 +65,7 @@ downloadable artifact.
 ## Code layout
 
 ```
-src/main/java/io/github/steelaspect/sharedwaypoints/
+src/main/java/io/github/steelaspect/sharedwaypoints/        (common: everything the server needs)
   SharedWaypoints.java                 entrypoint: lifecycle, tick and disconnect events, commands
   ModContext.java                      config + waypoints + favourites + navigation for the running server
   command/WaypointCommand.java         the /waypoints Brigadier tree and tab completion
@@ -78,9 +79,13 @@ src/main/java/io/github/steelaspect/sharedwaypoints/
   text/Formats.java                    "3 days ago"
   util/                                Dimensions, Gsons, JsonFiles (atomic writes), Page
   waypoint/                            Category, CategoryRegistry, Waypoint (record = JSON shape), WaypointStore, FavoritesStore
-  xaero/XaeroShareFormat.java          builds xaero-waypoint: lines
+  network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
+                                       MenuNetworking (actions run as the player's /waypoints command)
+  xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
+src/client/java/.../client/            optional client: J keybind, WaypointMenuScreen, AddWaypointScreen, ...
 src/test/java/...                      unit tests
 src/gametest/...                       headless-server end-to-end test
+src/clientgametest/...                 real-client test: menu via keybind, add through the form, screenshots
 docs/PROGRESS.txt                      timestamped development log
 ```
 

@@ -22,6 +22,11 @@ final class XaeroParserReplica {
 
 	/** Runs the received-message and [Add]-click steps. Throws if Xaero would reject the line. */
 	static Parsed parse(String chatText) {
+		return parseAddCommand(addCommandFor(chatText));
+	}
+
+	/** The command Xaero's [Add] button would run for this share line (onWaypointReceived). */
+	static String addCommandFor(String chatText) {
 		// --- onWaypointReceived(playerName, text)
 		String text = chatText.replaceAll("§.", "");
 		if (!text.contains(WAYPOINT_SHARE_PREFIX)) {
@@ -37,9 +42,15 @@ final class XaeroParserReplica {
 		for (int i = 2; i < args.length; i++) {
 			addCommand.append(':').append(args[i]);
 		}
+		return addCommand.toString();
+	}
 
-		// --- the [Add] click: handleClientSendChatEvent -> onWaypointAdd(message.split(":"))
-		String[] add = addCommand.toString().split(":");
+	/** What Xaero does with an add command (handleClientSendChatEvent -> onWaypointAdd). */
+	static Parsed parseAddCommand(String addCommand) {
+		if (!addCommand.startsWith(WAYPOINT_ADD_PREFIX)) {
+			throw new IllegalArgumentException("Xaero would not intercept this command");
+		}
+		String[] add = addCommand.split(":");
 		String name = add[1].replace("^col^", ":");
 		if (name.isEmpty() || name.length() > 32) {
 			throw new IllegalArgumentException("Error 1: bad name length");

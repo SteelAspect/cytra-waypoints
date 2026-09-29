@@ -14,7 +14,7 @@
 **BlueMap or squaremap** web map.
 
 Only the server needs the mod. Players join with a vanilla client or with Xaero's Minimap, with nothing extra to
-install.
+install. Players who **also** install it on their client get an optional **waypoint menu** (press **J**).
 
 ```
 === Shared Waypoints (3) ===
@@ -50,6 +50,15 @@ install.
   finds the closest one.
 - **Teleport** for ops: a **[Teleport]** button and `/waypoints tp`.
 
+**Optional client menu**
+- Install the same jar on your client and press **J** on a server that runs SharedWaypoints: a full screen with
+  search, category and ★ favourite filters, sorting by name or distance, and a details panel.
+- Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
+  **Favourite**, **Rename**, **Description**, **Remove**, **Teleport** (ops) and **+ Add** with your position
+  pre-filled.
+- The server still decides everything, so permissions are the same as in chat. The menu updates live when
+  anyone changes a waypoint. Players without the client mod keep using chat as before.
+
 **Web maps**
 - **BlueMap and squaremap:** if either is installed, every waypoint shows up on the web map in a
   toggleable "Shared Waypoints" layer. Pins use the category colour, and clicking one shows its details.
@@ -72,6 +81,8 @@ install.
    **[latest release](https://github.com/SteelAspect/sharedwaypoints/releases/latest)**.
 2. Put it in your server's `mods/` folder together with [Fabric API](https://modrinth.com/mod/fabric-api).
 3. Start the server. Players don't need to install anything.
+4. Optional: players who want the menu put the same jar (with Fabric API) in their own `mods/` folder and press
+   **J**. The key can be changed under Options → Controls → SharedWaypoints.
 
 | Requirement | Version |
 |---|---|

@@ -61,10 +61,13 @@ sourceSets {
 }
 
 loom {
-	// Server-side only mod: no client source set.
+	// src/main is common (everything the server needs); src/client is the optional menu, only loaded on clients.
+	splitEnvironmentSourceSets()
+
 	mods {
 		"sharedwaypoints" {
 			sourceSet sourceSets.main
+			sourceSet sourceSets.client
 		}
 		"sharedwaypoints-gametest" {
 			sourceSet sourceSets.gametest
@@ -81,6 +84,41 @@ loom {
 			runDir "build/gametest"
 			source sourceSets.gametest
 		}
+	}
+}
+
+sourceSets {
+	// Real-client test (Fabric client GameTest): opens the menu in a singleplayer world and takes screenshots.
+	// Needs a display; in CI or a container run it under xvfb-run. Not part of the released jar.
+	clientgametest {
+		compileClasspath += main.compileClasspath + main.output + client.compileClasspath + client.output
+		runtimeClasspath += main.runtimeClasspath + main.output + client.runtimeClasspath + client.output
+	}
+}
+
+loom {
+	mods {
+		"sharedwaypoints-clientgametest" {
+			sourceSet sourceSets.clientgametest
+		}
+	}
+	runs {
+		clientGametest {
+			client()
+			name = "Client Game Test"
+			vmArg "-Dfabric.client.gametest"
+			runDir "build/clientgametest"
+			source sourceSets.clientgametest
+		}
+	}
+}
+
+tasks.named("runClientGametest") {
+	// Fresh config and saves every run.
+	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
+	doFirst {
+		new File(runDirectory.get().asFile, "config/sharedwaypoints").deleteDir()
+		new File(runDirectory.get().asFile, "saves").deleteDir()
 	}
 }
 
