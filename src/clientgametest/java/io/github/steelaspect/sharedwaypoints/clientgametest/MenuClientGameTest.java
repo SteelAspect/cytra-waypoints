@@ -54,6 +54,21 @@ public class MenuClientGameTest implements FabricClientGameTest {
 					ClientWaypoints.data(w.id()).map(data -> data.favorite()).orElse(false)));
 			context.waitTicks(5);
 			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-favourite"));
+
+			// Edit the player's own waypoint (Test Spot): select it, open Edit, change the description.
+			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Test Spot"));
+			context.clickScreenButton("Edit");
+			context.waitFor(client -> client.screen != null && client.screen.getClass().getSimpleName().equals("EditWaypointScreen"));
+			context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB);
+			context.getInput().typeChars("Near spawn");
+			context.waitTicks(2);
+			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edit"));
+			context.clickScreenButton("Save");
+			context.waitForScreen(WaypointMenuScreen.class);
+			context.waitFor(client -> ClientWaypoints.waypoints().stream()
+					.anyMatch(w -> w.name().equals("Test Spot") && "Near spawn".equals(w.description())));
+			context.waitTicks(5);
+			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edited"));
 			System.out.println("[SharedWaypoints test] PASSED");
 			context.setScreen(() -> null);
 		}

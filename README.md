@@ -54,10 +54,12 @@ install. Players who **also** install it on their client get an optional **waypo
 - Install the same jar on your client and press **J** on a server that runs SharedWaypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
 - Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
-  **Favourite**, **Rename**, **Description**, **Remove**, **Teleport** (ops) and **+ Add** with your position
+  **Favourite**, **Edit** (name and description), **Remove**, **Teleport** (ops) and **+ Add** with your position
   pre-filled.
 - The server still decides everything, so permissions are the same as in chat. The menu updates live when
   anyone changes a waypoint. Players without the client mod keep using chat as before.
+
+  ![The waypoint menu](docs/images/client-menu.png)
 
 **Web maps**
 - **BlueMap and squaremap:** if either is installed, every waypoint shows up on the web map in a
