@@ -28,6 +28,10 @@ xvfb-run -a ./gradlew --no-daemon runClientGametest   # real client: opens the m
 - **Unit tests** (`src/test`) cover the Xaero share format against `XaeroParserReplica`, a copy of Xaero's Minimap
   26.5.0's parser. They also cover the JSON stores, categories, navigation maths, paging, relative times and web-map markers
   (including HTML escaping of player-written text).
+- **Client GameTest** (`src/clientgametest`) starts a real client in a singleplayer world and opens the menu with
+  the J key. It adds a waypoint through the form, favourites and edits one, checks each change reached the
+  server, and saves screenshots to `build/clientgametest/screenshots/`. It needs a display, so it runs under
+  `xvfb-run` locally and in CI, where the screenshots are uploaded as an artifact.
 - **GameTest** (`src/gametest`) runs every command as two ordinary players and an op on a real server. It checks
   chat output, click events, tab completion, permissions, navigation, favourites and the saved files. It runs in
   Fabric's GameTest mode, which needs no `eula.txt`, and never ends up in the released jar.
@@ -82,7 +86,8 @@ src/main/java/io/github/steelaspect/sharedwaypoints/        (common: everything 
   network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
                                        MenuNetworking (actions run as the player's /waypoints command)
   xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
-src/client/java/.../client/            optional client: J keybind, WaypointMenuScreen, AddWaypointScreen, ...
+src/client/java/.../client/            optional client: J keybind, WaypointMenuScreen, AddWaypointScreen,
+                                       EditWaypointScreen, WaypointList, ClientWaypoints (latest snapshot)
 src/test/java/...                      unit tests
 src/gametest/...                       headless-server end-to-end test
 src/clientgametest/...                 real-client test: menu via keybind, add through the form, screenshots

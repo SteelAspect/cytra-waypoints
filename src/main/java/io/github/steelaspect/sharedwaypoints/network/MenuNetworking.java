@@ -177,7 +177,8 @@ public final class MenuNetworking {
 		@Override
 		public void sendSystemMessage(Component message) {
 			if (first == null) {
-				first = message.getString();
+				// Chat buttons such as "[View favourites]" mean nothing in the menu's status line.
+				first = message.getString().replaceAll("\\s*\\[[^\\]]*\\]\\s*$", "").trim();
 			}
 		}
 

@@ -57,8 +57,7 @@ public final class WaypointMenuScreen extends Screen {
 	private Button xaeroButton;
 	private Button copyButton;
 	private Button favoriteButton;
-	private Button renameButton;
-	private Button describeButton;
+	private Button editButton;
 	private Button teleportButton;
 	private Button removeButton;
 	private List<String> filterIds = List.of();
@@ -125,17 +124,22 @@ public final class WaypointMenuScreen extends Screen {
 		list = addRenderableWidget(new WaypointList(minecraft, this::onSelect, waypoint -> go()));
 		list.updateSizeAndPosition(listRight - MARGIN, bottom - TOP, MARGIN, TOP);
 
-		// --- action buttons, two columns at the bottom of the details panel
-		int columnWidth = (panelWidth - 4) / 2;
-		buttonsTop = bottom - 4 * 22 + 2;
-		goButton = actionButton("Go", 0, 0, columnWidth, "Start the on-screen compass", this::go);
-		xaeroButton = actionButton("Add to Xaero", 1, 0, columnWidth, "Open Xaero's Minimap's add-waypoint screen", this::addToXaero);
-		copyButton = actionButton("Copy coords", 0, 1, columnWidth, "Copy \"X Y Z\" to the clipboard", this::copyCoordinates);
-		favoriteButton = actionButton("☆ Favourite", 1, 1, columnWidth, "Only you see your favourites", () -> act(Action.FAVORITE));
-		renameButton = actionButton("Rename", 0, 2, columnWidth, "Rename this waypoint", this::rename);
-		describeButton = actionButton("Description", 1, 2, columnWidth, "Write a short note", this::describe);
-		teleportButton = actionButton("Teleport", 0, 3, columnWidth, "Teleport there (ops)", this::teleport);
-		removeButton = actionButton("Remove", 1, 3, columnWidth, "Remove it for everyone", this::remove);
+		// --- action buttons: three rows at the bottom of the details panel (the last row has a third
+		// button, Teleport, for players allowed to teleport)
+		int half = (panelWidth - 4) / 2;
+		int third = (panelWidth - 8) / 3;
+		boolean teleport = ClientWaypoints.canTeleport();
+		buttonsTop = bottom - 3 * 22 + 2;
+		goButton = actionButton("▶ Go", panelLeft, 0, half, "Start the on-screen compass", this::go);
+		xaeroButton = actionButton("Add to Xaero", panelLeft + half + 4, 0, half, "", this::addToXaero);
+		copyButton = actionButton("Copy coords", panelLeft, 1, half, "Copy \"X Y Z\" to the clipboard", this::copyCoordinates);
+		favoriteButton = actionButton("☆ Favourite", panelLeft + half + 4, 1, half, "Only you see your favourites",
+				() -> act(Action.FAVORITE));
+		int lastWidth = teleport ? third : half;
+		editButton = actionButton("Edit", panelLeft, 2, lastWidth, "Rename it or change its description", this::edit);
+		removeButton = actionButton("Remove", panelLeft + lastWidth + 4, 2, lastWidth, "Remove it for everyone", this::remove);
+		teleportButton = actionButton("Teleport", panelLeft + 2 * (lastWidth + 4), 2, lastWidth, "Teleport there", this::teleport);
+		teleportButton.visible = teleport;
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), button -> onClose())
 				.bounds(width - MARGIN - 80, height - 26, 80, 20).build());
@@ -143,16 +147,19 @@ public final class WaypointMenuScreen extends Screen {
 		refreshList();
 	}
 
-	private Button actionButton(String label, int column, int row, int columnWidth, String tooltip, Runnable action) {
-		return addRenderableWidget(Button.builder(Component.literal(label), button -> action.run())
-				.bounds(panelLeft + column * (columnWidth + 4), buttonsTop + row * 22, columnWidth, 20)
-				.tooltip(Tooltip.create(Component.literal(tooltip)))
+	private Button actionButton(String label, int x, int row, int buttonWidth, String tooltip, Runnable action) {
+		Button button = addRenderableWidget(Button.builder(Component.literal(label), pressed -> action.run())
+				.bounds(x, buttonsTop + row * 22, buttonWidth, 20)
 				.build());
+		if (!tooltip.isEmpty()) {
+			button.setTooltip(Tooltip.create(Component.literal(tooltip)));
+		}
+		return button;
 	}
 
 	private static Component filterLabel(String id) {
 		if (ALL.equals(id)) {
-			return Component.literal("All categories");
+			return Component.literal("All");
 		}
 		if (FAVORITES.equals(id)) {
 			return Component.literal("★ Favourites");
@@ -243,10 +250,12 @@ public final class WaypointMenuScreen extends Screen {
 		copyButton.active = any;
 		favoriteButton.active = any;
 		favoriteButton.setMessage(Component.literal(data.map(d -> d.favorite()).orElse(false) ? "★ Unfavourite" : "☆ Favourite"));
-		renameButton.active = data.map(d -> d.canEdit()).orElse(false);
-		describeButton.active = renameButton.active;
+		editButton.active = data.map(d -> d.canEdit()).orElse(false);
+		editButton.setTooltip(Tooltip.create(Component.literal(editButton.active
+				? "Rename it or change its description" : "Only its creator or an op can edit it")));
 		removeButton.active = data.map(d -> d.canRemove()).orElse(false);
-		teleportButton.visible = ClientWaypoints.canTeleport();
+		removeButton.setTooltip(Tooltip.create(Component.literal(removeButton.active
+				? "Remove it for everyone" : "Only its creator or an op can remove it")));
 		teleportButton.active = any;
 	}
 
@@ -310,14 +319,8 @@ public final class WaypointMenuScreen extends Screen {
 		onClose();
 	}
 
-	private void rename() {
-		selected().ifPresent(waypoint -> minecraft.setScreen(new TextInputScreen(this, "Rename waypoint",
-				waypoint.name(), Waypoint.MAX_NAME_LENGTH, value -> act(Action.RENAME, value))));
-	}
-
-	private void describe() {
-		selected().ifPresent(waypoint -> minecraft.setScreen(new TextInputScreen(this, "Description of " + waypoint.name(),
-				waypoint.descriptionText().orElse(""), Waypoint.MAX_DESCRIPTION_LENGTH, value -> act(Action.DESCRIBE, value))));
+	private void edit() {
+		selected().ifPresent(waypoint -> minecraft.setScreen(new EditWaypointScreen(this, waypoint)));
 	}
 
 	private void remove() {
@@ -328,6 +331,11 @@ public final class WaypointMenuScreen extends Screen {
 			minecraft.setScreen(this);
 		}, Component.literal("Remove \"" + waypoint.name() + "\"?"),
 				Component.literal("This removes it for everyone on the server."))));
+	}
+
+	/** Selects a waypoint by name (used by the client test). */
+	public void selectForTest(String name) {
+		list.children().stream().filter(entry -> entry.waypoint.name().equals(name)).findFirst().ifPresent(list::setSelected);
 	}
 
 	private void showLocalStatus(String message) {
@@ -363,41 +371,42 @@ public final class WaypointMenuScreen extends Screen {
 		int x = panelLeft + 6;
 		int maxWidth = width - MARGIN - x - 6;
 		int y = TOP + 6;
+		int limit = buttonsTop - 4;
 		Category category = waypoint.category();
 
 		String title = waypoint.name() + (isFavorite(waypoint) ? " ★" : "");
 		graphics.drawString(font, Component.literal(title).withStyle(style -> style.withBold(true)), x, y, Colors.argb(category));
-		y += 13;
-		graphics.drawString(font, category.displayName(), x, y, Colors.argb(category));
 		y += 12;
-		graphics.drawString(font, waypoint.coordinates() + "  ·  " + Dimensions.shortName(waypoint.dimension()), x, y, Colors.WHITE);
-		y += 12;
+		graphics.drawString(font, category.displayName() + " · " + Dimensions.shortName(waypoint.dimension()), x, y,
+				Colors.argb(category));
+		y += 11;
+		graphics.drawString(font, waypoint.coordinates(), x, y, Colors.WHITE);
+		String distance = WaypointList.distanceLabel(waypoint);
+		String where = distance != null ? distance.replace(" ⟳", " via portal") : "in " + Dimensions.shortName(waypoint.dimension());
+		graphics.drawString(font, where, x + maxWidth - font.width(where), y, Colors.AQUA);
+		y += 11;
 		Optional<NavMath.Target> other = NavMath.portalEquivalent(waypoint);
 		if (other.isPresent()) {
 			String side = waypoint.dimension().equals(Dimensions.OVERWORLD) ? "Nether side: " : "Overworld side: ";
 			graphics.drawString(font, side + other.get().x() + " " + other.get().y() + " " + other.get().z(), x, y, Colors.PURPLE);
-			y += 12;
+			y += 11;
 		}
-		String distance = WaypointList.distanceLabel(waypoint);
-		graphics.drawString(font, distance != null ? distance.replace(" ⟳", " via Nether portal") : "In " + Dimensions.shortName(waypoint.dimension()),
-				x, y, Colors.AQUA);
-		y += 12;
 		if (waypoint.id().equals(ClientWaypoints.navigatingTo())) {
 			graphics.drawString(font, "▶ Navigating here", x, y, Colors.GREEN);
-			y += 12;
+			y += 11;
 		}
+		// The creator line sits at the bottom of the text area; the description fills the space above it.
+		int creatorY = limit - 9;
 		if (waypoint.description() != null) {
-			y += 2;
-			int lines = font.split(Component.literal("“" + waypoint.description() + "”"), maxWidth).size();
-			int room = Math.max(0, (buttonsTop - 16 - y) / 9);
-			if (room > 0) {
-				graphics.drawWordWrap(font, Component.literal("“" + waypoint.description() + "”"), x, y, maxWidth, Colors.GRAY);
-				y += Math.min(lines, room) * 9 + 3;
+			var lines = font.split(Component.literal("“" + waypoint.description() + "”"), maxWidth);
+			for (int i = 0; i < lines.size() && y + 9 <= creatorY - 2; i++) {
+				graphics.drawString(font, lines.get(i), x, y + 1, Colors.GRAY);
+				y += 9;
 			}
 		}
-		if (y + 10 < buttonsTop) {
-			graphics.drawString(font, "Added by " + waypoint.creatorName() + " · " + Formats.relativeAge(waypoint.created(), Instant.now()),
-					x, y, Colors.DARK_GRAY);
+		if (creatorY > y) {
+			graphics.drawString(font, font.plainSubstrByWidth("Added by " + waypoint.creatorName() + " · "
+					+ Formats.relativeAge(waypoint.created(), Instant.now()), maxWidth), x, creatorY, Colors.DARK_GRAY);
 		}
 	}
 

@@ -7,8 +7,8 @@
   SharedWaypoints.
   - Search, category and ★ favourite filters, and sorting by category, name or distance.
   - A details panel with distance and direction, portal-side coordinates, the description and the creator.
-  - Buttons for Go / Stop, Add to Xaero (opens Xaero's add screen directly), Copy coords, Favourite, Rename,
-    Description, Remove, Teleport (ops) and + Add (your position and dimension pre-filled).
+  - Buttons for Go / Stop, Add to Xaero (opens Xaero's add screen directly), Copy coords, Favourite, Edit (name
+    and description), Remove, Teleport (ops) and + Add (your position and dimension pre-filled).
 - The menu updates live when anyone changes a waypoint.
 - Menu actions run the normal /waypoints commands on the server, so permissions and validation are the same as
   in chat.

@@ -118,3 +118,5 @@
 [2026-09-29 17:52:53 UTC] BUILD: real client GameTest under Xvfb (downloads client assets on first run)
 [2026-09-29 17:53:17 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0
 [2026-09-29 17:53:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0
+[2026-09-29 17:56:46 UTC] FIX: menu layout (3 button rows, Edit screen replaces Rename/Description, shorter filter label, status without chat buttons); rerunning all tests
+[2026-09-29 17:58:33 UTC] BUILD PASS: 1.4.0 - unit tests, server GameTest (menu handler) and real-client GameTest (menu via J, add/favourite/edit, screenshots) all pass
