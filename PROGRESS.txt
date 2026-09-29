@@ -1,0 +1,38 @@
+[2026-09-29 01:43:57 UTC] STARTED: SharedWaypoints build (Option B: PROGRESS.txt log; Option A webhook URL was a placeholder)
+[2026-09-29 01:46:15 UTC] RESEARCH: versions resolved (MC 1.21.11, Loader 0.19.5, Fabric API 0.141.6+1.21.11, permissions-api 0.6.1); downloaded Xaero's Minimap 26.5.0 (fabric 1.21.11) to verify share format
+[2026-09-29 01:50:22 UTC] RESEARCH: Xaero 26.5.0 decompiled - system chat IS parsed (ChatListener.handleSystemMessage mixin); format confirmed
+[2026-09-29 01:50:22 UTC] FILE CREATED: settings.gradle
+[2026-09-29 01:50:22 UTC] FILE CREATED: gradle.properties
+[2026-09-29 01:50:22 UTC] FILE CREATED: .gitignore
+[2026-09-29 01:50:39 UTC] FILE CREATED: build.gradle (Loom 1.18.2 fabric-loom-remap, Mojang mappings)
+[2026-09-29 01:50:39 UTC] FILE CREATED: src/main/resources/fabric.mod.json
+[2026-09-29 01:51:05 UTC] FILE CREATED: Gradle wrapper (gradlew, gradlew.bat, gradle/wrapper/*) pinned to Gradle 9.7.1
+[2026-09-29 01:51:11 UTC] BUILD: first Gradle/Loom setup run (downloads MC 1.21.11 + mappings)
+[2026-09-29 01:51:38 UTC] BUILD FAIL: Loom 1.18.2 needs a Java 25 JVM; switching to Loom 1.17.21 (Java 21)
+[2026-09-29 01:52:13 UTC] BUILD FAIL: Maven Central HTTP 429 (rate limit) in container; added container-local Gradle mirror init script, retrying
+[2026-09-29 01:53:48 UTC] BUILD PASS: Loom 1.17.21 setup OK (MC 1.21.11 mapped with Mojang mappings)
+[2026-09-29 01:57:06 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/SharedWaypoints.java
+[2026-09-29 01:57:06 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/Category.java
+[2026-09-29 01:57:06 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/Waypoint.java
+[2026-09-29 01:58:00 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStore.java
+[2026-09-29 01:58:00 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Dimensions.java
+[2026-09-29 01:58:00 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/xaero/XaeroShareFormat.java
+[2026-09-29 01:59:23 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/permission/WaypointPermissions.java
+[2026-09-29 01:59:23 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/WaypointText.java
+[2026-09-29 01:59:23 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/command/WaypointCommand.java
+[2026-09-29 01:59:28 UTC] BUILD: compiling (./gradlew build)
+[2026-09-29 02:00:23 UTC] BUILD PASS: first full compile + remapJar OK
+[2026-09-29 02:01:55 UTC] FILE CREATED: src/test/java/io/github/steelaspect/sharedwaypoints/xaero/XaeroParserReplica.java
+[2026-09-29 02:01:55 UTC] FILE CREATED: src/test/java/io/github/steelaspect/sharedwaypoints/xaero/XaeroShareFormatTest.java
+[2026-09-29 02:01:55 UTC] FILE CREATED: src/test/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStoreTest.java
+[2026-09-29 02:01:55 UTC] BUILD: running unit tests (./gradlew build)
+[2026-09-29 02:02:28 UTC] BUILD FAIL: tests - Level static init needs game bootstrap; Dimensions now uses plain id strings; fixed CSV quoting in test
+[2026-09-29 02:02:42 UTC] BUILD PASS: 23/23 unit tests (Xaero parser replica round-trips, JSON store)
+[2026-09-29 02:04:12 UTC] FILE CREATED: src/gametest/resources/fabric.mod.json (+ gametest source set / runGametest in build.gradle)
+[2026-09-29 02:05:00 UTC] FILE CREATED: src/gametest/java/io/github/steelaspect/sharedwaypoints/gametest/SharedWaypointsGameTest.java
+[2026-09-29 02:05:00 UTC] BUILD: running headless server GameTest (./gradlew runGametest)
+[2026-09-29 02:06:35 UTC] BUILD PASS: GameTest on headless MC 1.21.11 server - commands, tab-complete, permissions, JSON all verified (negative control fails as expected)
+[2026-09-29 02:07:25 UTC] FILE CREATED: README.md (commands, JSON example, Xaero verification, build instructions)
+[2026-09-29 02:07:25 UTC] BUILD: final clean build + unit tests + GameTest
+[2026-09-29 02:07:57 UTC] BUILD PASS: final - 23/23 unit tests, GameTest passed, jar at build/libs/sharedwaypoints-1.0.0.jar
+[2026-09-29 02:07:57 UTC] DONE: all deliverables complete; committed and pushed to the working branch

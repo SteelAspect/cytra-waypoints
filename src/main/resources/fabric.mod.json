@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints",
+	"version": "${version}",
+	"name": "SharedWaypoints",
+	"description": "Server-side shared waypoint list. Browse waypoints in chat and add them to Xaero's Minimap with one click. Clients do not need to install it.",
+	"authors": [
+		"SteelAspect"
+	],
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.steelaspect.sharedwaypoints.SharedWaypoints"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.11",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"luckperms": "*"
+	}
+}
