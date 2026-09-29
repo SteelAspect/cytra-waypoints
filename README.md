@@ -1,3 +1,5 @@
+<img src="src/main/resources/assets/sharedwaypoints/icon.png" alt="" width="96" align="right">
+
 # SharedWaypoints
 
 [![Build](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml/badge.svg)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
@@ -5,9 +7,11 @@
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
 ![Server-side](https://img.shields.io/badge/side-server%20only-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A shared waypoint list for your Fabric server.** Players browse waypoints in chat, add them to
-**Xaero's Minimap** with a click, and navigate to them with a **live on-screen compass**.
+**Xaero's Minimap** with a click, navigate to them with a **live on-screen compass**, and see them on your
+**BlueMap or squaremap** web map.
 
 Only the server needs the mod. Players join with a vanilla client or with Xaero's Minimap, with nothing extra to
 install.
@@ -46,7 +50,15 @@ install.
   finds the closest one.
 - **Teleport** for ops: a **[Teleport]** button and `/waypoints tp`.
 
+**Web maps**
+- **BlueMap and squaremap:** if either is installed, every waypoint shows up on the web map in a
+  toggleable "Shared Waypoints" layer. Pins use the category colour, and clicking one shows its details.
+- **Always in sync:** adding, renaming or removing a waypoint updates the map straight away.
+
 **For server owners**
+- **Your own categories:** shops, mines, farms, whatever fits your server, each with its own colour (see
+  [Configuration](#configuration)).
+- **`/waypoints reload`** applies config changes and hand edits without a restart.
 - **Permissions** through [fabric-permissions-api](https://github.com/lucko/fabric-permissions-api) (bundled), so it
   works with LuckPerms and falls back to vanilla op levels.
 - **Players manage their own waypoints:** anyone can add, and creators can rename, describe or remove what they
@@ -75,7 +87,7 @@ The mod also works in singleplayer and LAN worlds.
 | Command | What it does |
 |---|---|
 | `/waypoints [page <n>]` | List all waypoints, grouped by category |
-| `/waypoints <category> [page]` | List one category: `storage`, `farms`, `bases`, `portals`, `other` |
+| `/waypoints <category> [page]` | List one category, e.g. `storage` (see `/waypoints categories`) |
 | `/waypoints categories` | Categories with their counts and Xaero colours |
 | `/waypoints info <name>` | Details, portal-side coordinates, distance and all buttons |
 | `/waypoints search <text>` | Search names, descriptions and creators |
@@ -90,6 +102,7 @@ The mod also works in singleplayer and LAN worlds.
 | `/waypoints describe <name> [text]` | Set a description (max 120 characters). Leave the text out to clear it |
 | `/waypoints remove <name>` | Remove a waypoint |
 | `/waypoints tp <name>` | Teleport to a waypoint (ops) |
+| `/waypoints reload` | Reload `config.json`, waypoints and favourites from disk (ops) |
 | `/waypoints xaero <name>` | Send the Xaero share message (what **[Add to Xaero]** runs) |
 
 - Put names with spaces in quotes: `/waypoints add "Main Storage" storage`. Names are 1–32 characters (Xaero's limit)
@@ -108,6 +121,7 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 | `sharedwaypoints.edit` | op level 2, and creators can always rename or describe their own waypoints |
 | `sharedwaypoints.remove` | op level 2, and creators can always remove their own waypoints |
 | `sharedwaypoints.teleport` | op level 2 |
+| `sharedwaypoints.reload` | op level 2 |
 
 ## Configuration
 
@@ -119,7 +133,16 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
   "navigationParticles": true,
   "arrivalRadius": 6,
   "pageSize": 8,
-  "nearRadius": 512
+  "nearRadius": 512,
+  "webMapMarkers": true,
+  "webMapLayerName": "Shared Waypoints",
+  "categories": [
+    { "id": "storage", "name": "Storage", "color": "aqua" },
+    { "id": "farms", "name": "Farms", "color": "green" },
+    { "id": "bases", "name": "Bases", "color": "gold" },
+    { "id": "portals", "name": "Portals", "color": "light_purple" },
+    { "id": "other", "name": "Other", "color": "white" }
+  ]
 }
 ```
 
@@ -130,8 +153,20 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 | `arrivalRadius` | Distance in blocks that counts as "arrived" (1–64) |
 | `pageSize` | Waypoints per page (3–30) |
 | `nearRadius` | Default radius for `/waypoints near` |
+| `webMapMarkers` | Show waypoints on BlueMap / squaremap when installed |
+| `webMapLayerName` | Name of the layer on the web map |
+| `categories` | Your categories, in the order they're listed |
 
-Changes take effect on the next server start.
+Each category has an `id` (one lower-case word, used in commands), a `name` shown in chat, and a `color`. The
+colour is one of the 16 chat colours: `black`, `dark_blue`, `dark_green`, `dark_aqua`, `dark_red`,
+`dark_purple`, `gold`, `gray`, `dark_gray`, `blue`, `green`, `aqua`, `red`, `light_purple`, `yellow` or
+`white`. The same colour is used in chat, on the boss-bar compass (closest match), in Xaero's Minimap and on web
+maps.
+
+If you remove a category, its waypoints keep it and show up in gray until you add it back or move them.
+Invalid entries are skipped with a warning in the server log.
+
+Apply changes with `/waypoints reload`, or restart the server.
 
 ## Data files
 
@@ -177,6 +212,13 @@ colours map to the matching Xaero colours: storage aqua, farms green, bases gold
 Players without Xaero just see the raw line. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#xaeros-minimap-format)
 for how the format was verified.
 
+## Web maps
+
+With [BlueMap](https://modrinth.com/plugin/bluemap) or [squaremap](https://modrinth.com/plugin/squaremap)
+installed, a **Shared Waypoints** layer appears on every map. Each waypoint is a pin in its category colour, and
+clicking it shows the name, category, coordinates, description and creator. Nothing needs setting up; turn it off
+with `"webMapMarkers": false`. Tested against BlueMap 5.16 and squaremap 1.3.12 for 1.21.11.
+
 ## Building from source
 
 ```bash
@@ -185,3 +227,7 @@ for how the format was verified.
 
 The jar appears in `build/libs/`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
 how the code is organised. The [changelog](CHANGELOG.md) lists what changed in each version.
+
+## License
+
+[MIT](LICENSE) © 2026 SteelAspect

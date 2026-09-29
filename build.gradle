@@ -30,8 +30,25 @@ base {
 }
 
 repositories {
-	// fabric-permissions-api is published to Maven Central.
-	mavenCentral()
+	// fabric-permissions-api and squaremap-api are published to Maven Central.
+	mavenCentral {
+		content { excludeGroup "de.bluecolored" }
+	}
+	maven {
+		name = "BlueMap"
+		url = "https://repo.bluecolored.de/releases"
+		content { includeGroup "de.bluecolored" }
+	}
+	// Only for the GameTest server (squaremap), never for the released jar.
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
 }
 
 sourceSets {
@@ -67,7 +84,21 @@ loom {
 	}
 }
 
+configurations {
+	// Mod jars dropped unchanged into the GameTest server's mods/ folder, like a server owner would install them.
+	// Fabric Loader remaps them at runtime and loads the libraries they bundle.
+	gametestServerMods {
+		transitive = false
+	}
+}
+
+def copyGametestMods = tasks.register("copyGametestMods", Sync) {
+	from configurations.gametestServerMods
+	into layout.buildDirectory.dir("gametest/mods")
+}
+
 tasks.named("runGametest") {
+	dependsOn copyGametestMods
 	// Start every run from an empty waypoint list.
 	def waypointConfig = project.layout.buildDirectory.dir("gametest/config/sharedwaypoints")
 	doFirst {
@@ -87,6 +118,13 @@ dependencies {
 	modImplementation "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
 	include "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
 
+	// Optional web-map integrations: compiled against, never bundled. Used only when the server has them.
+	compileOnly "de.bluecolored:bluemap-api:${project.bluemap_api_version}"
+	compileOnly "xyz.jpenilla:squaremap-api:${project.squaremap_api_version}"
+
+	// The GameTest server also runs squaremap 1.3.12, to check the web-map layer for real (see copyGametestMods).
+	gametestServerMods "maven.modrinth:squaremap:${project.squaremap_modrinth_version}"
+
 	// JUnit 5 running inside Fabric Loader, so tests can use Minecraft classes.
 	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 	testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.0"
@@ -102,6 +140,15 @@ processResources {
 
 	filesMatching("fabric.mod.json") {
 		expand "version": version
+	}
+}
+
+jar {
+	def projectName = project.name
+	inputs.property "projectName", projectName
+
+	from("LICENSE") {
+		rename { "${it}_${projectName}" }
 	}
 }
 

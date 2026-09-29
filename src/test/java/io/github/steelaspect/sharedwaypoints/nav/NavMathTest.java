@@ -3,7 +3,7 @@ package io.github.steelaspect.sharedwaypoints.nav;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.TestCategories;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.time.Instant;
 import java.util.Optional;
@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 class NavMathTest {
 	private static Waypoint at(String dimension, int x, int y, int z) {
-		return new Waypoint(UUID.randomUUID(), "W", Category.OTHER, x, y, z, dimension, null, Waypoint.SERVER_UUID,
+		return new Waypoint(UUID.randomUUID(), "W", TestCategories.OTHER, x, y, z, dimension, null, Waypoint.SERVER_UUID,
 				"Server", Instant.EPOCH);
 	}
 

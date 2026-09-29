@@ -12,6 +12,7 @@
 | Java | 21 |
 | Mod ID / package | `sharedwaypoints` / `io.github.steelaspect.sharedwaypoints` |
 | Bundled | fabric-permissions-api 0.6.1 (jar-in-jar) |
+| Optional | BlueMap API 2.7.4 and squaremap API 1.3.12 (compile-only; checked against BlueMap 5.16 and squaremap 1.3.12) |
 
 Loom 1.18+ needs a Java 25 JVM to run Gradle. 1.17.21 is the newest Loom that runs on Java 21 and still builds the
 obfuscated 1.21.11.
@@ -24,10 +25,15 @@ obfuscated 1.21.11.
 ```
 
 - **Unit tests** (`src/test`) cover the Xaero share format against `XaeroParserReplica`, a copy of Xaero's Minimap
-  26.5.0's parser. They also cover the JSON stores, navigation maths, paging and relative times.
+  26.5.0's parser. They also cover the JSON stores, categories, navigation maths, paging, relative times and web-map markers
+  (including HTML escaping of player-written text).
 - **GameTest** (`src/gametest`) runs every command as two ordinary players and an op on a real server. It checks
   chat output, click events, tab completion, permissions, navigation, favourites and the saved files. It runs in
   Fabric's GameTest mode, which needs no `eula.txt`, and never ends up in the released jar.
+  The test server also runs **squaremap 1.3.12**: `copyGametestMods` drops the unmodified jar from Modrinth into
+  `build/gametest/mods/`, and the test checks the markers in squaremap's layer. BlueMap isn't run in tests
+  because it first needs a manual download of Minecraft's resources. Its layer is compiled against, and
+  checked against, the real BlueMap 5.16 jar.
 
 ## Branches and jar names
 
@@ -62,7 +68,8 @@ src/main/java/io/github/steelaspect/sharedwaypoints/
   SharedWaypoints.java                 entrypoint: lifecycle, tick and disconnect events, commands
   ModContext.java                      config + waypoints + favourites + navigation for the running server
   command/WaypointCommand.java         the /waypoints Brigadier tree and tab completion
-  config/ModConfig.java                config.json
+  config/ModConfig.java                config.json (including categories)
+  map/                                 web maps: MapIntegrations, BlueMapLayer, SquaremapLayer, MapMarker, MarkerIcons
   nav/NavMath.java                     portal projection, distances, compass arrows (pure maths)
   nav/NavigationManager.java           boss-bar compass, beacon particles, arrival
   permission/WaypointPermissions.java  permission nodes and fallbacks
@@ -70,7 +77,7 @@ src/main/java/io/github/steelaspect/sharedwaypoints/
   text/Viewer.java                     who is reading (distance, favourites, which buttons)
   text/Formats.java                    "3 days ago"
   util/                                Dimensions, Gsons, JsonFiles (atomic writes), Page
-  waypoint/                            Category, Waypoint (record = JSON shape), WaypointStore, FavoritesStore
+  waypoint/                            Category, CategoryRegistry, Waypoint (record = JSON shape), WaypointStore, FavoritesStore
   xaero/XaeroShareFormat.java          builds xaero-waypoint: lines
 src/test/java/...                      unit tests
 src/gametest/...                       headless-server end-to-end test
@@ -104,8 +111,12 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
 
 ## Design notes
 
-- Categories are a fixed set: `storage`, `farms`, `bases`, `portals`, `other`.
+- Categories come from `config.json`. Ids are single lower-case words and can't be a /waypoints subcommand
+  (`CategoryRegistry.RESERVED_IDS`; the GameTest fails if a new subcommand is missing from that list). Unknown
+  ids stored on waypoints are kept and shown in gray.
+- Web maps are optional. Their classes are only loaded after `FabricLoader.isModLoaded` says they're present,
+  and a failure disables only that map. Player-written text is HTML-escaped before it reaches a map page.
 - Waypoints have a stable `id`, so favourites and navigation survive renames. Version 1 files are upgraded on load.
 - The waypoint Y is the block the player stands in. Distances in lists are horizontal; arrival also counts height.
-- Chat replies follow the vanilla `sendCommandFeedback` gamerule, like vanilla commands.
+- Chat replies are sent even when `sendCommandFeedback` is off, because for /waypoints the reply is the result.
 - In singleplayer, every world shares the same `config/sharedwaypoints/` list.

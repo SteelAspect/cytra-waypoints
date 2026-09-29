@@ -17,6 +17,7 @@ import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.util.Page;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
+import io.github.steelaspect.sharedwaypoints.waypoint.WaypointStore;
 import io.github.steelaspect.sharedwaypoints.xaero.XaeroShareFormat;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -61,9 +62,6 @@ public final class WaypointCommand {
 
 	private static final DynamicCommandExceptionType UNKNOWN_WAYPOINT = new DynamicCommandExceptionType(
 			name -> Component.literal("No waypoint named \"" + name + "\""));
-	private static final DynamicCommandExceptionType UNKNOWN_CATEGORY = new DynamicCommandExceptionType(
-			name -> Component.literal("Unknown category \"" + name + "\". Use one of: "
-					+ String.join(", ", Category.ids())));
 	private static final DynamicCommandExceptionType NAME_TAKEN = new DynamicCommandExceptionType(
 			name -> Component.literal("A waypoint named \"" + name + "\" already exists"));
 	private static final DynamicCommandExceptionType INVALID_TEXT = new DynamicCommandExceptionType(
@@ -79,9 +77,6 @@ public final class WaypointCommand {
 	private static final DynamicCommandExceptionType DIMENSION_MISSING = new DynamicCommandExceptionType(
 			dimension -> Component.literal("Dimension " + dimension + " isn't loaded on this server"));
 
-	private static final SuggestionProvider<CommandSourceStack> CATEGORY_SUGGESTIONS =
-			(context, builder) -> SharedSuggestionProvider.suggest(Category.ids(), builder);
-
 	private final ModContext mod;
 
 	private WaypointCommand(ModContext mod) {
@@ -90,6 +85,9 @@ public final class WaypointCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher, ModContext mod) {
 		WaypointCommand command = new WaypointCommand(mod);
+		// Categories come from config.json and can change on /waypoints reload, so suggest the current ones.
+		SuggestionProvider<CommandSourceStack> categorySuggestions =
+				(context, builder) -> SharedSuggestionProvider.suggest(mod.categories().ids(), builder);
 		BiPredicate<CommandSourceStack, Waypoint> anyWaypoint = (source, waypoint) -> true;
 
 		dispatcher.register(Commands.literal("waypoints")
@@ -118,8 +116,8 @@ public final class WaypointCommand {
 				.then(Commands.literal("nearest")
 						.executes(context -> command.nearest(context.getSource(), null))
 						.then(Commands.argument("category", StringArgumentType.word())
-								.suggests(CATEGORY_SUGGESTIONS)
-								.executes(context -> command.nearest(context.getSource(), category(context)))))
+								.suggests(categorySuggestions)
+								.executes(context -> command.nearest(context.getSource(), command.category(context)))))
 
 				// ---- navigation
 				.then(Commands.literal("go")
@@ -139,6 +137,11 @@ public final class WaypointCommand {
 				.then(Commands.literal("favorites")
 						.executes(context -> command.listFavorites(context.getSource())))
 
+				// ---- admin
+				.then(Commands.literal("reload")
+						.requires(WaypointPermissions.requireReload())
+						.executes(context -> command.reload(context.getSource())))
+
 				// ---- xaero
 				.then(Commands.literal("xaero")
 						.then(command.nameArgument("name", anyWaypoint)
@@ -149,7 +152,7 @@ public final class WaypointCommand {
 						.requires(WaypointPermissions.requireAdd())
 						.then(Commands.argument("name", StringArgumentType.string())
 								.then(Commands.argument("category", StringArgumentType.word())
-										.suggests(CATEGORY_SUGGESTIONS)
+										.suggests(categorySuggestions)
 										// No coordinates: the executing entity's block position and dimension.
 										.executes(command::addHere)
 										.then(Commands.argument("pos", BlockPosArgument.blockPos())
@@ -180,11 +183,11 @@ public final class WaypointCommand {
 				// Brigadier always prefers a matching literal (add, info, ...) over this argument,
 				// so a category name can never shadow a subcommand.
 				.then(Commands.argument("category", StringArgumentType.word())
-						.suggests(CATEGORY_SUGGESTIONS)
-						.executes(context -> command.listCategory(context.getSource(), category(context), 1))
+						.suggests(categorySuggestions)
+						.executes(context -> command.listCategory(context.getSource(), command.category(context), 1))
 						.then(Commands.argument("page", IntegerArgumentType.integer(1))
 								.executes(context -> command.listCategory(context.getSource(),
-										category(context), page(context))))));
+										command.category(context), page(context))))));
 	}
 
 	// ------------------------------------------------------------------ browsing
@@ -192,20 +195,20 @@ public final class WaypointCommand {
 	private int listAll(CommandSourceStack source, int requestedPage) {
 		List<Waypoint> all = mod.waypoints().all();
 		if (all.isEmpty()) {
-			source.sendSuccess(() -> Component.literal("No shared waypoints yet. ")
+			reply(source, Component.literal("No shared waypoints yet. ")
 					.withStyle(ChatFormatting.GRAY)
 					.append(Component.literal("[Add one]").withStyle(style -> style
 							.withColor(ChatFormatting.YELLOW)
 							.withClickEvent(new ClickEvent.SuggestCommand("/waypoints add "))
 							.withHoverEvent(new HoverEvent.ShowText(
-									Component.literal("/waypoints add <name> <category> [x y z]"))))), false);
+									Component.literal("/waypoints add <name> <category> [x y z]"))))));
 			return 0;
 		}
 		Page<Waypoint> page = Page.of(all, requestedPage, mod.config().pageSize);
-		source.sendSuccess(() -> WaypointText.header("Shared Waypoints (" + all.size() + ")"), false);
+		reply(source, WaypointText.header("Shared Waypoints (" + all.size() + ")"));
 		sendGrouped(source, page.items());
 		if (page.count() > 1) {
-			source.sendSuccess(() -> WaypointText.pageFooter(page, "/waypoints page"), false);
+			reply(source, WaypointText.pageFooter(page, "/waypoints page"));
 		}
 		return page.items().size();
 	}
@@ -214,41 +217,57 @@ public final class WaypointCommand {
 		List<Waypoint> waypoints = mod.waypoints().inCategory(category);
 		Page<Waypoint> page = Page.of(waypoints, requestedPage, mod.config().pageSize);
 		Viewer viewer = viewer(source);
-		source.sendSuccess(() -> WaypointText.categoryHeader(category, waypoints.size()), false);
+		reply(source, WaypointText.categoryHeader(category, waypoints.size()));
 		if (waypoints.isEmpty()) {
-			source.sendSuccess(() -> WaypointText.muted("No waypoints in this category yet."), false);
+			reply(source, WaypointText.muted("No waypoints in this category yet."));
 		}
 		for (Waypoint waypoint : page.items()) {
-			source.sendSuccess(() -> WaypointText.line(waypoint, viewer), false);
+			reply(source, WaypointText.line(waypoint, viewer));
 		}
 		if (page.count() > 1) {
-			source.sendSuccess(() -> WaypointText.pageFooter(page, "/waypoints " + category.id()), false);
+			reply(source, WaypointText.pageFooter(page, "/waypoints " + category.id()));
 		}
 		return page.items().size();
 	}
 
 	private int listCategories(CommandSourceStack source) {
-		Map<Category, Integer> counts = mod.waypoints().countsByCategory();
-		source.sendSuccess(() -> WaypointText.header("Categories"), false);
-		for (Category category : Category.values()) {
-			source.sendSuccess(() -> WaypointText.categorySummary(category, counts.get(category)), false);
+		Map<String, Integer> counts = mod.waypoints().countsByCategory();
+		reply(source, WaypointText.header("Categories"));
+		for (Category category : mod.categories().all()) {
+			reply(source, WaypointText.categorySummary(category, counts.getOrDefault(category.id(), 0)));
 		}
-		return Category.values().length;
+		// Waypoints whose category was removed from config.json keep it; show those too.
+		counts.forEach((id, count) -> {
+			if (mod.categories().byId(id).isEmpty()) {
+				reply(source, WaypointText.categorySummary(mod.categories().resolve(id), count)
+						.copy().append(WaypointText.muted(" (not in config.json)")));
+			}
+		});
+		return mod.categories().all().size();
+	}
+
+	private int reload(CommandSourceStack source) {
+		mod.reload(source.getServer());
+		List<String> maps = mod.maps().activeMaps();
+		reply(source, WaypointText.success("Reloaded SharedWaypoints: " + mod.waypoints().size() + " waypoints, "
+				+ mod.categories().all().size() + " categories"
+				+ (maps.isEmpty() ? "" : ", markers on " + String.join(" and ", maps)) + "."));
+		return 1;
 	}
 
 	private int search(CommandSourceStack source, String query) {
 		List<Waypoint> results = mod.waypoints().search(query);
-		source.sendSuccess(() -> WaypointText.header("Search: " + query.trim() + " (" + results.size() + ")"), false);
+		reply(source, WaypointText.header("Search: " + query.trim() + " (" + results.size() + ")"));
 		if (results.isEmpty()) {
-			source.sendSuccess(() -> WaypointText.muted("Nothing matches. Searches names, descriptions and creators."), false);
+			reply(source, WaypointText.muted("Nothing matches. Searches names, descriptions and creators."));
 			return 0;
 		}
 		Viewer viewer = viewer(source);
 		results.stream().limit(MAX_SEARCH_RESULTS)
-				.forEach(waypoint -> source.sendSuccess(() -> WaypointText.line(waypoint, viewer), false));
+				.forEach(waypoint -> reply(source, WaypointText.line(waypoint, viewer)));
 		if (results.size() > MAX_SEARCH_RESULTS) {
-			source.sendSuccess(() -> WaypointText.muted("…and " + (results.size() - MAX_SEARCH_RESULTS)
-					+ " more. Try a longer search."), false);
+			reply(source, WaypointText.muted("…and " + (results.size() - MAX_SEARCH_RESULTS)
+					+ " more. Try a longer search."));
 		}
 		return results.size();
 	}
@@ -257,7 +276,7 @@ public final class WaypointCommand {
 		Waypoint waypoint = find(name);
 		boolean canEdit = WaypointPermissions.canEdit(source, waypoint);
 		for (Component line : WaypointText.info(waypoint, viewer(source), canEdit)) {
-			source.sendSuccess(() -> line, false);
+			reply(source, line);
 		}
 		return 1;
 	}
@@ -270,13 +289,13 @@ public final class WaypointCommand {
 		List<Waypoint> nearby = byDistance(viewer).stream()
 				.filter(waypoint -> viewer.distance(waypoint).orElse(Double.MAX_VALUE) <= radius)
 				.toList();
-		source.sendSuccess(() -> WaypointText.header("Within " + radius + "m (" + nearby.size() + ")"), false);
+		reply(source, WaypointText.header("Within " + radius + "m (" + nearby.size() + ")"));
 		if (nearby.isEmpty()) {
-			source.sendSuccess(() -> WaypointText.muted("Nothing that close. Try /waypoints nearest."), false);
+			reply(source, WaypointText.muted("Nothing that close. Try /waypoints nearest."));
 			return 0;
 		}
 		nearby.stream().limit(MAX_NEAR_RESULTS)
-				.forEach(waypoint -> source.sendSuccess(() -> WaypointText.distanceLine(waypoint, viewer), false));
+				.forEach(waypoint -> reply(source, WaypointText.distanceLine(waypoint, viewer)));
 		return nearby.size();
 	}
 
@@ -287,8 +306,8 @@ public final class WaypointCommand {
 				.filter(waypoint -> category == null || waypoint.category() == category)
 				.findFirst()
 				.orElseThrow(NOTHING_REACHABLE::create);
-		source.sendSuccess(() -> WaypointText.header("Nearest" + (category == null ? "" : " " + category.id())), false);
-		source.sendSuccess(() -> WaypointText.distanceLine(nearest, viewer), false);
+		reply(source, WaypointText.header("Nearest" + (category == null ? "" : " " + category.id())));
+		reply(source, WaypointText.distanceLine(nearest, viewer));
 		return 1;
 	}
 
@@ -311,9 +330,9 @@ public final class WaypointCommand {
 	private int stop(CommandSourceStack source) throws CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
 		boolean wasNavigating = mod.navigation().stop(player.getUUID());
-		source.sendSuccess(() -> wasNavigating
+		reply(source, wasNavigating
 				? WaypointText.success("Navigation stopped.")
-				: WaypointText.muted("You weren't navigating anywhere."), false);
+				: WaypointText.muted("You weren't navigating anywhere."));
 		return wasNavigating ? 1 : 0;
 	}
 
@@ -325,7 +344,7 @@ public final class WaypointCommand {
 				.orElseThrow(() -> DIMENSION_MISSING.create(waypoint.dimension()));
 		player.teleportTo(level, waypoint.x() + 0.5, waypoint.y(), waypoint.z() + 0.5, Set.of(),
 				player.getYRot(), player.getXRot(), true);
-		source.sendSuccess(() -> WaypointText.success("Teleported to " + waypoint.name()), false);
+		reply(source, WaypointText.success("Teleported to " + waypoint.name()));
 		return 1;
 	}
 
@@ -335,13 +354,13 @@ public final class WaypointCommand {
 		ServerPlayer player = source.getPlayerOrException();
 		Waypoint waypoint = find(name);
 		boolean nowFavorite = mod.favorites().toggle(player.getUUID(), waypoint.id());
-		source.sendSuccess(() -> nowFavorite
+		reply(source, nowFavorite
 				? Component.literal("★ ").withStyle(ChatFormatting.GOLD)
 						.append(WaypointText.success(waypoint.name() + " added to your favourites. "))
 						.append(Component.literal("[View favourites]").withStyle(style -> style
 								.withColor(ChatFormatting.YELLOW)
 								.withClickEvent(new ClickEvent.RunCommand("/waypoints favorites"))))
-				: WaypointText.muted("☆ " + waypoint.name() + " removed from your favourites."), false);
+				: WaypointText.muted("☆ " + waypoint.name() + " removed from your favourites."));
 		return 1;
 	}
 
@@ -351,13 +370,13 @@ public final class WaypointCommand {
 		List<Waypoint> favorites = mod.favorites().of(player.getUUID()).stream()
 				.map(id -> mod.waypoints().get(id))
 				.flatMap(Optional::stream)
-				.sorted(Comparator.comparing(Waypoint::category).thenComparing(Waypoint::name, String.CASE_INSENSITIVE_ORDER))
+				.sorted(WaypointStore.DISPLAY_ORDER)
 				.toList();
-		source.sendSuccess(() -> WaypointText.header("★ Your favourites (" + favorites.size() + ")"), false);
+		reply(source, WaypointText.header("★ Your favourites (" + favorites.size() + ")"));
 		if (favorites.isEmpty()) {
-			source.sendSuccess(() -> WaypointText.muted("None yet. Open a waypoint with /waypoints info and click [☆ Favourite]."), false);
+			reply(source, WaypointText.muted("None yet. Open a waypoint with /waypoints info and click [☆ Favourite]."));
 		}
-		favorites.forEach(waypoint -> source.sendSuccess(() -> WaypointText.line(waypoint, viewer), false));
+		favorites.forEach(waypoint -> reply(source, WaypointText.line(waypoint, viewer)));
 		return favorites.size();
 	}
 
@@ -402,8 +421,8 @@ public final class WaypointCommand {
 				Instant.now().truncatedTo(ChronoUnit.SECONDS));
 		mod.waypoints().add(waypoint);
 
-		source.sendSuccess(() -> WaypointText.success("Added waypoint " + name), false);
-		source.sendSuccess(() -> WaypointText.line(waypoint, viewer(source)), false);
+		reply(source, WaypointText.success("Added waypoint " + name));
+		reply(source, WaypointText.line(waypoint, viewer(source)));
 		warnIfUnsaved(source);
 		announce(source, creatorName, waypoint);
 		return 1;
@@ -429,7 +448,7 @@ public final class WaypointCommand {
 			throw CANNOT_REMOVE.create();
 		}
 		mod.waypoints().remove(waypoint.name());
-		source.sendSuccess(() -> WaypointText.success("Removed waypoint " + waypoint.name()), false);
+		reply(source, WaypointText.success("Removed waypoint " + waypoint.name()));
 		warnIfUnsaved(source);
 		return 1;
 	}
@@ -445,7 +464,7 @@ public final class WaypointCommand {
 			throw NAME_TAKEN.create(newName);
 		}
 		Waypoint renamed = mod.waypoints().update(waypoint.withName(newName));
-		source.sendSuccess(() -> WaypointText.success("Renamed " + waypoint.name() + " to " + renamed.name()), false);
+		reply(source, WaypointText.success("Renamed " + waypoint.name() + " to " + renamed.name()));
 		warnIfUnsaved(source);
 		return 1;
 	}
@@ -461,9 +480,9 @@ public final class WaypointCommand {
 			throw INVALID_TEXT.create(problem.get());
 		}
 		mod.waypoints().update(waypoint.withDescription(description));
-		source.sendSuccess(() -> description.isEmpty()
+		reply(source, description.isEmpty()
 				? WaypointText.success("Cleared the description of " + waypoint.name())
-				: WaypointText.success("Updated the description of " + waypoint.name()), false);
+				: WaypointText.success("Updated the description of " + waypoint.name()));
 		warnIfUnsaved(source);
 		return 1;
 	}
@@ -472,16 +491,16 @@ public final class WaypointCommand {
 
 	/** Sends waypoint lines with a category header in front of each new category. */
 	private void sendGrouped(CommandSourceStack source, List<Waypoint> waypoints) {
-		Map<Category, Integer> counts = mod.waypoints().countsByCategory();
+		Map<String, Integer> counts = mod.waypoints().countsByCategory();
 		Viewer viewer = viewer(source);
 		Category current = null;
 		for (Waypoint waypoint : waypoints) {
-			if (waypoint.category() != current) {
+			if (current == null || !waypoint.category().id().equals(current.id())) {
 				current = waypoint.category();
 				Category header = current;
-				source.sendSuccess(() -> WaypointText.categoryHeader(header, counts.get(header)), false);
+				reply(source, WaypointText.categoryHeader(header, counts.getOrDefault(header.id(), 0)));
 			}
-			source.sendSuccess(() -> WaypointText.line(waypoint, viewer), false);
+			reply(source, WaypointText.line(waypoint, viewer));
 		}
 	}
 
@@ -504,8 +523,8 @@ public final class WaypointCommand {
 
 	private void warnIfUnsaved(CommandSourceStack source) {
 		if (mod.waypoints().lastSaveFailed()) {
-			source.sendSuccess(() -> WaypointText.warning(
-					"Warning: could not write waypoints.json, the change is only in memory. See the server log."), false);
+			reply(source, WaypointText.warning(
+					"Warning: could not write waypoints.json, the change is only in memory. See the server log."));
 		}
 	}
 
@@ -523,9 +542,27 @@ public final class WaypointCommand {
 						waypoint -> Component.literal(waypoint.coordinates() + " (" + Dimensions.shortName(waypoint.dimension()) + ")")));
 	}
 
-	private static Category category(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+	private Category category(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		String id = string(context, "category");
-		return Category.byId(id).orElseThrow(() -> UNKNOWN_CATEGORY.create(id));
+		Optional<Category> category = mod.categories().byId(id);
+		if (category.isEmpty()) {
+			throw new SimpleCommandExceptionType(Component.literal("Unknown category \"" + id + "\". Use one of: "
+					+ String.join(", ", mod.categories().ids()))).create();
+		}
+		return category.get();
+	}
+
+	/**
+	 * Sends a reply to whoever ran the command. Vanilla drops command replies when the {@code sendCommandFeedback}
+	 * gamerule is off, but for /waypoints the reply <em>is</em> the result, so players get it anyway.
+	 */
+	private static void reply(CommandSourceStack source, Component message) {
+		ServerPlayer player = source.getPlayer();
+		if (player != null && !source.isSilent() && !player.commandSource().acceptsSuccess()) {
+			player.sendSystemMessage(message);
+		} else {
+			source.sendSuccess(() -> message, false);
+		}
 	}
 
 	private static int page(CommandContext<CommandSourceStack> context) {

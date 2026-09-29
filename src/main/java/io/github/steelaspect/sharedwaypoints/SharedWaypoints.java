@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
  *
  * <p>Everything here runs on the server only: the mod registers vanilla Brigadier commands and sends vanilla chat
  * components, boss bars, particles and titles, so unmodded clients (and Xaero's Minimap clients) can join without
- * installing it.
+ * installing it. BlueMap and squaremap are optional: markers are added only when one of them is installed.
  */
 public final class SharedWaypoints implements ModInitializer {
 	public static final String MOD_ID = "sharedwaypoints";
@@ -29,7 +29,12 @@ public final class SharedWaypoints implements ModInitializer {
 
 		// (Re)load from disk every time a server starts. In singleplayer this runs for each world opened.
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> context.load());
-		ServerLifecycleEvents.SERVER_STOPPING.register(server -> context.navigation().clear());
+		// Web maps (BlueMap, squaremap) set up their worlds while the server starts, so hook in afterwards.
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> context.maps().start(server));
+		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+			context.navigation().clear();
+			context.maps().stop();
+		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> context.navigation().tick(server));
 		ServerPlayConnectionEvents.DISCONNECT.register(
 				(handler, server) -> context.navigation().stop(handler.getPlayer().getUUID()));
