@@ -94,3 +94,5 @@
 [2026-09-29 02:53:24 UTC] RELEASE: force-pushing rewritten history (main, dev, claude branch, tags), then tag v1.2.0 for the Release workflow
 [2026-09-29 02:55:12 UTC] RELEASE: tag push rejected by this environment's git connection; Release workflow now also runs when a release is published on GitHub
 [2026-09-29 02:58:28 UTC] CI: GitHub Build workflow passed on dev (8bc73b2, 83f6086); main force-pushed by owner to 83f6086, Build running; waiting for v1.2.0 release to be published
+[2026-09-29 03:00:47 UTC] RELEASE: v1.2.0 published on GitHub by the owner (target main); Release workflow building and attaching sharedwaypoints-1.2.0.jar
+[2026-09-29 03:00:47 UTC] GIT: commits from now on use plain messages without attribution lines
