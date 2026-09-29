@@ -61,6 +61,8 @@ public final class WaypointMenuScreen extends Screen {
 	private Button teleportButton;
 	private Button removeButton;
 	private List<String> filterIds = List.of();
+	/** Whether the current layout has the Teleport button (it changes the last row). */
+	private boolean builtWithTeleport;
 	private int panelLeft;
 	private int bottom;
 	private int buttonsTop;
@@ -129,6 +131,7 @@ public final class WaypointMenuScreen extends Screen {
 		int half = (panelWidth - 4) / 2;
 		int third = (panelWidth - 8) / 3;
 		boolean teleport = ClientWaypoints.canTeleport();
+		builtWithTeleport = teleport;
 		buttonsTop = bottom - 3 * 22 + 2;
 		goButton = actionButton("▶ Go", panelLeft, 0, half, "Start the on-screen compass", this::go);
 		xaeroButton = actionButton("Add to Xaero", panelLeft + half + 4, 0, half, "", this::addToXaero);
@@ -174,8 +177,9 @@ public final class WaypointMenuScreen extends Screen {
 	private void onServerUpdate() {
 		List<String> ids = new ArrayList<>(List.of(ALL, FAVORITES));
 		ClientWaypoints.categories().forEach(category -> ids.add(category.id()));
-		if (!ids.equals(filterIds)) {
-			rebuildWidgets(); // categories changed: the filter button needs new values
+		if (!ids.equals(filterIds) || ClientWaypoints.canTeleport() != builtWithTeleport) {
+			// Categories or the player's rights changed: the filter values or the button row must be rebuilt.
+			rebuildWidgets();
 		} else {
 			refreshList();
 		}
@@ -331,6 +335,21 @@ public final class WaypointMenuScreen extends Screen {
 			minecraft.setScreen(this);
 		}, Component.literal("Remove \"" + waypoint.name() + "\"?"),
 				Component.literal("This removes it for everyone on the server."))));
+	}
+
+	/**
+	 * Sets the view (used by the client test): search text, filter ("all", "favorites" or a category id) and sort
+	 * ("category", "name" or "distance").
+	 */
+	public void setViewForTest(String query, String filterId, String sortName) {
+		search = query;
+		filter = switch (filterId) {
+			case "all" -> ALL;
+			case "favorites" -> FAVORITES;
+			default -> filterId;
+		};
+		sort = Sort.valueOf(sortName.toUpperCase(Locale.ROOT));
+		rebuildWidgets();
 	}
 
 	/** Selects a waypoint by name (used by the client test). */
