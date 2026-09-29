@@ -6,8 +6,27 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
+// Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-<version>.jar); builds from
+// any other branch, e.g. `dev`, are test builds (sharedwaypoints-dev-<version>.jar, version "<version>+dev" in-game),
+// so the two can never be mixed up. Force either with -Prelease=true / -Prelease=false.
+def gitBranch = ''
+try {
+	gitBranch = providers.exec {
+		commandLine 'git', 'rev-parse', '--abbrev-ref', 'HEAD'
+		ignoreExitValue = true
+	}.standardOutput.asText.get().trim()
+} catch (Exception ignored) {
+	// No git (e.g. building from a source zip): treated as a test build unless -Prelease=true.
+}
+if (gitBranch == 'HEAD') {
+	// Detached checkout (typical in CI): use the CI's branch name if it has one.
+	gitBranch = providers.environmentVariable('GITHUB_REF_NAME').getOrElse('')
+}
+def isRelease = project.hasProperty('release') ? project.property('release').toString().toBoolean() : gitBranch == 'main'
+def modVersion = isRelease ? project.version.toString() : "${project.version}+dev"
+
 base {
-	archivesName = project.archives_base_name
+	archivesName = isRelease ? project.archives_base_name : "${project.archives_base_name}-dev"
 }
 
 repositories {
@@ -78,7 +97,7 @@ test {
 }
 
 processResources {
-	def version = project.version
+	def version = modVersion
 	inputs.property "version", version
 
 	filesMatching("fabric.mod.json") {
