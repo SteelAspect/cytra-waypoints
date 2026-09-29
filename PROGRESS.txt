@@ -69,3 +69,8 @@
 [2026-09-29 02:33:36 UTC] BUILD: final clean build + unit tests + GameTest for 1.1.0
 [2026-09-29 02:34:10 UTC] BUILD PASS: 51/51 unit tests + GameTest; jar build/libs/sharedwaypoints-1.1.0.jar
 [2026-09-29 02:34:10 UTC] DONE: '10x cooler' update committed and pushed to dev (main untouched)
+[2026-09-29 02:37:30 UTC] STARTED: separate jar names for dev vs main builds; dev jar into build/libs
+[2026-09-29 02:37:30 UTC] FILE UPDATED: build.gradle (branch-based jar name: main -> sharedwaypoints-<v>.jar, other branches -> sharedwaypoints-dev-<v>.jar)
+[2026-09-29 02:38:40 UTC] FILE UPDATED: README.md (jar naming per branch)
+[2026-09-29 02:38:40 UTC] BUILD PASS: dev -> build/libs/sharedwaypoints-dev-1.1.0.jar (1.1.0+dev); main -> sharedwaypoints-1.0.0.jar; -Prelease=true -> sharedwaypoints-1.1.0.jar
+[2026-09-29 02:38:40 UTC] DONE: jar naming committed and pushed to dev; dev jar sent to user

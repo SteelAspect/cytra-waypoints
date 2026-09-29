@@ -43,8 +43,16 @@ sounds.
 ./gradlew build          # Windows: gradlew.bat build
 ```
 
-The jar to install is **`build/libs/sharedwaypoints-1.1.0.jar`**. `build/libs/sharedwaypoints-1.1.0-sources.jar` holds
-only the sources.
+The jar to install goes to **`build/libs/`**, and its name depends on the branch you build:
+
+| Built from | Jar in `build/libs/` | Version shown in-game |
+|---|---|---|
+| `main` (releases) | `sharedwaypoints-1.1.0.jar` | `1.1.0` |
+| `dev` or any other branch (test builds) | `sharedwaypoints-dev-1.1.0.jar` | `1.1.0+dev` |
+
+Force either with `./gradlew build -Prelease=true` or `-Prelease=false`. The `-sources.jar` next to it holds only the
+sources. `build/devlibs/` contains a development-only jar (still using Mojang names) that won't load on a normal
+server, so don't install that one.
 
 `build` also runs the unit tests. To start a real headless 1.21.11 server and run the end-to-end tests:
 
