@@ -97,3 +97,4 @@
 [2026-09-29 03:00:47 UTC] RELEASE: v1.2.0 published on GitHub by the owner (target main); Release workflow building and attaching sharedwaypoints-1.2.0.jar
 [2026-09-29 03:00:47 UTC] GIT: commits from now on use plain messages without attribution lines
 [2026-09-29 03:02:00 UTC] DONE: Release workflow succeeded (both runs); sharedwaypoints-1.2.0.jar (85,607 bytes) and changelog notes attached to https://github.com/SteelAspect/sharedwaypoints/releases/tag/v1.2.0
+[2026-09-29 03:06:01 UTC] MERGED: PR #1 (dev -> main) merged by request as 3a622d4; dev fast-forwarded to main
