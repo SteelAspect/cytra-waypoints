@@ -120,3 +120,4 @@
 [2026-09-29 17:53:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0
 [2026-09-29 17:56:46 UTC] FIX: menu layout (3 button rows, Edit screen replaces Rename/Description, shorter filter label, status without chat buttons); rerunning all tests
 [2026-09-29 17:58:33 UTC] BUILD PASS: 1.4.0 - unit tests, server GameTest (menu handler) and real-client GameTest (menu via J, add/favourite/edit, screenshots) all pass
+[2026-09-29 18:06:28 UTC] FIX: CI client test timed out loading the world (software GL on 2-core runner) -> render/simulation distance lowered; menu now rebuilds when teleport permission arrives (Teleport button was missing for ops); client test tours every screen (13 screenshots) and clicks Teleport
