@@ -92,3 +92,4 @@
 [2026-09-29 02:52:29 UTC] BUILD: clean build + unit tests + GameTest for 1.2.0
 [2026-09-29 02:53:24 UTC] BUILD PASS: 1.2.0 - 51/51 unit tests + GameTest
 [2026-09-29 02:53:24 UTC] RELEASE: force-pushing rewritten history (main, dev, claude branch, tags), then tag v1.2.0 for the Release workflow
+[2026-09-29 02:55:12 UTC] RELEASE: tag push rejected by this environment's git connection; Release workflow now also runs when a release is published on GitHub

@@ -45,11 +45,13 @@ Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
 
 1. Set `mod_version` in `gradle.properties` and add a `## <version>` section to `CHANGELOG.md`.
 2. Bring `main` up to date with `dev` and push.
-3. Tag and push: `git tag v<version> && git push origin v<version>`.
+3. Either push a tag (`git tag v<version> && git push origin v<version>`), or on GitHub go to
+   **Releases → Draft a new release**, create the tag `v<version>` on the right branch, and publish.
 
-The **Release** workflow (`.github/workflows/release.yml`) then checks that the tag matches `mod_version`, builds with
-`-Prelease=true`, and runs the unit tests and the GameTest. It creates the GitHub release with
-`sharedwaypoints-<version>.jar` attached, using that version's changelog section as the notes. The **Build**
+The **Release** workflow (`.github/workflows/release.yml`) handles both. It checks that the tag matches
+`mod_version`, builds with `-Prelease=true`, and runs the unit tests and the GameTest. Then it creates the release,
+or updates the one you published, with `sharedwaypoints-<version>.jar` attached. If the release has no notes, it
+fills them in from that version's changelog section. The **Build**
 workflow runs the same checks on every push to `main`/`dev` and on pull requests, and keeps the jar as a
 downloadable artifact.
 
