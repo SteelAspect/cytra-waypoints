@@ -15,7 +15,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class XaeroShareFormatTest {
 	private static Waypoint waypoint(String name, Category category, String dimension) {
-		return new Waypoint(name, category, 120, 64, -340, dimension, UUID.randomUUID(), "Tester", Instant.EPOCH);
+		return new Waypoint(UUID.randomUUID(), name, category, 120, 64, -340, dimension, null, UUID.randomUUID(), "Tester",
+				Instant.EPOCH);
 	}
 
 	@Test

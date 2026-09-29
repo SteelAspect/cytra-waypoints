@@ -1,5 +1,7 @@
 package io.github.steelaspect.sharedwaypoints.util;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
@@ -17,6 +19,12 @@ public final class Dimensions {
 	/** Full dimension id, e.g. {@code minecraft:the_nether}. */
 	public static String id(ResourceKey<Level> dimension) {
 		return dimension.identifier().toString();
+	}
+
+	/** Dimension key for a stored id, or null if the id is malformed. */
+	public static ResourceKey<Level> key(String dimensionId) {
+		Identifier identifier = Identifier.tryParse(dimensionId);
+		return identifier == null ? null : ResourceKey.create(Registries.DIMENSION, identifier);
 	}
 
 	/**

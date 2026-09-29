@@ -37,3 +37,35 @@
 [2026-09-29 02:07:57 UTC] BUILD PASS: final - 23/23 unit tests, GameTest passed, jar at build/libs/sharedwaypoints-1.0.0.jar
 [2026-09-29 02:07:57 UTC] DONE: all deliverables complete; committed and pushed to branch claude/loving-feynman-nw86fq
 [2026-09-29 02:19:37 UTC] WORKFLOW: main is locked (no pushes); all work and testing now happens on the dev branch
+[2026-09-29 02:21:44 UTC] STARTED: '10x cooler' update on dev - live navigation (boss-bar compass, beacon, nearest, nether conversion, teleport) + sharing & polish (announce, search, paging, descriptions, favourites, hover cards, near)
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/Waypoint.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/JsonFiles.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Gsons.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStore.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/FavoritesStore.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/config/ModConfig.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/nav/NavMath.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Dimensions.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/permission/WaypointPermissions.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/Formats.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Page.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/Viewer.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/WaypointText.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/nav/NavigationManager.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/ModContext.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/SharedWaypoints.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/command/WaypointCommand.java
+[2026-09-29 02:28:36 UTC] BUILD: compiling main sources
+[2026-09-29 02:29:15 UTC] BUILD PASS: main sources compile
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStoreTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/waypoint/FavoritesStoreTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/nav/NavMathTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/text/FormatsTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/gametest/java/io/github/steelaspect/sharedwaypoints/gametest/SharedWaypointsGameTest.java
+[2026-09-29 02:31:36 UTC] BUILD: build + unit tests + GameTest
+[2026-09-29 02:32:15 UTC] BUILD FAIL: GameTest - test left earlier output in the recorder (mod output correct); fixed test
+[2026-09-29 02:33:25 UTC] FILE UPDATED: README.md (navigation, near/nearest, search, paging, favourites, descriptions, config, teleport)
+[2026-09-29 02:33:36 UTC] FILE UPDATED: gradle.properties (version 1.1.0)
+[2026-09-29 02:33:36 UTC] BUILD: final clean build + unit tests + GameTest for 1.1.0
+[2026-09-29 02:34:10 UTC] BUILD PASS: 51/51 unit tests + GameTest; jar build/libs/sharedwaypoints-1.1.0.jar
+[2026-09-29 02:34:10 UTC] DONE: '10x cooler' update committed and pushed to dev (main untouched)
