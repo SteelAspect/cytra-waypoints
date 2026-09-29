@@ -36,3 +36,4 @@
 [2026-09-29 02:07:25 UTC] BUILD: final clean build + unit tests + GameTest
 [2026-09-29 02:07:57 UTC] BUILD PASS: final - 23/23 unit tests, GameTest passed, jar at build/libs/sharedwaypoints-1.0.0.jar
 [2026-09-29 02:07:57 UTC] DONE: all deliverables complete; committed and pushed to branch claude/loving-feynman-nw86fq
+[2026-09-29 02:19:37 UTC] WORKFLOW: main is locked (no pushes); all work and testing now happens on the dev branch
