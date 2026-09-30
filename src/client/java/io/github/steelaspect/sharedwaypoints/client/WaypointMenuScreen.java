@@ -27,7 +27,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * The waypoint menu: search, category/favourite filter and sort along the top, the list on the left, details and
- * every action for the selected waypoint on the right.
+ * every action for the selected waypoint on the right. The Routes button opens {@link RoutesScreen}.
  */
 public final class WaypointMenuScreen extends Screen {
 	private static final int MARGIN = 10;
@@ -144,6 +144,10 @@ public final class WaypointMenuScreen extends Screen {
 		teleportButton = actionButton("Teleport", panelLeft + 2 * (lastWidth + 4), 2, lastWidth, "Teleport there", this::teleport);
 		teleportButton.visible = teleport;
 
+		addRenderableWidget(Button.builder(Component.literal("Routes"), button -> minecraft.setScreen(new RoutesScreen(this)))
+				.bounds(width - MARGIN - 80 - 4 - 80, height - 26, 80, 20)
+				.tooltip(Tooltip.create(Component.literal("Routes: waypoints to visit one after another")))
+				.build());
 		addRenderableWidget(Button.builder(Component.literal("Done"), button -> onClose())
 				.bounds(width - MARGIN - 80, height - 26, 80, 20).build());
 
@@ -352,6 +356,11 @@ public final class WaypointMenuScreen extends Screen {
 		rebuildWidgets();
 	}
 
+	/** Opens the routes screen (used by the client test; players click Routes). */
+	public void openRoutesForTest() {
+		minecraft.setScreen(new RoutesScreen(this));
+	}
+
 	/** Selects a waypoint by name (used by the client test). */
 	public void selectForTest(String name) {
 		list.children().stream().filter(entry -> entry.waypoint.name().equals(name)).findFirst().ifPresent(list::setSelected);
@@ -436,10 +445,11 @@ public final class WaypointMenuScreen extends Screen {
 			return;
 		}
 		Optional<ResultPayload> result = ClientWaypoints.recentResult();
-		result.ifPresent(r -> graphics.drawString(font, font.plainSubstrByWidth(r.message(), width - 110), MARGIN, y,
+		result.ifPresent(r -> graphics.drawString(font, font.plainSubstrByWidth(r.message(), width - 190), MARGIN, y,
 				r.success() ? Colors.GREEN : Colors.RED));
 		if (result.isEmpty()) {
-			graphics.drawString(font, ClientWaypoints.waypoints().size() + " waypoints · J opens this menu", MARGIN, y, Colors.DARK_GRAY);
+			graphics.drawString(font, font.plainSubstrByWidth(ClientWaypoints.waypoints().size()
+					+ " waypoints · J opens this menu", width - 190), MARGIN, y, Colors.DARK_GRAY);
 		}
 	}
 

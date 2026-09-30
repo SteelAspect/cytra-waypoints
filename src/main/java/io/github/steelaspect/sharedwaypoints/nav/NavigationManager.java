@@ -4,6 +4,7 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +39,9 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>Everything is vanilla packets (boss bar, particles, titles, sound), so it works on unmodded clients.
  * Navigation between the Overworld and the Nether points at the matching portal spot (coordinates / 8 or * 8).
+ *
+ * <p>Following a {@link Route} is navigation to one stop at a time: arriving at a stop moves the compass on to the
+ * next one, and stops whose waypoint was deleted are skipped.
  */
 public final class NavigationManager {
 	private static final int UPDATE_INTERVAL = 5; // ticks between compass updates
@@ -50,11 +54,23 @@ public final class NavigationManager {
 	private final List<Consumer<UUID>> changeListeners = new ArrayList<>();
 	private long ticks;
 
+	/**
+	 * Where a player is on a route.
+	 *
+	 * @param routeId the route being followed
+	 * @param index   0-based index of the stop being navigated to
+	 */
+	public record RouteProgress(UUID routeId, int index) {
+	}
+
 	/** One player's navigation. */
 	private static final class Session {
-		final UUID waypointId;
+		UUID waypointId;
 		final ServerBossEvent bar;
-		/** Dimension the start distance was measured in; reset when the player changes dimension. */
+		/** The route being followed, or null for a single waypoint. */
+		UUID routeId;
+		int stopIndex;
+		/** Dimension the start distance was measured in; reset when the player changes dimension or stop. */
 		String measuredIn;
 		double startDistance;
 
@@ -93,6 +109,53 @@ public final class NavigationManager {
 		}
 	}
 
+	/**
+	 * Starts following a route at stop {@code fromIndex} (0-based); stops whose waypoint no longer exists are
+	 * skipped. Returns false if there is no stop left to go to.
+	 */
+	public boolean startRoute(ServerPlayer player, Route route, int fromIndex) {
+		Optional<Integer> first = nextExistingStop(route, fromIndex);
+		if (first.isEmpty()) {
+			return false;
+		}
+		stop(player.getUUID());
+		Waypoint waypoint = context.waypoints().get(route.stops().get(first.get())).orElseThrow();
+		ServerBossEvent bar = new ServerBossEvent(Component.literal(waypoint.name()),
+				barColor(waypoint.category()), BossEvent.BossBarOverlay.NOTCHED_10);
+		bar.addPlayer(player);
+		Session session = new Session(waypoint.id(), bar);
+		session.routeId = route.id();
+		session.stopIndex = first.get();
+		sessions.put(player.getUUID(), session);
+		player.sendSystemMessage(WaypointText.routeStarted(route, session.stopIndex, waypoint));
+		if (!update(player, session, true)) {
+			stop(player.getUUID());
+		} else {
+			changed(player.getUUID());
+		}
+		return true;
+	}
+
+	/**
+	 * Skips the stop a player is heading to and moves on to the next one of their route. Returns false if they
+	 * aren't following a route; finishing the route by skipping the last stop counts as a skip.
+	 */
+	public boolean skip(ServerPlayer player) {
+		Session session = sessions.get(player.getUUID());
+		if (session == null || session.routeId == null) {
+			return false;
+		}
+		Optional<Route> route = context.routes().get(session.routeId);
+		if (route.isEmpty() || !advance(session, route.get())) {
+			routeFinished(player, route.map(Route::name).orElse("the route"));
+			stop(player.getUUID());
+		} else {
+			update(player, session, false);
+			changed(player.getUUID());
+		}
+		return true;
+	}
+
 	/** Stops a player's navigation; returns whether there was one. */
 	public boolean stop(UUID playerId) {
 		Session session = sessions.remove(playerId);
@@ -107,6 +170,14 @@ public final class NavigationManager {
 	/** Id of the waypoint a player is navigating to. */
 	public Optional<UUID> destinationOf(UUID playerId) {
 		return Optional.ofNullable(sessions.get(playerId)).map(session -> session.waypointId);
+	}
+
+	/** The route a player is following and which stop they're heading to. */
+	public Optional<RouteProgress> routeOf(UUID playerId) {
+		Session session = sessions.get(playerId);
+		return session == null || session.routeId == null
+				? Optional.empty()
+				: Optional.of(new RouteProgress(session.routeId, session.stopIndex));
 	}
 
 	/** Stops everything (server stopping). */
@@ -136,12 +207,33 @@ public final class NavigationManager {
 
 	/** Refreshes one compass; returns false when navigation should end. */
 	private boolean update(ServerPlayer player, Session session, boolean particles) {
+		Optional<Route> route = Optional.empty();
+		if (session.routeId != null) {
+			route = context.routes().get(session.routeId);
+			if (route.isEmpty()) {
+				// The route was deleted: finish the current stop as ordinary navigation.
+				session.routeId = null;
+				player.sendSystemMessage(WaypointText.warning("That route was deleted; still navigating to this stop."));
+			}
+		}
 		Optional<Waypoint> found = context.waypoints().get(session.waypointId);
 		if (found.isEmpty()) {
-			player.sendSystemMessage(WaypointText.warning("Navigation stopped: that waypoint was removed."));
-			return false;
+			if (route.isPresent() && advance(session, route.get())) {
+				player.sendSystemMessage(WaypointText.warning("That stop was removed; heading to the next one."));
+				found = context.waypoints().get(session.waypointId);
+			} else {
+				player.sendSystemMessage(WaypointText.warning("Navigation stopped: that waypoint was removed."));
+				return false;
+			}
 		}
 		Waypoint waypoint = found.get();
+		if (route.isPresent()) {
+			int at = currentIndex(route.get(), session);
+			if (at >= 0) {
+				session.stopIndex = at; // stops were moved or dropped around this one
+			}
+		}
+		String stopLabel = route.map(r -> "[" + (session.stopIndex + 1) + "/" + r.stops().size() + "] ").orElse("");
 
 		// Respawning creates a new ServerPlayer object; move the bar over to it.
 		if (!session.bar.getPlayers().contains(player)) {
@@ -155,7 +247,7 @@ public final class NavigationManager {
 		if (projected.isEmpty()) {
 			session.measuredIn = null;
 			session.bar.setProgress(0f);
-			session.bar.setName(Component.literal("✦ " + waypoint.name()).withStyle(waypoint.category().color())
+			session.bar.setName(Component.literal(stopLabel + "✦ " + waypoint.name()).withStyle(waypoint.category().color())
 					.append(Component.literal("  is in " + Dimensions.shortName(waypoint.dimension())
 							+ " — travel there to continue").withStyle(ChatFormatting.GRAY)));
 			return true;
@@ -171,17 +263,102 @@ public final class NavigationManager {
 		}
 
 		if (!target.viaPortal() && Math.hypot(distance, heightDifference) <= context.config().arrivalRadius) {
+			if (route.isPresent()) {
+				return arriveAtStop(player, session, route.get(), waypoint);
+			}
 			arrive(player, waypoint);
 			return false;
 		}
 
 		session.bar.setProgress((float) Math.clamp(1.0 - distance / session.startDistance, 0.0, 1.0));
-		session.bar.setName(compassText(player, waypoint, target, distance, heightDifference));
+		session.bar.setName(Component.literal(stopLabel).withStyle(ChatFormatting.GRAY)
+				.append(compassText(player, waypoint, target, distance, heightDifference)));
 
 		if (particles && context.config().navigationParticles && !target.viaPortal() && distance <= PARTICLE_RANGE) {
 			beacon(player, waypoint, target);
 		}
 		return true;
+	}
+
+	/** Reached a route stop: announce it and move on, or finish the route. Returns whether to keep navigating. */
+	private boolean arriveAtStop(ServerPlayer player, Session session, Route route, Waypoint waypoint) {
+		int number = session.stopIndex + 1;
+		if (!advance(session, route)) {
+			arrive(player, waypoint);
+			routeFinished(player, route.name());
+			return false;
+		}
+		Waypoint next = context.waypoints().get(session.waypointId).orElseThrow();
+		title(player, Component.literal("Stop " + number + "/" + route.stops().size()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
+				Component.literal(waypoint.name()).withStyle(waypoint.category().color()));
+		ding(player);
+		player.sendSystemMessage(Component.literal("✔ " + number + "/" + route.stops().size() + " ").withStyle(ChatFormatting.GREEN)
+				.append(WaypointText.categoryTag(waypoint.category()))
+				.append(Component.literal(" " + waypoint.name()).withStyle(ChatFormatting.WHITE))
+				.append(Component.literal("  Next: ").withStyle(ChatFormatting.GRAY))
+				.append(Component.literal(next.name()).withStyle(next.category().color())));
+		changed(player.getUUID());
+		return true;
+	}
+
+	/**
+	 * Points a session at the next stop of its route that still exists. Returns false (session unchanged) if
+	 * there is none. Works out where the player really is first, because the route may have been edited (stops
+	 * dropped, moved, or deleted with their waypoint) since the session last looked.
+	 */
+	private boolean advance(Session session, Route route) {
+		int at = currentIndex(route, session);
+		// If the current stop left the route, the stop that took its place is the next one.
+		Optional<Integer> next = nextExistingStop(route, at >= 0 ? at + 1 : session.stopIndex);
+		if (next.isEmpty()) {
+			return false;
+		}
+		session.stopIndex = next.get();
+		session.waypointId = route.stops().get(next.get());
+		session.measuredIn = null;
+		return true;
+	}
+
+	/**
+	 * Index of the session's waypoint in the route: its remembered position if that still matches, otherwise the
+	 * occurrence nearest to it (a waypoint may be on a route more than once), or -1 if it isn't on the route.
+	 */
+	private static int currentIndex(Route route, Session session) {
+		List<UUID> stops = route.stops();
+		if (session.stopIndex >= 0 && session.stopIndex < stops.size() && stops.get(session.stopIndex).equals(session.waypointId)) {
+			return session.stopIndex;
+		}
+		int best = -1;
+		for (int i = 0; i < stops.size(); i++) {
+			if (stops.get(i).equals(session.waypointId)
+					&& (best < 0 || Math.abs(i - session.stopIndex) < Math.abs(best - session.stopIndex))) {
+				best = i;
+			}
+		}
+		return best;
+	}
+
+	/** Index of the first stop at or after {@code from} whose waypoint still exists. */
+	private Optional<Integer> nextExistingStop(Route route, int from) {
+		for (int i = Math.max(from, 0); i < route.stops().size(); i++) {
+			if (context.waypoints().get(route.stops().get(i)).isPresent()) {
+				return Optional.of(i);
+			}
+		}
+		return Optional.empty();
+	}
+
+	private static void routeFinished(ServerPlayer player, String routeName) {
+		title(player, Component.literal("Route complete!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
+				Component.literal(routeName).withStyle(ChatFormatting.YELLOW));
+		player.sendSystemMessage(Component.literal("⚑ Finished the route ").withStyle(ChatFormatting.GREEN)
+				.append(Component.literal(routeName).withStyle(ChatFormatting.WHITE)));
+	}
+
+	private static void title(ServerPlayer player, Component title, Component subtitle) {
+		player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 40, 15));
+		player.connection.send(new ClientboundSetSubtitleTextPacket(subtitle));
+		player.connection.send(new ClientboundSetTitleTextPacket(title));
 	}
 
 	/** e.g. {@code ↗ Main Storage  340m  ▲12} or {@code ⟳ Portal spot for Hub — take a Nether portal here}. */
@@ -223,18 +400,20 @@ public final class NavigationManager {
 	}
 
 	private static void arrive(ServerPlayer player, Waypoint waypoint) {
-		player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 40, 15));
-		player.connection.send(new ClientboundSetSubtitleTextPacket(
-				Component.literal(waypoint.name()).withStyle(waypoint.category().color())));
-		player.connection.send(new ClientboundSetTitleTextPacket(
-				Component.literal("Arrived!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)));
-		player.connection.send(new ClientboundSoundPacket(
-				BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.PLAYER_LEVELUP), SoundSource.PLAYERS,
-				player.getX(), player.getY(), player.getZ(), 0.6f, 1.3f, player.getRandom().nextLong()));
+		title(player, Component.literal("Arrived!").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD),
+				Component.literal(waypoint.name()).withStyle(waypoint.category().color()));
+		ding(player);
 		player.sendSystemMessage(Component.literal("✔ Arrived at ").withStyle(ChatFormatting.GREEN)
 				.append(WaypointText.categoryTag(waypoint.category()))
 				.append(Component.literal(" " + waypoint.name()).withStyle(ChatFormatting.WHITE)));
 	}
+
+	private static void ding(ServerPlayer player) {
+		player.connection.send(new ClientboundSoundPacket(
+				BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.PLAYER_LEVELUP), SoundSource.PLAYERS,
+				player.getX(), player.getY(), player.getZ(), 0.6f, 1.3f, player.getRandom().nextLong()));
+	}
+
 
 	/** Boss bars only have seven colours; this picks the closest one to the category's chat colour. */
 	static BossEvent.BossBarColor barColor(Category category) {

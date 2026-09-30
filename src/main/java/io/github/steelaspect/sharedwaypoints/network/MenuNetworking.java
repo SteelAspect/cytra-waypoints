@@ -6,6 +6,7 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import io.github.steelaspect.sharedwaypoints.permission.WaypointPermissions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -89,7 +90,7 @@ public final class MenuNetworking {
 	public SyncPayload snapshot(ServerPlayer player) {
 		CommandSourceStack source = player.createCommandSourceStack();
 		if (!WaypointPermissions.canView(player)) {
-			return new SyncPayload(List.of(), List.of(), false, false, null);
+			return new SyncPayload(List.of(), List.of(), false, false, null, List.of(), false, null);
 		}
 		Set<UUID> favorites = mod.favorites().of(player.getUUID());
 		Map<String, SyncPayload.CategoryData> categories = new LinkedHashMap<>();
@@ -105,8 +106,18 @@ public final class MenuNetworking {
 					WaypointPermissions.canEdit(source, waypoint), WaypointPermissions.canRemove(source, waypoint),
 					favorites.contains(waypoint.id())));
 		}
+		List<SyncPayload.RouteData> routes = new ArrayList<>();
+		for (Route route : mod.routes().all()) {
+			routes.add(new SyncPayload.RouteData(route.id(), route.name(), route.stops(), route.description(),
+					route.creatorName(), WaypointPermissions.canEdit(source, route),
+					WaypointPermissions.canRemove(source, route)));
+		}
+		SyncPayload.RouteProgressData onRoute = mod.navigation().routeOf(player.getUUID())
+				.map(progress -> new SyncPayload.RouteProgressData(progress.routeId(), progress.index()))
+				.orElse(null);
 		return new SyncPayload(List.copyOf(categories.values()), waypoints, WaypointPermissions.canAdd(source),
-				WaypointPermissions.canTeleport(source), mod.navigation().destinationOf(player.getUUID()).orElse(null));
+				WaypointPermissions.canTeleport(source), mod.navigation().destinationOf(player.getUUID()).orElse(null),
+				routes, WaypointPermissions.canCreateRoute(source), onRoute);
 	}
 
 	private static SyncPayload.CategoryData categoryData(Category category) {
@@ -138,11 +149,24 @@ public final class MenuNetworking {
 				case ADD -> "waypoints add " + quoted(arg(args, 0)) + " " + matching(arg(args, 1), CATEGORY_ID)
 						+ " " + Integer.parseInt(arg(args, 2)) + " " + Integer.parseInt(arg(args, 3))
 						+ " " + Integer.parseInt(arg(args, 4)) + " " + matching(arg(args, 5), DIMENSION_ID);
+				case ROUTE_GO -> "waypoints route go " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1));
+				case ROUTE_SKIP -> "waypoints route skip";
+				case ROUTE_CREATE -> "waypoints route create " + quoted(arg(args, 0));
+				case ROUTE_ADD -> "waypoints route add " + routeName(args, 0) + " " + name(args, 1);
+				case ROUTE_DROP -> "waypoints route drop " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1));
+				case ROUTE_MOVE -> "waypoints route move " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1))
+						+ " " + Integer.parseInt(arg(args, 2));
+				case ROUTE_RENAME -> "waypoints route rename " + routeName(args, 0) + " " + quoted(arg(args, 1));
+				case ROUTE_DESCRIBE -> {
+					String text = oneLine(arg(args, 1));
+					yield "waypoints route describe " + routeName(args, 0) + (text.isEmpty() ? "" : " " + text);
+				}
+				case ROUTE_DELETE -> "waypoints route delete " + routeName(args, 0);
 			};
 		} catch (BadRequest e) {
 			return new ResultPayload(false, e.getMessage());
 		} catch (NumberFormatException e) {
-			return new ResultPayload(false, "Coordinates must be whole numbers");
+			return new ResultPayload(false, "Numbers must be whole numbers");
 		}
 		if (command == null) {
 			pushTo(player);
@@ -219,6 +243,16 @@ public final class MenuNetworking {
 		try {
 			UUID id = UUID.fromString(arg(args, index));
 			return quoted(mod.waypoints().get(id).orElseThrow(() -> new BadRequest("That waypoint no longer exists")).name());
+		} catch (IllegalArgumentException e) {
+			throw new BadRequest("Incomplete request from the menu");
+		}
+	}
+
+	/** The (quoted) current name of the route whose id is argument {@code index}. */
+	private String routeName(List<String> args, int index) throws BadRequest {
+		try {
+			UUID id = UUID.fromString(arg(args, index));
+			return quoted(mod.routes().get(id).orElseThrow(() -> new BadRequest("That route no longer exists")).name());
 		} catch (IllegalArgumentException e) {
 			throw new BadRequest("Incomplete request from the menu");
 		}

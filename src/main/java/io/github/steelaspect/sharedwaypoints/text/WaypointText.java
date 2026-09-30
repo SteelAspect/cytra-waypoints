@@ -5,6 +5,7 @@ import io.github.steelaspect.sharedwaypoints.nav.NavMath;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.util.Page;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -149,6 +150,131 @@ public final class WaypointText {
 		return Component.literal("➜ Navigating to ").withStyle(ChatFormatting.GREEN)
 				.append(Component.literal(waypoint.name()).withStyle(waypoint.category().color()))
 				.append(Component.literal(" — follow the compass at the top of your screen. ").withStyle(ChatFormatting.GRAY))
+				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/waypoints stop"), "Stop navigating"));
+	}
+
+	// ----------------------------------------------------------------- routes
+
+	/** Command for a route subcommand, e.g. {@code /waypoints route go "Nether Tour"}. */
+	public static String routeCommand(String subcommand, String routeName) {
+		return "/waypoints route " + subcommand + " " + StringArgumentType.escapeIfRequired(routeName);
+	}
+
+	/** One line of the route list: {@code [Route] Nether Tour — 5 stops · 1.2km [Go] [Info]}. */
+	public static MutableComponent routeLine(Route route, List<Waypoint> stops, boolean isPlayer) {
+		MutableComponent hover = Component.literal(route.name()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+		route.descriptionText().ifPresent(description -> hover.append(
+				Component.literal("\n“" + description + "”").withStyle(ChatFormatting.WHITE, ChatFormatting.ITALIC)));
+		for (int i = 0; i < stops.size(); i++) {
+			Waypoint stop = stops.get(i);
+			hover.append(Component.literal("\n" + (i + 1) + ". ").withStyle(ChatFormatting.GRAY))
+					.append(Component.literal(stop.name()).withStyle(stop.category().color()));
+		}
+		hover.append(Component.literal("\nCreated by " + route.creatorName()).withStyle(ChatFormatting.DARK_GRAY))
+				.append(Component.literal("\nClick for details").withStyle(ChatFormatting.YELLOW));
+
+		MutableComponent line = Component.literal("[Route] ").withStyle(ChatFormatting.GOLD)
+				.append(Component.literal(route.name()).withStyle(style -> style
+						.withColor(ChatFormatting.WHITE)
+						.withClickEvent(new ClickEvent.RunCommand(routeCommand("info", route.name())))
+						.withHoverEvent(new HoverEvent.ShowText(hover))))
+				.append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
+				.append(Component.literal(routeSummary(stops)).withStyle(ChatFormatting.GRAY));
+		if (isPlayer && !stops.isEmpty()) {
+			line.append(" ").append(button("[Go]", ChatFormatting.GREEN,
+					new ClickEvent.RunCommand(routeCommand("go", route.name())), "Follow this route stop by stop"));
+		}
+		return line.append(" ").append(button("[Info]", ChatFormatting.AQUA,
+				new ClickEvent.RunCommand(routeCommand("info", route.name())), "Show every stop"));
+	}
+
+	/** "5 stops · 1.2km", "1 stop", "no stops yet". */
+	public static String routeSummary(List<Waypoint> stops) {
+		if (stops.isEmpty()) {
+			return "no stops yet";
+		}
+		String count = stops.size() + (stops.size() == 1 ? " stop" : " stops");
+		return stops.size() < 2 ? count : count + " · " + NavMath.formatDistance(NavMath.routeLength(stops));
+	}
+
+	/**
+	 * Multi-line details for {@code /waypoints route info}: the numbered stops, with editing buttons for players
+	 * who may change the route.
+	 */
+	public static List<Component> routeInfo(Route route, List<Waypoint> stops, Viewer viewer, boolean canEdit,
+			boolean canRemove) {
+		List<Component> lines = new ArrayList<>();
+		lines.add(Component.literal("=== ").withStyle(ChatFormatting.YELLOW)
+				.append(Component.literal("Route: " + route.name()).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD))
+				.append(Component.literal(" ===").withStyle(ChatFormatting.YELLOW)));
+		route.descriptionText().ifPresent(description ->
+				lines.add(Component.literal("  “" + description + "”").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)));
+		lines.add(Component.literal("  " + routeSummary(stops) + " · created by " + route.creatorName() + ", "
+				+ Formats.relativeAge(route.created(), Instant.now())).withStyle(ChatFormatting.GRAY));
+		if (stops.isEmpty()) {
+			lines.add(muted("  Add stops with /waypoints route add " + StringArgumentType.escapeIfRequired(route.name())
+					+ " <waypoint>"));
+		}
+		for (int i = 0; i < stops.size(); i++) {
+			Waypoint stop = stops.get(i);
+			int number = i + 1;
+			MutableComponent line = Component.literal("  " + number + ". ").withStyle(ChatFormatting.GRAY)
+					.append(categoryTag(stop.category()))
+					.append(" ")
+					.append(name(stop, viewer))
+					.append(Component.literal(" — " + stop.coordinates() + " (" + Dimensions.shortName(stop.dimension()) + ")")
+							.withStyle(ChatFormatting.DARK_GRAY));
+			if (viewer.isPlayer()) {
+				line.append(" ").append(button("[Go from here]", ChatFormatting.GREEN,
+						new ClickEvent.RunCommand(routeCommand("go", route.name()) + " " + number),
+						"Follow the route starting at stop " + number));
+			}
+			if (canEdit) {
+				if (i > 0) {
+					line.append(" ").append(button("[↑]", ChatFormatting.GRAY,
+							new ClickEvent.RunCommand(routeCommand("move", route.name()) + " " + number + " " + (number - 1)),
+							"Move this stop up"));
+				}
+				line.append(" ").append(button("[✕]", ChatFormatting.RED,
+						new ClickEvent.RunCommand(routeCommand("drop", route.name()) + " " + number),
+						"Remove this stop from the route (the waypoint stays)"));
+			}
+			lines.add(line);
+		}
+
+		MutableComponent buttons = Component.literal("  ");
+		if (viewer.isPlayer() && !stops.isEmpty()) {
+			buttons.append(button("[Go]", ChatFormatting.GREEN,
+					new ClickEvent.RunCommand(routeCommand("go", route.name())), "Follow this route stop by stop")).append(" ");
+		}
+		if (canEdit) {
+			buttons.append(button("[+ Stop]", ChatFormatting.YELLOW,
+					new ClickEvent.SuggestCommand(routeCommand("add", route.name()) + " "),
+					"Add a waypoint as the last stop")).append(" ");
+			buttons.append(button("[Describe]", ChatFormatting.GRAY,
+					new ClickEvent.SuggestCommand(routeCommand("describe", route.name()) + " "),
+					"Write a short note for this route")).append(" ");
+		}
+		if (canRemove) {
+			buttons.append(button("[Delete]", ChatFormatting.RED,
+					new ClickEvent.SuggestCommand(routeCommand("delete", route.name())),
+					"Delete this route (its waypoints stay). Press Enter to confirm."));
+		}
+		lines.add(buttons);
+		return lines;
+	}
+
+	/** Chat confirmation when a route is started. */
+	public static Component routeStarted(Route route, int stopIndex, Waypoint firstStop) {
+		return Component.literal("➜ Following route ").withStyle(ChatFormatting.GREEN)
+				.append(Component.literal(route.name()).withStyle(ChatFormatting.GOLD))
+				.append(Component.literal(" — stop " + (stopIndex + 1) + "/" + route.stops().size() + ": ")
+						.withStyle(ChatFormatting.GRAY))
+				.append(Component.literal(firstStop.name()).withStyle(firstStop.category().color()))
+				.append(" ")
+				.append(button("[Skip stop]", ChatFormatting.YELLOW, new ClickEvent.RunCommand("/waypoints route skip"),
+						"Go straight to the next stop"))
+				.append(" ")
 				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/waypoints stop"), "Stop navigating"));
 	}
 

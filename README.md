@@ -2,7 +2,7 @@
 
 # SharedWaypoints
 
-[![Download 1.4.1](https://img.shields.io/badge/download-1.4.1-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 1.5.0](https://img.shields.io/badge/download-1.5.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
@@ -10,8 +10,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A shared waypoint list for your Fabric server.** Players browse waypoints in chat, add them to
-**Xaero's Minimap** with a click, navigate to them with a **live on-screen compass**, and see them on your
-**BlueMap or squaremap** web map.
+**Xaero's Minimap** with a click, navigate to them with a **live on-screen compass**, follow **routes** stop by stop,
+and see everything on your **BlueMap or squaremap** web map.
 
 Only the server needs the mod. Players join with a vanilla client or with Xaero's Minimap, with nothing extra to
 install. Players who **also** install it on their client get an optional **waypoint menu** (press **J**).
@@ -50,22 +50,37 @@ install. Players who **also** install it on their client get an optional **waypo
   finds the closest one.
 - **Teleport** for ops: a **[Teleport]** button and `/waypoints tp`.
 
+**Routes**
+- A **route** is a named list of waypoints to visit in order, e.g. a Nether highway tour or a round of your farms.
+- **[Go]** on a route and the compass takes you to each stop in turn. When you arrive it shows "Stop 2/5" and moves
+  on to the next stop by itself. **[Skip stop]** jumps ahead, and you can start from any stop.
+- Anyone can create routes. Creators (and ops) add, remove and reorder stops, and rename, describe or delete the
+  route. Deleting a waypoint removes it from every route; deleting a route keeps its waypoints.
+- Routes show their stop count and total length (Nether legs counted in the Nether), and appear as gold lines on
+  web maps.
+
 **Optional client menu**
 - Install the same jar on your client and press **J** on a server that runs SharedWaypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
 - Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
   **Favourite**, **Edit** (name and description), **Remove**, **Teleport** (ops) and **+ Add** with your position
   pre-filled.
+- A **Routes** screen lists every route and its stops. It has Start / Stop, Skip stop, **+ Stop** (pick a
+  waypoint), **− Stop**, **↑ / ↓** to reorder, Edit and Delete.
 - The server still decides everything, so permissions are the same as in chat. The menu updates live when
   anyone changes a waypoint. Players without the client mod keep using chat as before.
-- The **[player guide](docs/PLAYER-GUIDE.md)** explains how to install the menu and what every button does.
+- The **[player guide](docs/PLAYER-GUIDE.md)** explains how to install the menu, what every button does, and how
+  to use routes.
+- The menu needs a matching mod version on both sides: 1.5.0 or newer on the client and on the server. If one side is
+  older, J says so, and chat keeps working as normal.
 
   ![The waypoint menu](docs/images/client-menu.png)
 
 **Web maps**
 - **BlueMap and squaremap:** if either is installed, every waypoint shows up on the web map in a
   toggleable "Shared Waypoints" layer. Pins use the category colour, and clicking one shows its details.
-- **Always in sync:** adding, renaming or removing a waypoint updates the map straight away.
+  Routes are drawn as gold lines between their stops.
+- **Always in sync:** adding, renaming or removing a waypoint or route updates the map straight away.
 
 **For server owners**
 - **Your own categories:** shops, mines, farms, whatever fits your server, each with its own colour (see
@@ -116,6 +131,17 @@ The mod also works in singleplayer and LAN worlds.
 | `/waypoints describe <name> [text]` | Set a description (max 120 characters). Leave the text out to clear it |
 | `/waypoints remove <name>` | Remove a waypoint |
 | `/waypoints tp <name>` | Teleport to a waypoint (ops) |
+| `/waypoints route [list]` | List routes with their stop count and length |
+| `/waypoints route info <route>` | A route's numbered stops, with buttons |
+| `/waypoints route go <route> [stop]` | Follow a route, optionally starting at a later stop |
+| `/waypoints route skip` | Go straight to the next stop |
+| `/waypoints route create <name>` | Create an empty route |
+| `/waypoints route add <route> <waypoint>` | Add a waypoint as the last stop (up to 64 stops) |
+| `/waypoints route drop <route> <stop>` | Remove stop number *n* (the waypoint stays) |
+| `/waypoints route move <route> <from> <to>` | Move a stop to another position |
+| `/waypoints route rename <old> <new>` | Rename a route |
+| `/waypoints route describe <route> [text]` | Set or clear a route's description |
+| `/waypoints route delete <route>` | Delete a route (its waypoints stay) |
 | `/waypoints reload` | Reload `config.json`, waypoints and favourites from disk (ops) |
 | `/waypoints xaero <name>` | Send the Xaero share message (what **[Add to Xaero]** runs) |
 
@@ -130,10 +156,11 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 
 | Node | Default |
 |---|---|
-| `sharedwaypoints.view` | everyone: list, search, info, navigate, favourites, Xaero |
+| `sharedwaypoints.view` | everyone: list, search, info, navigate, follow routes, favourites, Xaero |
 | `sharedwaypoints.add` | everyone |
-| `sharedwaypoints.edit` | op level 2, and creators can always rename or describe their own waypoints |
-| `sharedwaypoints.remove` | op level 2, and creators can always remove their own waypoints |
+| `sharedwaypoints.route` | everyone: create routes |
+| `sharedwaypoints.edit` | op level 2, and creators can always rename or describe their own waypoints and change their own routes |
+| `sharedwaypoints.remove` | op level 2, and creators can always remove their own waypoints and routes |
 | `sharedwaypoints.teleport` | op level 2 |
 | `sharedwaypoints.reload` | op level 2 |
 
@@ -211,6 +238,24 @@ Waypoints are stored in `config/sharedwaypoints/waypoints.json` and saved after 
   entries are skipped with a warning.
 - If the file can't be read at all, it's kept as `waypoints.json.broken-<time>` rather than overwritten.
 - Favourites are stored per player in `favorites.json`.
+- Routes are stored in `routes.json`, with each stop as a waypoint `id`:
+
+```json
+{
+  "version": 1,
+  "routes": [
+    {
+      "id": "9b2e41f0-3c55-4a1e-8d7f-0f4a6c1d2e33",
+      "name": "Farm Run",
+      "stops": ["3f1c2b8e-6a0d-4e53-9d7c-2b1f6e4a9c10", "7d0e5a92-1b4f-4c3a-9e2d-5f6a7b8c9d01"],
+      "description": "Collect everything before the raid",
+      "creatorUuid": "8667ba71-b85a-4004-af54-457a9734eed7",
+      "creatorName": "Steve",
+      "created": "2026-09-30T12:00:00Z"
+    }
+  ]
+}
+```
 
 ## Xaero's Minimap
 

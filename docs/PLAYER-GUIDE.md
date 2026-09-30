@@ -44,6 +44,8 @@ distance.
 **Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates, its
 description, and who added it and when.
 
+**Bottom right:** **Routes** opens the [routes screen](#routes), and **Done** closes the menu.
+
 ## Buttons
 
 | Button | What it does |
@@ -79,8 +81,43 @@ Favourites are per player: yours don't change what anyone else sees.
 
 ![Only favourites](images/guide/favourites.png)
 
+## Routes
+
+A route is a list of waypoints to visit in order, like a tour of the farms or a Nether highway. When you follow a
+route, the compass at the top of the screen points at one stop at a time. On arrival it shows "Stop 2/5" and moves
+on to the next stop by itself.
+
+![Following a route: the compass shows the stop number](images/guide/route-compass.png)
+
+Click **Routes** in the menu to open the routes screen. Routes are on the left. On the right are the selected
+route's stops, with their distance from you.
+
+![The routes screen](images/guide/routes.png)
+
+| Button | What it does |
+|---|---|
+| **▶ Start** / **■ Stop** | Follow the route from the first stop. If a later stop is selected, it says **▶ From stop N** and starts there. |
+| **Skip stop** | While following the route, go straight to the next stop. |
+| **+ Stop** | Pick a waypoint to add as the last stop. |
+| **− Stop** | Remove the selected stop from the route. The waypoint itself stays. |
+| **↑ / ↓** | Move the selected stop earlier or later. |
+| **Edit** | Change the route's name or description. |
+| **Delete** | Delete the route for everyone, after asking you first. Its waypoints stay. |
+| **+ New route** | Create a route (top right), then add stops with **+ Stop**. |
+
+Anyone can create a route. Only its creator and admins can change or delete it, but everyone can follow it.
+
+![Picking a stop](images/guide/route-picker.png)
+
+Everything also works in chat. `/waypoints route` lists the routes, and `/waypoints route info <name>` shows the
+stops with buttons: **[Go from here]**, and for the creator **[↑]** and **[✕]**.
+
+![A route in chat](images/guide/route-chat.png)
+
 ## Good to know
 
 - The server decides everything. The menu can only do what you're allowed to do with commands.
+- The menu needs 1.5.0 or newer on both your game and the server. If the server is older, **J** tells you, and chat
+  works as normal.
 - The list updates by itself when anyone adds, renames or removes a waypoint.
 - Everything in the menu also works in chat. See the [command list](../README.md#commands).
