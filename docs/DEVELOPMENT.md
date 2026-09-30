@@ -54,7 +54,8 @@ Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
 
 ## Releasing
 
-1. Set `mod_version` in `gradle.properties` and add a `## <version>` section to `CHANGELOG.md`.
+1. Set `mod_version` in `gradle.properties`, add a `## <version>` section to `CHANGELOG.md`, and update the
+   version in the README's download badge. `./gradlew check` fails if either of the last two is missing.
 2. Bring `main` up to date with `dev` and push.
 3. Do one of these:
    - Push a tag: `git tag v<version> && git push origin v<version>`.

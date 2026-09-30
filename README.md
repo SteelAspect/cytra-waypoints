@@ -2,11 +2,11 @@
 
 # SharedWaypoints
 
-[![Build](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml/badge.svg)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/SteelAspect/sharedwaypoints?label=download)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 1.4.1](https://img.shields.io/badge/download-1.4.1-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
-![Server-side](https://img.shields.io/badge/side-server%20only-blue)
+![Server-side](https://img.shields.io/badge/side-server%2C%20client%20optional-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A shared waypoint list for your Fabric server.** Players browse waypoints in chat, add them to
@@ -58,6 +58,7 @@ install. Players who **also** install it on their client get an optional **waypo
   pre-filled.
 - The server still decides everything, so permissions are the same as in chat. The menu updates live when
   anyone changes a waypoint. Players without the client mod keep using chat as before.
+- The **[player guide](docs/PLAYER-GUIDE.md)** explains how to install the menu and what every button does.
 
   ![The waypoint menu](docs/images/client-menu.png)
 
@@ -84,7 +85,7 @@ install. Players who **also** install it on their client get an optional **waypo
 2. Put it in your server's `mods/` folder together with [Fabric API](https://modrinth.com/mod/fabric-api).
 3. Start the server. Players don't need to install anything.
 4. Optional: players who want the menu put the same jar (with Fabric API) in their own `mods/` folder and press
-   **J**. The key can be changed under Options → Controls → SharedWaypoints.
+   **J**. See the [player guide](docs/PLAYER-GUIDE.md) for step-by-step instructions you can share with them.
 
 | Requirement | Version |
 |---|---|
