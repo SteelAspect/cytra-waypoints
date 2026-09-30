@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.github.steelaspect.sharedwaypoints.waypoint.TestCategories;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -88,5 +89,23 @@ class NavMathTest {
 	@Test
 	void horizontalDistanceUsesBlockCentre() {
 		assertEquals(5.0, new NavMath.Target(3, 0, 4, false).horizontalDistance(0.5, 0.5), 1e-9);
+	}
+
+	@Test
+	void routeLengthAddsUpTheLegs() {
+		assertEquals(0.0, NavMath.routeLength(List.of()));
+		assertEquals(0.0, NavMath.routeLength(List.of(at("minecraft:overworld", 0, 64, 0))));
+		// 3-4-5 then 6-8-10: 15 blocks.
+		assertEquals(15.0, NavMath.routeLength(List.of(at("minecraft:overworld", 0, 64, 0),
+				at("minecraft:overworld", 3, 70, 4), at("minecraft:overworld", 9, 64, 12))), 1e-9);
+	}
+
+	@Test
+	void routeLegIntoTheNetherIsMeasuredToThePortalSpot() {
+		// From the Nether at 0,0 to an Overworld stop at 80,0: you travel in the Nether to its portal spot at 10,0.
+		double length = NavMath.routeLength(List.of(at("minecraft:the_nether", 0, 64, 0), at("minecraft:overworld", 80, 64, 0)));
+		assertEquals(10.0, length, 1e-9);
+		// Into the End can't be measured and counts as 0.
+		assertEquals(0.0, NavMath.routeLength(List.of(at("minecraft:overworld", 0, 64, 0), at("minecraft:the_end", 100, 64, 0))));
 	}
 }

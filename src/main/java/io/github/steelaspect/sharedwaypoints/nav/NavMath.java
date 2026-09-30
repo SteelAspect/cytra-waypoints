@@ -2,6 +2,7 @@ package io.github.steelaspect.sharedwaypoints.nav;
 
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
@@ -82,6 +83,21 @@ public final class NavMath {
 		String[] names = {"S", "SW", "W", "NW", "N", "NE", "E", "SE"};
 		double yaw = Math.toDegrees(Math.atan2(-(toX - fromX), toZ - fromZ));
 		return names[Math.floorMod((int) Math.round(yaw / 45.0), names.length)];
+	}
+
+	/**
+	 * Horizontal length of a route: the sum of each leg, measured in the dimension the leg starts in (a leg into
+	 * the Nether counts to the portal spot). Legs that can't be measured, e.g. into the End, count as 0.
+	 */
+	public static double routeLength(List<Waypoint> stops) {
+		double total = 0;
+		for (int i = 0; i + 1 < stops.size(); i++) {
+			Waypoint from = stops.get(i);
+			total += project(stops.get(i + 1), from.dimension())
+					.map(target -> target.horizontalDistance(from.x() + 0.5, from.z() + 0.5))
+					.orElse(0.0);
+		}
+		return total;
 	}
 
 	/** "85m", "1.2km". */

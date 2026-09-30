@@ -1,5 +1,6 @@
 package io.github.steelaspect.sharedwaypoints.map;
 
+import java.awt.Color;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,7 +16,7 @@ import xyz.jpenilla.squaremap.api.marker.Marker;
 import xyz.jpenilla.squaremap.api.marker.MarkerOptions;
 
 /**
- * squaremap layer: one layer per map world with an icon marker per waypoint. Only loaded when squaremap is
+ * squaremap layer: one layer per map world with an icon marker per waypoint and a polyline per route. Only loaded when squaremap is
  * installed. squaremap's worlds exist once the server has started, which is when this is created.
  */
 final class SquaremapLayer implements MapIntegrations.Layer {
@@ -43,8 +44,23 @@ final class SquaremapLayer implements MapIntegrations.Layer {
 	}
 
 	@Override
-	public void update(List<MapMarker> markers) {
+	public void update(List<MapMarker> markers, List<MapRoute> routes) {
 		layers.values().forEach(SimpleLayerProvider::clearMarkers);
+		// Lines first, so the pins are drawn on top of them.
+		for (MapRoute route : routes) {
+			SimpleLayerProvider layer = layers.get(route.dimension());
+			if (layer == null) {
+				continue;
+			}
+			Marker line = Marker.polyline(route.points().stream().map(point -> Point.of(point[0], point[2])).toList())
+					.markerOptions(MarkerOptions.builder()
+							.strokeColor(new Color(MapRoute.RGB))
+							.strokeWeight(4)
+							.strokeOpacity(0.9)
+							.hoverTooltip(route.labelHtml())
+							.clickTooltip(route.detailHtml()));
+			layer.addMarker(Key.of(route.key()), line);
+		}
 		for (MapMarker marker : markers) {
 			SimpleLayerProvider layer = layers.get(marker.dimension());
 			if (layer == null) {

@@ -40,7 +40,6 @@ public final class AddWaypointScreen extends Screen {
 		name = addRenderableWidget(new EditBox(font, left, top + 12, FIELD_WIDTH, 20, Component.literal("Name")));
 		name.setMaxLength(Waypoint.MAX_NAME_LENGTH);
 		name.setHint(Component.literal("e.g. Iron Farm"));
-		setInitialFocus(name);
 
 		List<Category> categories = ClientWaypoints.categories().isEmpty()
 				? List.of(Category.unknown("other")) : ClientWaypoints.categories();
@@ -112,6 +111,12 @@ public final class AddWaypointScreen extends Screen {
 		SharedWaypointsClient.send(Action.ADD, trimmed, category.getValue().id(), x.getValue(), y.getValue(), z.getValue(),
 				dimension.getValue());
 		minecraft.setScreen(parent);
+	}
+
+	/** Always start in the text field (Minecraft would otherwise tab past it after keyboard input). */
+	@Override
+	protected void setInitialFocus() {
+		setInitialFocus(name);
 	}
 
 	@Override

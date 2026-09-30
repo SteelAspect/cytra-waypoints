@@ -29,11 +29,13 @@ xvfb-run -a ./gradlew --no-daemon runClientGametest   # real client: opens the m
   26.5.0's parser. They also cover the JSON stores, categories, navigation maths, paging, relative times and web-map markers
   (including HTML escaping of player-written text).
 - **Client GameTest** (`src/clientgametest`) starts a real client in a singleplayer world and opens the menu with
-  the J key. It adds a waypoint through the form, favourites and edits one, checks each change reached the
-  server, and saves screenshots to `build/clientgametest/screenshots/`. It needs a display, so it runs under
+  the J key. It adds a waypoint through the form, favourites and edits one, then creates a route, adds stops with
+  the picker, reorders them and starts following it. It checks each change reached the server, and saves
+  screenshots to `build/clientgametest/screenshots/`. It needs a display, so it runs under
   `xvfb-run` locally and in CI, where the screenshots are uploaded as an artifact.
 - **GameTest** (`src/gametest`) runs every command as two ordinary players and an op on a real server. It checks
-  chat output, click events, tab completion, permissions, navigation, favourites and the saved files. It runs in
+  chat output, click events, tab completion, permissions, navigation, favourites, routes (including following one
+  stop by stop and deleting a stop mid-route), the menu's network handler and the saved files. It runs in
   Fabric's GameTest mode, which needs no `eula.txt`, and never ends up in the released jar.
   The test server also runs **squaremap 1.3.12**: `copyGametestMods` drops the unmodified jar from Modrinth into
   `build/gametest/mods/`, and the test checks the markers in squaremap's layer. BlueMap isn't run in tests
@@ -79,20 +81,23 @@ src/main/java/io/github/steelaspect/sharedwaypoints/        (common: everything 
   ModContext.java                      config + waypoints + favourites + navigation for the running server
   command/WaypointCommand.java         the /waypoints Brigadier tree and tab completion
   config/ModConfig.java                config.json (including categories)
-  map/                                 web maps: MapIntegrations, BlueMapLayer, SquaremapLayer, MapMarker, MarkerIcons
+  map/                                 web maps: MapIntegrations, BlueMapLayer, SquaremapLayer, MapMarker, MapRoute (lines),
+                                       MarkerIcons
   nav/NavMath.java                     portal projection, distances, compass arrows (pure maths)
-  nav/NavigationManager.java           boss-bar compass, beacon particles, arrival
+  nav/NavigationManager.java           boss-bar compass, beacon particles, arrival, following routes stop by stop
   permission/WaypointPermissions.java  permission nodes and fallbacks
   text/WaypointText.java               chat lines, hover cards, buttons, page footers
   text/Viewer.java                     who is reading (distance, favourites, which buttons)
   text/Formats.java                    "3 days ago"
   util/                                Dimensions, Gsons, JsonFiles (atomic writes), Page
-  waypoint/                            Category, CategoryRegistry, Waypoint (record = JSON shape), WaypointStore, FavoritesStore
+  waypoint/                            Category, CategoryRegistry, Waypoint (record = JSON shape), WaypointStore, FavoritesStore,
+                                       Route (record = JSON shape), RouteStore
   network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
                                        MenuNetworking (actions run as the player's /waypoints command)
   xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
 src/client/java/.../client/            optional client: J keybind, WaypointMenuScreen, AddWaypointScreen,
-                                       EditWaypointScreen, WaypointList, ClientWaypoints (latest snapshot)
+                                       EditWaypointScreen, WaypointList, RoutesScreen, RouteLists, EditRouteScreen,
+                                       WaypointPickerScreen, ClientWaypoints (latest snapshot)
 src/test/java/...                      unit tests
 src/gametest/...                       headless-server end-to-end test
 src/clientgametest/...                 real-client test: menu via keybind, add through the form, screenshots
@@ -132,6 +137,12 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
 - Web maps are optional. Their classes are only loaded after `FabricLoader.isModLoaded` says they're present,
   and a failure disables only that map. Player-written text is HTML-escaped before it reaches a map page.
 - Waypoints have a stable `id`, so favourites and navigation survive renames. Version 1 files are upgraded on load.
+- Routes store waypoint ids. Deleting a waypoint drops it from every route (`RouteStore.forgetWaypoint`).
+  Navigation keeps the id of the stop it's heading to. It re-finds that stop's position whenever the route changes,
+  so dropped, moved or deleted stops never make it skip one.
+- The menu's channels carry a protocol version (`sync2`, `action2`, `result2` since 1.5.0). A client and server
+  from different protocol versions never exchange data they can't read. The client sees the old `action` channel
+  and tells the player the server is older. Change the suffix whenever a payload's layout changes.
 - The waypoint Y is the block the player stands in. Distances in lists are horizontal; arrival also counts height.
 - Chat replies are sent even when `sendCommandFeedback` is off, because for /waypoints the reply is the result.
 - In singleplayer, every world shares the same `config/sharedwaypoints/` list.

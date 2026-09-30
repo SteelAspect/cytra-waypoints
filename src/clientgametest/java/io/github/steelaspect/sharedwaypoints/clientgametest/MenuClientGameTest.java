@@ -3,11 +3,16 @@ package io.github.steelaspect.sharedwaypoints.clientgametest;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import io.github.steelaspect.sharedwaypoints.client.AddWaypointScreen;
 import io.github.steelaspect.sharedwaypoints.client.ClientWaypoints;
+import io.github.steelaspect.sharedwaypoints.client.RoutesScreen;
 import io.github.steelaspect.sharedwaypoints.client.SharedWaypointsClient;
 import io.github.steelaspect.sharedwaypoints.client.WaypointMenuScreen;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
+import java.util.List;
+import java.util.Optional;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
@@ -23,7 +28,34 @@ public class MenuClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void shot(ClientGameTestContext context, String name) {
+		// Park the mouse in the corner and drop keyboard focus, so no tooltip covers the screen.
+		context.getInput().setCursorPos(1, 1);
+		context.runOnClient(client -> {
+			if (client.screen != null && !(client.screen instanceof ChatScreen)) {
+				client.screen.clearFocus();
+			}
+		});
+		context.waitTicks(1);
 		System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-" + name));
+	}
+
+	private static Optional<SyncPayload.RouteData> farmRun() {
+		return ClientWaypoints.routes().stream().filter(route -> route.name().equals("Farm Run")).findFirst();
+	}
+
+	private static int stopCount() {
+		return farmRun().map(route -> route.stops().size()).orElse(0);
+	}
+
+	/** Calls a test hook on a screen class that isn't public (the waypoint picker). */
+	private static void invoke(Object screen, String method, String argument) {
+		try {
+			var hook = screen.getClass().getDeclaredMethod(method, String.class);
+			hook.setAccessible(true);
+			hook.invoke(screen, argument);
+		} catch (ReflectiveOperationException e) {
+			throw new AssertionError("no test hook " + method + " on " + screen.getClass().getName(), e);
+		}
 	}
 
 	@Override
@@ -117,6 +149,75 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			view(context, "", "all", "distance");
 			shot(context, "sort-distance");
 			view(context, "", "all", "category");
+
+			// --- routes: create one, add stops with the picker, reorder, then follow it
+			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).openRoutesForTest());
+			context.waitForScreen(RoutesScreen.class);
+			context.waitTicks(3);
+			shot(context, "routes-empty");
+			context.clickScreenButton("+ New route");
+			context.waitFor(client -> client.screen != null && client.screen.getClass().getSimpleName().equals("EditRouteScreen"));
+			context.getInput().typeChars("Farm Run");
+			context.waitTicks(2);
+			shot(context, "route-new");
+			context.clickScreenButton("Create");
+			context.waitForScreen(RoutesScreen.class);
+			context.waitFor(client -> ClientWaypoints.routes().stream().anyMatch(route -> route.name().equals("Farm Run")));
+			for (String stop : List.of("Iron Farm", "Main Storage", "Spawn Base")) {
+				int before = stopCount();
+				context.waitTicks(3);
+				context.clickScreenButton("+ Stop");
+				context.waitFor(client -> client.screen != null
+						&& client.screen.getClass().getSimpleName().equals("WaypointPickerScreen"));
+				if (before == 0) {
+					context.waitTicks(2);
+					shot(context, "route-picker");
+				}
+				context.runOnClient(client -> invoke(client.screen, "pickForTest", stop));
+				context.waitForScreen(RoutesScreen.class);
+				context.waitFor(client -> stopCount() == before + 1);
+			}
+			// Move stop 3 (Spawn Base) up to stop 2 with the ↑ button.
+			context.runOnClient(client -> ((RoutesScreen) client.screen).selectForTest("Farm Run", 2));
+			context.waitTicks(2);
+			context.clickScreenButton("↑");
+			context.waitFor(client -> farmRun().map(route -> ClientWaypoints.stops(route).get(1).name().equals("Spawn Base"))
+					.orElse(false));
+			boolean movedOnServer = world.getServer().computeOnServer(server -> SharedWaypoints.context().routes()
+					.get("Farm Run").map(route -> route.stops().size() == 3).orElse(false));
+			if (!movedOnServer) {
+				throw new AssertionError("Farm Run should have 3 stops on the server");
+			}
+			context.runOnClient(client -> ((RoutesScreen) client.screen).selectForTest("Farm Run", -1));
+			context.waitTicks(5);
+			shot(context, "routes");
+
+			// The same route in chat.
+			context.setScreen(() -> null);
+			context.runOnClient(client -> client.player.connection.sendCommand("waypoints route info \"Farm Run\""));
+			context.waitTicks(5);
+			context.setScreen(() -> new ChatScreen("", false));
+			context.waitTicks(3);
+			shot(context, "route-chat");
+
+			// Follow it: the compass shows [1/3] and the first stop.
+			context.setScreen(() -> null);
+			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
+			context.waitForScreen(WaypointMenuScreen.class);
+			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).openRoutesForTest());
+			context.waitForScreen(RoutesScreen.class);
+			context.waitTicks(3);
+			context.runOnClient(client -> ((RoutesScreen) client.screen).selectForTest("Farm Run", 0));
+			context.waitTicks(2);
+			context.clickScreenButton("▶ Start");
+			context.waitFor(client -> client.screen == null && ClientWaypoints.onRoute() != null);
+			context.waitTicks(20);
+			shot(context, "route-compass");
+			world.getServer().runOnServer(server -> SharedWaypoints.context().navigation()
+					.stop(server.getPlayerList().getPlayers().get(0).getUUID()));
+			context.waitFor(client -> ClientWaypoints.onRoute() == null);
+			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
+			context.waitForScreen(WaypointMenuScreen.class);
 
 			// What an op sees: Teleport, and Edit/Remove on everyone's waypoints.
 			// There's no /op in singleplayer, so op the player through the player list.

@@ -4,20 +4,22 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * Shows the shared waypoints on web maps: a toggleable "Shared Waypoints" layer on BlueMap and/or squaremap,
+ * Shows the shared waypoints (pins) and routes (lines) on web maps: a toggleable "Shared Waypoints" layer on BlueMap
+ * and/or squaremap,
  * whichever is installed. Both are optional: their classes are only touched after checking the mod is loaded,
  * and any failure only disables that one map (the rest of the mod keeps working).
  */
 public final class MapIntegrations {
 	/** One web map's marker layer. */
 	interface Layer {
-		/** Replaces all markers with these. Called on the server thread. */
-		void update(List<MapMarker> markers);
+		/** Replaces all markers and route lines with these. Called on the server thread. */
+		void update(List<MapMarker> markers, List<MapRoute> routes);
 
 		/** Removes the layer from the map. */
 		void close();
@@ -46,15 +48,21 @@ public final class MapIntegrations {
 		refresh();
 	}
 
-	/** Pushes the current waypoints to every layer. Called after every change. */
+	/** Pushes the current waypoints and routes to every layer. Called after every change. */
 	public void refresh() {
 		if (layers.isEmpty()) {
 			return;
 		}
 		List<MapMarker> markers = mod.waypoints().all().stream().map(MapMarker::of).toList();
+		List<MapRoute> routes = mod.routes().all().stream()
+				.flatMap(route -> MapRoute.of(route, route.stops().stream()
+						.map(id -> mod.waypoints().get(id))
+						.flatMap(Optional::stream)
+						.toList()).stream())
+				.toList();
 		for (Layer layer : layers) {
 			try {
-				layer.update(markers);
+				layer.update(markers, routes);
 			} catch (RuntimeException | LinkageError e) {
 				SharedWaypoints.LOGGER.warn("Could not update web map markers ({})", layer.getClass().getSimpleName(), e);
 			}

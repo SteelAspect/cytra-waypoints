@@ -100,6 +100,32 @@ public final class ClientWaypoints {
 		return snapshot == null ? null : snapshot.navigatingTo();
 	}
 
+	/** Every route, sorted by name. */
+	public static List<SyncPayload.RouteData> routes() {
+		return snapshot == null ? List.of() : snapshot.routes();
+	}
+
+	public static Optional<SyncPayload.RouteData> route(UUID id) {
+		return routes().stream().filter(route -> route.id().equals(id)).findFirst();
+	}
+
+	/** The route's stops as waypoints, in order. */
+	public static List<Waypoint> stops(SyncPayload.RouteData route) {
+		return route.stops().stream()
+				.map(id -> waypoints.stream().filter(waypoint -> waypoint.id().equals(id)).findFirst())
+				.flatMap(Optional::stream)
+				.toList();
+	}
+
+	public static boolean canAddRoute() {
+		return snapshot != null && snapshot.canAddRoute();
+	}
+
+	/** The route the player is following, or null. */
+	public static SyncPayload.RouteProgressData onRoute() {
+		return snapshot == null ? null : snapshot.onRoute();
+	}
+
 	/** The last action result, if it arrived in the last few seconds. */
 	public static Optional<ResultPayload> recentResult() {
 		return lastResult != null && System.currentTimeMillis() - lastResultAt < 6000 ? Optional.of(lastResult) : Optional.empty();

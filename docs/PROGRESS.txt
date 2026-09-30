@@ -128,3 +128,8 @@
 [2026-09-30 00:18:06 UTC] RELEASED: v1.3.0 (jar attached) via the new manual Release run; v1.4.0 release run started. PR #3 merged (334d5e4); dev fast-forwarded to main
 [2026-09-30 00:18:06 UTC] STARTED: 1.4.1 on dev (README badges that work while the repo is private, player guide for the client menu), then 1.5.0 Routes
 [2026-09-30 00:21:12 UTC] BUILD PASS: 1.4.1 - player guide (docs/PLAYER-GUIDE.md, 6 screenshots), static README badges (work while private), checkDocs build check (badge + changelog match mod_version); build, unit tests, GameTest pass
+[2026-09-30 00:21:44 UTC] RELEASED: v1.4.0 (jar attached, marked latest). PR #4 opened for 1.4.1 (dev -> main)
+[2026-09-30 00:21:44 UTC] STARTED: 1.5.0 Routes on branch routes (from dev)
+[2026-09-30 00:41:48 UTC] MERGED: PR #4 (1.4.1) into main (f85057f); v1.4.1 release run started
+[2026-09-30 00:41:48 UTC] BUILD PASS: 1.5.0 Routes - unit tests (route store, route length, map lines), server GameTest (commands, following a route, deleting a stop mid-route, menu actions, permissions, squaremap lines, routes.json, reload), real-client test (routes screen, picker, reorder, start; 19 screenshots)
+[2026-09-30 00:45:06 UTC] RELEASED: v1.4.1 (jar attached, latest). PR #5 (1.5.0 routes) CI green (build + client); waiting on go-ahead to merge and release

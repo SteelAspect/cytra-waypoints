@@ -17,11 +17,19 @@ import net.minecraft.resources.Identifier;
  * @param canAdd        whether the player may add waypoints
  * @param canTeleport   whether to show Teleport
  * @param navigatingTo  waypoint the player is navigating to, or null
+ * @param routes        every route, sorted by name
+ * @param canAddRoute   whether the player may create routes
+ * @param onRoute       the route the player is following and which stop they're heading to, or null
  */
 public record SyncPayload(List<CategoryData> categories, List<WaypointData> waypoints, boolean canAdd,
-		boolean canTeleport, UUID navigatingTo) implements CustomPacketPayload {
+		boolean canTeleport, UUID navigatingTo, List<RouteData> routes, boolean canAddRoute, RouteProgressData onRoute)
+		implements CustomPacketPayload {
 
-	public static final Type<SyncPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "sync"));
+	/**
+	 * The channel names carry the menu protocol version ({@code sync2} since routes were added in 1.5.0), so a
+	 * client and server with different versions never try to read each other's data: the menu just isn't offered.
+	 */
+	public static final Type<SyncPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "sync2"));
 	public static final StreamCodec<FriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of(SyncPayload::write, SyncPayload::read);
 	/** Largest payload accepted (a few thousand waypoints fit easily). */
 	public static final int MAX_SIZE = 4 * 1024 * 1024;
@@ -40,6 +48,21 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 	public record WaypointData(UUID id, String name, String categoryId, int x, int y, int z, String dimension,
 			String description, String creatorName, long createdEpochSecond, boolean canEdit, boolean canRemove,
 			boolean favorite) {
+	}
+
+	/**
+	 * One route as the menu shows it.
+	 *
+	 * @param stops     waypoint ids in visiting order
+	 * @param canEdit   may change stops, name and description
+	 * @param canRemove may delete it
+	 */
+	public record RouteData(UUID id, String name, List<UUID> stops, String description, String creatorName,
+			boolean canEdit, boolean canRemove) {
+	}
+
+	/** The route a player is following and the 0-based index of the stop they're heading to. */
+	public record RouteProgressData(UUID routeId, int stopIndex) {
 	}
 
 	@Override
@@ -71,6 +94,21 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 		buf.writeBoolean(payload.canAdd);
 		buf.writeBoolean(payload.canTeleport);
 		buf.writeNullable(payload.navigatingTo, (out, id) -> out.writeUUID(id));
+		buf.writeVarInt(payload.routes.size());
+		for (RouteData route : payload.routes) {
+			buf.writeUUID(route.id());
+			buf.writeUtf(route.name());
+			buf.writeVarInt(route.stops().size());
+			route.stops().forEach(buf::writeUUID);
+			buf.writeNullable(route.description(), FriendlyByteBuf::writeUtf);
+			buf.writeUtf(route.creatorName());
+			buf.writeByte((route.canEdit() ? 1 : 0) | (route.canRemove() ? 2 : 0));
+		}
+		buf.writeBoolean(payload.canAddRoute);
+		buf.writeNullable(payload.onRoute, (out, progress) -> {
+			out.writeUUID(progress.routeId());
+			out.writeVarInt(progress.stopIndex());
+		});
 	}
 
 	private static SyncPayload read(FriendlyByteBuf buf) {
@@ -99,6 +137,24 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 		boolean canAdd = buf.readBoolean();
 		boolean canTeleport = buf.readBoolean();
 		UUID navigatingTo = buf.readNullable(in -> in.readUUID());
-		return new SyncPayload(List.copyOf(categories), List.copyOf(waypoints), canAdd, canTeleport, navigatingTo);
+		int routeCount = buf.readVarInt();
+		List<RouteData> routes = new ArrayList<>(routeCount);
+		for (int i = 0; i < routeCount; i++) {
+			UUID id = buf.readUUID();
+			String name = buf.readUtf();
+			int stopCount = buf.readVarInt();
+			List<UUID> stops = new ArrayList<>(stopCount);
+			for (int j = 0; j < stopCount; j++) {
+				stops.add(buf.readUUID());
+			}
+			String description = buf.readNullable(FriendlyByteBuf::readUtf);
+			String creator = buf.readUtf();
+			byte flags = buf.readByte();
+			routes.add(new RouteData(id, name, List.copyOf(stops), description, creator, (flags & 1) != 0, (flags & 2) != 0));
+		}
+		boolean canAddRoute = buf.readBoolean();
+		RouteProgressData onRoute = buf.readNullable(in -> new RouteProgressData(in.readUUID(), in.readVarInt()));
+		return new SyncPayload(List.copyOf(categories), List.copyOf(waypoints), canAdd, canTeleport, navigatingTo,
+				List.copyOf(routes), canAddRoute, onRoute);
 	}
 }

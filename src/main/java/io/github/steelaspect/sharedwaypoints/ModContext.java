@@ -6,18 +6,20 @@ import io.github.steelaspect.sharedwaypoints.nav.NavigationManager;
 import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
 import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import io.github.steelaspect.sharedwaypoints.waypoint.FavoritesStore;
+import io.github.steelaspect.sharedwaypoints.waypoint.RouteStore;
 import io.github.steelaspect.sharedwaypoints.waypoint.WaypointStore;
 import java.nio.file.Path;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * Everything the mod keeps while a server runs: config, categories, waypoints, favourites, live navigation and
- * web-map markers.
+ * Everything the mod keeps while a server runs: config, categories, waypoints, routes, favourites, live navigation
+ * and web-map markers.
  */
 public final class ModContext {
 	private final Path configDir;
 	private final WaypointStore waypoints;
 	private final FavoritesStore favorites;
+	private final RouteStore routes;
 	private final NavigationManager navigation;
 	private final MapIntegrations maps;
 	private final MenuNetworking menus;
@@ -28,14 +30,18 @@ public final class ModContext {
 		this.configDir = configDir;
 		this.waypoints = new WaypointStore(configDir.resolve("waypoints.json"), () -> categories);
 		this.favorites = new FavoritesStore(configDir.resolve("favorites.json"));
+		this.routes = new RouteStore(configDir.resolve("routes.json"));
 		this.navigation = new NavigationManager(this);
 		this.maps = new MapIntegrations(this);
 		this.menus = new MenuNetworking(this);
-		// Deleted waypoints disappear from favourites; navigation notices on its next tick.
+		// Deleted waypoints disappear from favourites and routes; navigation notices on its next tick.
 		waypoints.onRemoved(waypoint -> favorites.forget(waypoint.id()));
+		waypoints.onRemoved(waypoint -> routes.forgetWaypoint(waypoint.id()));
 		waypoints.onChanged(maps::refresh);
+		routes.onChanged(maps::refresh);
 		// Players with the client menu see changes live.
 		waypoints.onChanged(menus::pushToAll);
+		routes.onChanged(menus::pushToAll);
 		navigation.onChange(menus::pushTo);
 	}
 
@@ -44,6 +50,7 @@ public final class ModContext {
 		config = ModConfig.load(configDir.resolve("config.json"));
 		categories = config.categoryRegistry();
 		waypoints.load();
+		routes.load();
 		favorites.load();
 	}
 
@@ -64,6 +71,10 @@ public final class ModContext {
 
 	public WaypointStore waypoints() {
 		return waypoints;
+	}
+
+	public RouteStore routes() {
+		return routes;
 	}
 
 	public FavoritesStore favorites() {

@@ -13,6 +13,7 @@ import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
 import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
 import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
 import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
+import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -34,8 +35,8 @@ import net.minecraft.server.permissions.LevelBasedPermissionSet;
 
 /**
  * End-to-end test on a real (headless) 1.21.11 server: runs the /waypoints commands as two ordinary players and
- * a moderator, and checks chat output, click events, tab completion, permissions, navigation, favourites and the
- * JSON files.
+ * a moderator, and checks chat output, click events, tab completion, permissions, navigation, favourites, routes,
+ * the client menu's network handler and the JSON files.
  */
 public class SharedWaypointsGameTest {
 	/** Collects everything a command sends back to its source. */
@@ -255,7 +256,7 @@ public class SharedWaypointsGameTest {
 		}
 		expectError(helper, dispatcher, alice, "waypoints reload", ""); // ops only
 		run(helper, dispatcher, moderator, "waypoints reload");
-		helper.assertTrue(moderator.out.take().contains("Reloaded SharedWaypoints: 1 waypoints, 6 categories"), "reload summary");
+		helper.assertTrue(moderator.out.take().contains("Reloaded SharedWaypoints: 1 waypoints, 0 routes, 6 categories"), "reload summary");
 		run(helper, dispatcher, moderator, "waypoints add Market shops 5 64 5");
 		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints shops"), 1, "list the new category");
 		String shopsList = alice.out.take();
@@ -311,6 +312,8 @@ public class SharedWaypointsGameTest {
 		ResultPayload gone = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.GO, spotId));
 		helper.assertTrue(!gone.success() && gone.message().contains("no longer exists"), "stale id: " + gone.message());
 
+		routes(helper, server, dispatcher, mod, aliceEntity, bobEntity, alice, bob, moderator);
+
 		// Every /waypoints subcommand must be a reserved word, so no category can ever hide one.
 		for (var child : dispatcher.getRoot().getChild("waypoints").getChildren()) {
 			if (child instanceof com.mojang.brigadier.tree.LiteralCommandNode<?>) {
@@ -320,6 +323,193 @@ public class SharedWaypointsGameTest {
 		}
 
 		helper.succeed();
+	}
+
+	// ------------------------------------------------------------------- routes
+
+	private static void routes(GameTestHelper helper, MinecraftServer server, CommandDispatcher<CommandSourceStack> dispatcher,
+			ModContext mod, ServerPlayer aliceEntity, ServerPlayer bobEntity, Source alice, Source bob, Source moderator) {
+		alice.out.take();
+		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints route"), 0, "no routes yet");
+		helper.assertTrue(alice.out.take().contains("No routes yet"), "empty route list");
+
+		// Stops: three in the overworld along +X, one in the Nether in between.
+		run(helper, dispatcher, alice, "waypoints add R1 other 20 64 0");
+		run(helper, dispatcher, alice, "waypoints add R2 other 40 64 0");
+		run(helper, dispatcher, alice, "waypoints add R3 portals 5 70 0 minecraft:the_nether");
+		run(helper, dispatcher, alice, "waypoints add R4 other 60 64 0");
+		Waypoint r1 = mod.waypoints().get("R1").orElseThrow();
+		Waypoint r2 = mod.waypoints().get("R2").orElseThrow();
+		Waypoint r3 = mod.waypoints().get("R3").orElseThrow();
+		Waypoint r4 = mod.waypoints().get("R4").orElseThrow();
+		Waypoint market = mod.waypoints().get("Market").orElseThrow();
+
+		// --- create and fill
+		run(helper, dispatcher, alice, "waypoints route create \"Grand Tour\"");
+		helper.assertTrue(alice.out.take().contains("Created route Grand Tour"), "route created");
+		expectError(helper, dispatcher, bob, "waypoints route create \"grand tour\"", "already exists");
+		for (String stop : List.of("R1", "R2", "R3", "R4", "Market")) {
+			run(helper, dispatcher, alice, "waypoints route add \"Grand Tour\" " + stop);
+		}
+		helper.assertTrue(alice.out.take().contains("Added Market to Grand Tour as stop 5"), "stop numbering");
+		expectError(helper, dispatcher, bob, "waypoints route add \"Grand Tour\" R1", "only change routes you created");
+		expectError(helper, dispatcher, bob, "waypoints route delete \"Grand Tour\"", "only delete routes you created");
+		expectError(helper, dispatcher, alice, "waypoints route add \"Grand Tour\" Nowhere", "No waypoint named");
+		expectError(helper, dispatcher, alice, "waypoints route drop \"Grand Tour\" 9", "Stop numbers go from 1 to 5");
+		helper.assertTrue(suggestions(dispatcher, alice, "waypoints route add ").contains("\"Grand Tour\""),
+				"route names suggested (quoted) to its creator");
+		helper.assertTrue(suggestions(dispatcher, bob, "waypoints route add ").isEmpty(),
+				"no editable routes suggested to others");
+		helper.assertTrue(suggestions(dispatcher, bob, "waypoints route go ").contains("\"Grand Tour\""),
+				"anyone may follow it");
+
+		// --- list and info
+		helper.assertValueEqual(run(helper, dispatcher, bob, "waypoints route list"), 1, "one route");
+		Component routeLine = bob.out.messages.stream()
+				.filter(line -> line.getString().startsWith("[Route] Grand Tour")).findFirst().orElseThrow();
+		helper.assertTrue(routeLine.getString().contains("5 stops ·"), "stop count and length: " + routeLine.getString());
+		helper.assertValueEqual(clickOf(routeLine, "[Go]"),
+				Optional.of(new ClickEvent.RunCommand("/waypoints route go \"Grand Tour\"")), "route Go click");
+		bob.out.take();
+		run(helper, dispatcher, bob, "waypoints route info \"Grand Tour\"");
+		String info = bob.out.take();
+		helper.assertTrue(info.contains("1. [Other] R1") && info.contains("3. [Portals] R3") && info.contains("5. [Shops] Market"),
+				"numbered stops:\n" + info);
+		helper.assertTrue(info.contains("[Go from here]") && !info.contains("[✕]") && !info.contains("[Delete]"),
+				"no editing buttons for others:\n" + info);
+		run(helper, dispatcher, alice, "waypoints route info \"Grand Tour\"");
+		String aliceInfo = alice.out.take();
+		helper.assertTrue(aliceInfo.contains("[✕]") && aliceInfo.contains("[↑]") && aliceInfo.contains("[Delete]"),
+				"editing buttons for the creator:\n" + aliceInfo);
+
+		// --- move and drop
+		run(helper, dispatcher, alice, "waypoints route move \"Grand Tour\" 5 1");
+		helper.assertValueEqual(route(mod).stops(), List.of(market.id(), r1.id(), r2.id(), r3.id(), r4.id()), "moved to the front");
+		run(helper, dispatcher, alice, "waypoints route drop \"Grand Tour\" 1");
+		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r2.id(), r3.id(), r4.id()), "dropped");
+		helper.assertTrue(mod.waypoints().get(market.id()).isPresent(), "dropping a stop keeps the waypoint");
+		run(helper, dispatcher, alice, "waypoints route describe \"Grand Tour\" Bring fire resistance");
+		helper.assertValueEqual(route(mod).description(), "Bring fire resistance", "route description");
+
+		// --- web map: R1 -> R2 is an overworld stretch, drawn as a line
+		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
+			helper.assertTrue(SquaremapProbe.hasMarker("route-" + route(mod).id() + "-0"), "route line on the overworld map");
+			String popup = SquaremapProbe.clickTooltip("route-" + route(mod).id() + "-0");
+			helper.assertTrue(popup != null && popup.contains("<b>Grand Tour</b>") && popup.contains("Bring fire resistance"),
+					"route popup: " + popup);
+		}
+
+		// --- following the route: arrive, skip, finish
+		aliceEntity.teleportTo(0.5, 64, 0.5);
+		run(helper, dispatcher, alice, "waypoints route go \"Grand Tour\"");
+		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r1.id()), "heading to stop 1");
+		helper.assertValueEqual(mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(0), "stop index 0");
+		aliceEntity.teleportTo(20.5, 64, 0.5);
+		tick(mod, server);
+		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r2.id()),
+				"arriving at stop 1 moves on to stop 2");
+		run(helper, dispatcher, alice, "waypoints route skip");
+		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "skipped to stop 3");
+		run(helper, dispatcher, alice, "waypoints route skip");
+		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r4.id()), "skipped to stop 4");
+		aliceEntity.teleportTo(60.5, 64, 0.5);
+		tick(mod, server);
+		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty()
+				&& mod.navigation().routeOf(aliceEntity.getUUID()).isEmpty(), "arriving at the last stop finishes the route");
+		expectError(helper, dispatcher, alice, "waypoints route skip", "aren't following a route");
+
+		// Start from a later stop.
+		run(helper, dispatcher, alice, "waypoints route go \"Grand Tour\" 3");
+		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "go from stop 3");
+		run(helper, dispatcher, alice, "waypoints stop");
+
+		// Deleting the waypoint you're heading to moves on to the next stop (the list shifts under the session).
+		aliceEntity.teleportTo(0.5, 64, 0.5);
+		run(helper, dispatcher, alice, "waypoints route go \"Grand Tour\" 2");
+		run(helper, dispatcher, moderator, "waypoints remove R2");
+		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "deleted waypoint left the route");
+		tick(mod, server);
+		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()),
+				"deleted stop is skipped, not the one after it");
+		helper.assertValueEqual(mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(1),
+				"index follows the shorter route");
+		run(helper, dispatcher, alice, "waypoints stop");
+
+		// --- the client menu drives routes through the same commands
+		MenuNetworking menus = mod.menus();
+		SyncPayload aliceView = menus.snapshot(aliceEntity);
+		SyncPayload.RouteData tour = aliceView.routes().stream().filter(r -> r.name().equals("Grand Tour")).findFirst().orElseThrow();
+		helper.assertTrue(tour.canEdit() && tour.canRemove() && aliceView.canAddRoute(), "creator's rights in the menu");
+		helper.assertValueEqual(tour.stops(), List.of(r1.id(), r3.id(), r4.id()), "menu sees the stops");
+		SyncPayload.RouteData tourForBob = menus.snapshot(bobEntity).routes().stream()
+				.filter(r -> r.name().equals("Grand Tour")).findFirst().orElseThrow();
+		helper.assertTrue(!tourForBob.canEdit() && !tourForBob.canRemove(), "others may not change it");
+
+		ResultPayload created = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_CREATE, "Bob's \"Loop\""));
+		helper.assertTrue(created.success(), "menu create: " + created.message());
+		Route loop = mod.routes().get("Bob's \"Loop\"").orElseThrow();
+		String loopId = loop.id().toString();
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_ADD, loopId, r4.id().toString()));
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_ADD, loopId, r1.id().toString()));
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_MOVE, loopId, "2", "1"));
+		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().stops(), List.of(r1.id(), r4.id()), "menu add + move");
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_RENAME, loopId, "Loop\nroute delete Grand"));
+		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().name(), "Loop route delete Grand",
+				"a newline can't start a second command");
+		helper.assertTrue(mod.routes().contains("Grand Tour"), "Grand Tour untouched");
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DESCRIBE, loopId, "Quick one"));
+		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().description(), "Quick one", "menu describe");
+		ResultPayload go = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_GO, loopId, "1"));
+		helper.assertTrue(go.success(), "menu go: " + go.message());
+		SyncPayload.RouteProgressData onRoute = menus.snapshot(bobEntity).onRoute();
+		helper.assertTrue(onRoute != null && onRoute.routeId().equals(loop.id()) && onRoute.stopIndex() == 0,
+				"menu shows the route being followed");
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_SKIP));
+		helper.assertValueEqual(mod.navigation().destinationOf(bobEntity.getUUID()), Optional.of(r4.id()), "menu skip");
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.STOP));
+		ResultPayload dropDenied = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DROP,
+				tour.id().toString(), "1"));
+		helper.assertTrue(!dropDenied.success() && dropDenied.message().contains("only change routes you created"),
+				"permissions apply to routes: " + dropDenied.message());
+		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DROP, loopId, "2"));
+		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().stops(), List.of(r1.id()), "menu drop");
+
+		// --- saved to routes.json, and survives a reload
+		try {
+			String json = Files.readString(configDir().resolve("routes.json"));
+			helper.assertTrue(json.contains("\"Grand Tour\"") && json.contains(r3.id().toString())
+					&& json.contains("Bring fire resistance"), "routes.json:\n" + json);
+		} catch (IOException e) {
+			helper.fail("could not read routes.json: " + e);
+		}
+		run(helper, dispatcher, moderator, "waypoints reload");
+		helper.assertTrue(moderator.out.take().contains("2 routes"), "routes reloaded");
+		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "stops survive a reload");
+
+		// --- delete: creators and ops only; the waypoints stay
+		ResultPayload deleteDenied = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DELETE, loopId));
+		helper.assertTrue(!deleteDenied.success(), "alice can't delete bob's route");
+		run(helper, dispatcher, moderator, "waypoints route delete \"Loop route delete Grand\"");
+		run(helper, dispatcher, alice, "waypoints route delete \"Grand Tour\"");
+		helper.assertValueEqual(mod.routes().size(), 0, "both routes deleted");
+		helper.assertTrue(mod.waypoints().get(r1.id()).isPresent(), "deleting a route keeps its waypoints");
+		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
+			helper.assertTrue(!SquaremapProbe.hasMarker("route-" + loop.id() + "-0"), "route lines removed from the map");
+		}
+		for (String name : List.of("R1", "R3", "R4")) {
+			run(helper, dispatcher, moderator, "waypoints remove " + name);
+		}
+	}
+
+	private static Route route(ModContext mod) {
+		return mod.routes().get("Grand Tour").orElseThrow();
+	}
+
+	/** Enough navigation ticks for one compass update. */
+	private static void tick(ModContext mod, MinecraftServer server) {
+		for (int i = 0; i < 5; i++) {
+			mod.navigation().tick(server);
+		}
 	}
 
 	// ------------------------------------------------------------------ helpers
