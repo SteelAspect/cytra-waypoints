@@ -1,6 +1,7 @@
 package io.github.steelaspect.sharedwaypoints;
 
 import io.github.steelaspect.sharedwaypoints.config.ModConfig;
+import io.github.steelaspect.sharedwaypoints.join.JoinSummary;
 import io.github.steelaspect.sharedwaypoints.map.MapIntegrations;
 import io.github.steelaspect.sharedwaypoints.nav.NavigationManager;
 import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
@@ -25,6 +26,7 @@ public final class ModContext {
 	private final MapIntegrations maps;
 	private final MenuNetworking menus;
 	private final SyncService sync;
+	private final JoinSummary joinSummary;
 	private ModConfig config = new ModConfig();
 	private CategoryRegistry categories = CategoryRegistry.DEFAULT;
 
@@ -37,6 +39,7 @@ public final class ModContext {
 		this.maps = new MapIntegrations(this);
 		this.menus = new MenuNetworking(this);
 		this.sync = new SyncService(this);
+		this.joinSummary = new JoinSummary(this);
 		// Deleted waypoints disappear from favourites and routes; navigation notices on its next tick.
 		waypoints.onRemoved(waypoint -> favorites.forget(waypoint.id()));
 		waypoints.onRemoved(waypoint -> routes.forgetWaypoint(waypoint.id()));
@@ -102,5 +105,9 @@ public final class ModContext {
 
 	public SyncService sync() {
 		return sync;
+	}
+
+	public JoinSummary joinSummary() {
+		return joinSummary;
 	}
 }

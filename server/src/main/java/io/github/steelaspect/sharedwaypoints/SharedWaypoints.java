@@ -49,9 +49,12 @@ public final class SharedWaypoints implements ModInitializer {
 			context.sync().setServer(null);
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> context.navigation().tick(server));
+		// "N new waypoints since you last played" (last-seen times are kept in waypoints.json).
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> context.joinSummary().onJoin(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			context.navigation().stop(handler.getPlayer().getUUID());
 			context.sync().forget(handler.getPlayer().getUUID());
+			context.joinSummary().onLeave(handler.getPlayer().getUUID());
 		});
 
 		CommandRegistrationCallback.EVENT.register(

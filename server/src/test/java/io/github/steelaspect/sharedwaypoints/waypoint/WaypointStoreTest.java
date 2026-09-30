@@ -159,4 +159,44 @@ class WaypointStoreTest {
 	private static List<String> names(List<Waypoint> waypoints) {
 		return waypoints.stream().map(Waypoint::name).toList();
 	}
+
+	private static Waypoint addedAt(String name, Instant created) {
+		return new Waypoint(UUID.randomUUID(), name, TestCategories.OTHER, 0, 64, 0, "minecraft:overworld", null, STEVE,
+				"Steve", created);
+	}
+
+	@Test
+	void lastSeenIsSavedWithTheWaypoints() throws IOException {
+		WaypointStore store = loaded();
+		UUID alex = UUID.randomUUID();
+		assertTrue(store.lastSeen(alex).isEmpty(), "never seen");
+		Instant seen = Instant.parse("2026-09-30T08:15:30.250Z");
+		store.markSeen(alex, seen);
+
+		WaypointStore reloaded = loaded();
+		assertEquals(seen, reloaded.lastSeen(alex).orElseThrow());
+		JsonObject json = JsonParser.parseString(Files.readString(file())).getAsJsonObject();
+		assertEquals("2026-09-30T08:15:30.250Z", json.getAsJsonObject("lastSeen").get(alex.toString()).getAsString());
+	}
+
+	@Test
+	void olderFilesWithoutLastSeenStillLoad() throws IOException {
+		Files.createDirectories(file().getParent());
+		Files.writeString(file(), "{\"version\": 2, \"waypoints\": [{\"name\": \"Base\", \"dimension\": \"minecraft:overworld\"}]}");
+		WaypointStore store = loaded();
+		assertEquals(1, store.size());
+		assertTrue(store.lastSeen(STEVE).isEmpty());
+	}
+
+	@Test
+	void addedSinceIsNewestFirstAndIncludesTheSameSecond() {
+		WaypointStore store = loaded();
+		store.add(addedAt("Old", Instant.parse("2026-09-30T08:00:00Z")));
+		store.add(addedAt("Same second", Instant.parse("2026-09-30T09:00:00Z")));
+		store.add(addedAt("Newest", Instant.parse("2026-09-30T10:00:00Z")));
+		// Left at 09:00:00.600; waypoint times are whole seconds, so the 09:00:00 one might be newer: include it.
+		List<String> names = store.addedSince(Instant.parse("2026-09-30T09:00:00.600Z")).stream().map(Waypoint::name).toList();
+		assertEquals(List.of("Newest", "Same second"), names);
+		assertTrue(store.addedSince(Instant.parse("2026-09-30T11:00:00Z")).isEmpty());
+	}
 }

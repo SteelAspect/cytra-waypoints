@@ -321,6 +321,7 @@ public class SharedWaypointsGameTest {
 
 		routes(helper, server, dispatcher, mod, aliceEntity, bobEntity, alice, bob, moderator);
 		clientModSync(helper, dispatcher, mod, aliceEntity, bobEntity, alice, moderator);
+		joinSummary(helper, dispatcher, mod, aliceEntity, moderator);
 
 		// Every /waypoints subcommand must be a reserved word, so no category can ever hide one.
 		for (var child : dispatcher.getRoot().getChild("waypoints").getChildren()) {
@@ -507,6 +508,64 @@ public class SharedWaypointsGameTest {
 		for (String name : List.of("R1", "R3", "R4")) {
 			run(helper, dispatcher, moderator, "waypoints remove " + name);
 		}
+	}
+
+	// ---------------------------------------------------------- join summary
+
+	/** "N new waypoints since you last played", with the usual chat buttons. */
+	private static void joinSummary(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
+			ModContext mod, ServerPlayer aliceEntity, Source moderator) {
+		var viewer = io.github.steelaspect.sharedwaypoints.text.Viewer.of(aliceEntity, mod.favorites());
+		// Explicit times, so the check doesn't depend on how fast the test runs: alice "left" an hour from now, and
+		// the new waypoints are stamped after that.
+		java.time.Instant leftAt = java.time.Instant.now().plusSeconds(3600);
+		helper.assertTrue(mod.joinSummary().lines(Optional.of(leftAt), viewer).isEmpty(), "nothing new, nothing said");
+		java.util.function.BiConsumer<String, Integer> addLater = (name, x) -> mod.waypoints().add(new Waypoint(
+				UUID.randomUUID(), name, mod.categories().resolve(x == 30 ? "farms" : x == 40 ? "bases" : "other"),
+				x, 64, x, "minecraft:overworld", null, Waypoint.SERVER_UUID, "Server", leftAt.plusSeconds(60)));
+
+		addLater.accept("New Farm", 30);
+		addLater.accept("New Base", 40);
+		List<Component> lines = mod.joinSummary().lines(Optional.of(leftAt), viewer);
+		String text = String.join("\n", lines.stream().map(Component::getString).toList());
+		helper.assertTrue(lines.get(0).getString().equals("✦ 2 new waypoints since you last played:"), text);
+		helper.assertTrue(text.contains("[Farms] New Farm — 30 64 30 (overworld) [Add to Xaero] [Copy coords] [Go]"), text);
+		helper.assertTrue(text.contains("[Bases] New Base"), text);
+		Component farmLine = lines.stream().filter(line -> line.getString().contains("New Farm")).findFirst().orElseThrow();
+		helper.assertValueEqual(clickOf(farmLine, "[Add to Xaero]"),
+				Optional.of(new ClickEvent.RunCommand("/waypoints xaero \"New Farm\"")), "the usual Xaero add button");
+
+		// First visit: no "new" list, just a pointer to the waypoints.
+		List<Component> first = mod.joinSummary().lines(Optional.empty(), viewer);
+		helper.assertTrue(first.size() == 1 && first.get(0).getString().startsWith("✦ This server shares ")
+				&& first.get(0).getString().endsWith("[Show all]"), "first visit: " + first);
+
+		// Long lists are cut off with a button to the full list.
+		List<String> extra = new ArrayList<>();
+		for (int i = 0; i < 8; i++) {
+			addLater.accept("Extra" + i, i);
+			extra.add("Extra" + i);
+		}
+		List<Component> many = mod.joinSummary().lines(Optional.of(leftAt), viewer);
+		helper.assertValueEqual(many.size(), 1 + 8 + 1, "header, 8 lines, and the rest");
+		helper.assertTrue(many.get(9).getString().equals("…and 2 more. [Show all]"), many.get(9).getString());
+
+		// Joining records the time in waypoints.json.
+		mod.joinSummary().onJoin(aliceEntity);
+		helper.assertTrue(mod.waypoints().lastSeen(aliceEntity.getUUID()).isPresent(), "last seen recorded");
+		try {
+			String json = Files.readString(configDir().resolve("waypoints.json"));
+			helper.assertTrue(json.contains("\"lastSeen\"") && json.contains(aliceEntity.getUUID().toString()),
+					"lastSeen saved in waypoints.json");
+		} catch (IOException e) {
+			helper.fail("could not read waypoints.json: " + e);
+		}
+		for (String name : extra) {
+			run(helper, dispatcher, moderator, "waypoints remove " + name);
+		}
+		run(helper, dispatcher, moderator, "waypoints remove \"New Farm\"");
+		run(helper, dispatcher, moderator, "waypoints remove \"New Base\"");
+		moderator.out.take();
 	}
 
 	// ------------------------------------------------------ client-mod sync

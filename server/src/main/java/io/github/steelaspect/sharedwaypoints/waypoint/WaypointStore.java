@@ -40,6 +40,8 @@ public final class WaypointStore {
 	/** Keyed by lower-case name so lookups and uniqueness are case-insensitive. */
 	private final Map<String, Waypoint> byName = new HashMap<>();
 	private final Map<UUID, Waypoint> byId = new HashMap<>();
+	/** When each player was last online (for "new since you last played"), stored in the same file. */
+	private final Map<UUID, Instant> lastSeen = new HashMap<>();
 	private final List<Consumer<Waypoint>> removalListeners = new ArrayList<>();
 	private final List<Runnable> changeListeners = new ArrayList<>();
 	private final List<Consumer<Waypoint>> saveListeners = new ArrayList<>();
@@ -127,6 +129,23 @@ public final class WaypointStore {
 		return byName.size();
 	}
 
+	/** When the player was last online, if they have been before. */
+	public Optional<Instant> lastSeen(UUID player) {
+		return Optional.ofNullable(lastSeen.get(player));
+	}
+
+	/**
+	 * Waypoints added at or after {@code since}, newest first. "At" counts, because waypoint times are whole
+	 * seconds: showing one twice is better than missing one.
+	 */
+	public List<Waypoint> addedSince(Instant since) {
+		Instant from = since.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+		return byName.values().stream()
+				.filter(waypoint -> !waypoint.created().isBefore(from))
+				.sorted(Comparator.comparing(Waypoint::created).reversed().thenComparing(DISPLAY_ORDER))
+				.toList();
+	}
+
 	public boolean lastSaveFailed() {
 		return saveFailed;
 	}
@@ -173,12 +192,19 @@ public final class WaypointStore {
 		return updated;
 	}
 
+	/** Remembers that the player is (or was just) online, and saves. Doesn't count as a waypoint change. */
+	public void markSeen(UUID player, Instant when) {
+		lastSeen.put(player, when);
+		save();
+	}
+
 	// ------------------------------------------------------------ persistence
 
 	/** Replaces the in-memory list with the contents of the JSON file (if it exists). */
 	public void load() {
 		byName.clear();
 		byId.clear();
+		lastSeen.clear();
 		saveFailed = false;
 
 		Optional<StoreFile> data = JsonFiles.read(file, StoreFile.class, Gsons.withCategories(categories.get()));
@@ -189,6 +215,13 @@ public final class WaypointStore {
 			return;
 		}
 		boolean upgraded = data.get().version < FORMAT_VERSION;
+		if (data.get().lastSeen != null) {
+			data.get().lastSeen.forEach((player, when) -> {
+				if (player != null && when != null) {
+					lastSeen.put(player, when);
+				}
+			});
+		}
 		for (Waypoint raw : data.get().waypoints == null ? List.<Waypoint>of() : data.get().waypoints) {
 			Waypoint waypoint = sanitize(raw);
 			if (waypoint == null) {
@@ -213,6 +246,7 @@ public final class WaypointStore {
 	public void save() {
 		StoreFile data = new StoreFile();
 		data.waypoints = new ArrayList<>(all());
+		data.lastSeen = new java.util.TreeMap<>(lastSeen);
 		try {
 			JsonFiles.writeAtomically(file, data, Gsons.withCategories(categories.get()));
 			saveFailed = false;
@@ -268,5 +302,7 @@ public final class WaypointStore {
 	private static final class StoreFile {
 		int version = FORMAT_VERSION;
 		List<Waypoint> waypoints = new ArrayList<>();
+		/** Player UUID → when they were last online. Older files don't have it. */
+		Map<UUID, Instant> lastSeen = new LinkedHashMap<>();
 	}
 }
