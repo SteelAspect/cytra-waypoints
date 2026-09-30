@@ -146,3 +146,26 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
 - The waypoint Y is the block the player stands in. Distances in lists are horizontal; arrival also counts height.
 - Chat replies are sent even when `sendCommandFeedback` is off, because for /waypoints the reply is the result.
 - In singleplayer, every world shares the same `config/sharedwaypoints/` list.
+
+## Xaero's Minimap auto-sync (sharedwaypoints-client)
+
+Checked against **Xaero's Minimap 26.5.0 for Fabric 1.21.11** (`xaerominimap-fabric-1.21.11-26.5.0.jar`, Modrinth
+version `VNYP3B0c`), by decompiling it. Xaero has no public API for adding waypoints. Its
+`ThirdPartyWaypoints` is in-memory only and doesn't show up as a set in the waypoint screen, so the client mod uses
+Xaero's own world and set classes, all through reflection in one class, `XaeroBridge`:
+
+| Step | Xaero call |
+|---|---|
+| Current session | `xaero.hud.minimap.BuiltInHudModules.MINIMAP.getCurrentSession()` → `MinimapSession` |
+| Ready? | `session.getWorldState().getAutoWorldPath() != null` (Xaero's own "can't add a waypoint at this time" check) |
+| World for a dimension | Copied from `WaypointSharingHandler.getReceivedDestinationWorld`: container path = `worldState.getAutoRootContainerPath().resolve(dimensionHelper.getDimensionDirectoryName(dimKey))`; then the auto world if it's in that container, else `getFirstWorldConnectedTo(autoWorld)`, else `getFirstWorld()`, else `addWorld(worldStateUpdater.getPotentialWorldNode(dimKey, false))` |
+| The "Shared" set | `world.getWaypointSet("Shared")`, or `world.addWaypointSet(WaypointSet.Builder.begin().setName("Shared").build())` |
+| Waypoints | `new Waypoint(x, y, z, name, initials, WaypointColor.fromIndex(i), WaypointPurpose.NORMAL, false, true)`; `set.clear()` / `set.add(...)` |
+| Save | `session.getWorldManagerIO().saveWorld(world)` |
+
+The "Shared" set belongs to the mod. Each change rebuilds it for the affected dimensions from the list the server
+sent, so personal sets are never read or written. The only thing kept from the old set is each waypoint's
+"disabled" flag (matched by name), so hiding a shared waypoint in Xaero survives updates.
+
+If any class or method is missing (a Xaero update renamed it), the bridge logs one warning and turns sync off for
+the session. The game keeps running and the server's chat buttons still work.
