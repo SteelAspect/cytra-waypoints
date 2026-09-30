@@ -97,3 +97,16 @@
 [2026-09-29 03:00:47 UTC] RELEASE: v1.2.0 published on GitHub by the owner (target main); Release workflow building and attaching sharedwaypoints-1.2.0.jar
 [2026-09-29 03:00:47 UTC] GIT: commits from now on use plain messages without attribution lines
 [2026-09-29 03:02:00 UTC] DONE: Release workflow succeeded (both runs); sharedwaypoints-1.2.0.jar (85,607 bytes) and changelog notes attached to https://github.com/SteelAspect/sharedwaypoints/releases/tag/v1.2.0
+[2026-09-29 03:06:01 UTC] MERGED: PR #1 (dev -> main) merged by request as 3a622d4; dev fast-forwarded to main
+[2026-09-29 17:20:09 UTC] STARTED: 1.3.0 on dev - cleanup (MIT license, icon, /waypoints reload, output despite sendCommandFeedback=false) + web map markers + custom categories
+[2026-09-29 17:26:19 UTC] FILES: categories from config (Category record, CategoryRegistry), map/ package (BlueMap + squaremap layers, marker icons, HTML-escaped popups), /waypoints reload, replies despite sendCommandFeedback=false
+[2026-09-29 17:26:43 UTC] FILE CREATED: LICENSE (MIT); build.gradle (optional BlueMap/squaremap APIs, LICENSE in jar); version 1.3.0
+[2026-09-29 17:26:43 UTC] BUILD: compiling main sources
+[2026-09-29 17:29:04 UTC] FILES: tests - CategoryRegistryTest, MapMarkerTest (HTML escaping, icons), TestCategories; icon.png; fabric.mod.json license/icon
+[2026-09-29 17:29:04 UTC] BUILD: build + unit tests
+[2026-09-29 17:30:14 UTC] FILES: GameTest - squaremap runs on the test server (markers checked), reload + custom category, reserved-id check
+[2026-09-29 17:30:14 UTC] BUILD: build + unit tests + GameTest (with squaremap)
+[2026-09-29 17:33:13 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.3.0), docs/DEVELOPMENT.md
+[2026-09-29 17:33:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.3.0), docs/DEVELOPMENT.md
+[2026-09-29 17:33:37 UTC] BUILD: final clean build + unit tests + GameTest (with squaremap) for 1.3.0
+[2026-09-29 17:35:57 UTC] BUILD PASS: 1.3.0 - 60/60 unit tests; GameTest passes with squaremap (markers verified) and without any map mod

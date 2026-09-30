@@ -8,6 +8,7 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestion;
 import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
+import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -179,6 +180,17 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty(), "already there -> arrived at once");
 		run(helper, dispatcher, alice, "waypoints go Iron-Farm");
 
+		// --- web map: squaremap runs on this test server, so its layer must hold our markers
+		Waypoint hub = mod.waypoints().get("Hub").orElseThrow();
+		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
+			helper.assertTrue(SquaremapProbe.layerRegistered(), "our squaremap layer is registered");
+			helper.assertValueEqual(SquaremapProbe.layerLabel(), "Shared Waypoints", "layer name");
+			helper.assertTrue(SquaremapProbe.hasMarker("wp-" + ironFarm.id()), "Iron-Farm on the overworld map");
+			helper.assertTrue(!SquaremapProbe.hasMarker("wp-" + hub.id()), "Hub is in the Nether, not on the overworld map");
+			String popup = SquaremapProbe.clickTooltip("wp-" + ironFarm.id());
+			helper.assertTrue(popup != null && popup.contains("<b>Iron-Farm</b>"), "click popup: " + popup);
+		}
+
 		// --- tab completion
 		helper.assertTrue(suggestions(dispatcher, alice, "waypoints info ").contains("\"Main Storage\""),
 				"name suggestions are quoted when needed");
@@ -209,6 +221,9 @@ public class SharedWaypointsGameTest {
 		}
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty(),
 				"navigation ends when its waypoint is removed");
+		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
+			helper.assertTrue(!SquaremapProbe.hasMarker("wp-" + ironFarm.id()), "removed from the map too");
+		}
 
 		// --- the JSON file follows every change
 		JsonArray saved = readSavedWaypoints(helper);
@@ -220,6 +235,38 @@ public class SharedWaypointsGameTest {
 		helper.assertValueEqual(entry.get("description").getAsString(), "Sorted chests, bring shulkers", "description on disk");
 		helper.assertValueEqual(entry.get("creatorUuid").getAsString(), aliceEntity.getUUID().toString(), "creator");
 		helper.assertTrue(entry.has("id") && entry.has("created"), "id and timestamp on disk");
+
+		// --- custom categories from config.json, picked up by /waypoints reload
+		Path config = configDir().resolve("config.json");
+		try {
+			JsonObject json = JsonParser.parseString(Files.readString(config)).getAsJsonObject();
+			JsonObject shops = new JsonObject();
+			shops.addProperty("id", "shops");
+			shops.addProperty("name", "Shops");
+			shops.addProperty("color", "yellow");
+			json.getAsJsonArray("categories").add(shops);
+			Files.writeString(config, json.toString());
+		} catch (IOException e) {
+			helper.fail("could not edit " + config + ": " + e);
+		}
+		expectError(helper, dispatcher, alice, "waypoints reload", ""); // ops only
+		run(helper, dispatcher, moderator, "waypoints reload");
+		helper.assertTrue(moderator.out.take().contains("Reloaded SharedWaypoints: 1 waypoints, 6 categories"), "reload summary");
+		run(helper, dispatcher, moderator, "waypoints add Market shops 5 64 5");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints shops"), 1, "list the new category");
+		String shopsList = alice.out.take();
+		helper.assertTrue(shopsList.contains("[Shops] Market — 5 64 5"), shopsList);
+		helper.assertTrue(suggestions(dispatcher, alice, "waypoints add X ").contains("shops"), "new category suggested");
+		run(helper, dispatcher, alice, "waypoints categories");
+		helper.assertTrue(alice.out.take().contains("[Shops] shops — 1 waypoint · Xaero colour: Yellow (14)"), "category summary");
+
+		// Every /waypoints subcommand must be a reserved word, so no category can ever hide one.
+		for (var child : dispatcher.getRoot().getChild("waypoints").getChildren()) {
+			if (child instanceof com.mojang.brigadier.tree.LiteralCommandNode<?>) {
+				helper.assertTrue(CategoryRegistry.RESERVED_IDS.contains(child.getName()),
+						"subcommand \"" + child.getName() + "\" missing from CategoryRegistry.RESERVED_IDS");
+			}
+		}
 
 		helper.succeed();
 	}
