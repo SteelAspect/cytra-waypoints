@@ -47,6 +47,10 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 			world.getClientWorld().waitForChunksRender();
 			context.waitFor(client -> SharedWaypointsSync.isActive());
 			log("handshake done: the server syncs this client");
+			// This player already has the client mod, so the first join has no "get the client mod" tip.
+			if (context.computeOnClient(client -> chatText(client).contains("Want these waypoints in Xaero's Minimap"))) {
+				throw new AssertionError("The client-mod tip was shown to a player who has the client mod");
+			}
 
 			// Added on the server: appear in Xaero, in the right dimension's Shared set.
 			world.getServer().runCommand("waypoints add \"Main Storage\" storage 12 -60 -30");
@@ -90,6 +94,19 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 			// Saved to Xaero's waypoint files on disk, not just in memory.
 			requireFileContains("Iron Farm", "Shared");
 			log("PASSED");
+		}
+	}
+
+	/** Everything in the chat HUD so far, one message per line. */
+	private static String chatText(net.minecraft.client.Minecraft client) {
+		try {
+			var field = net.minecraft.client.gui.components.ChatComponent.class.getDeclaredField("allMessages");
+			field.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			var messages = (List<net.minecraft.client.GuiMessage>) field.get(client.gui.getChat());
+			return String.join("\n", messages.stream().map(message -> message.content().getString()).toList());
+		} catch (ReflectiveOperationException e) {
+			throw new AssertionError("can't read the chat HUD", e);
 		}
 	}
 

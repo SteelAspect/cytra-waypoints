@@ -169,6 +169,8 @@ public final class WaypointCommand {
 				.then(Commands.literal("xaero")
 						.then(command.nameArgument("name", anyWaypoint)
 								.executes(context -> command.shareToXaero(context.getSource(), string(context, "name")))))
+				.then(Commands.literal("sync")
+						.executes(context -> command.syncHelp(context.getSource())))
 
 				// ---- editing
 				.then(Commands.literal("add")
@@ -748,6 +750,12 @@ public final class WaypointCommand {
 						builder,
 						route -> StringArgumentType.escapeIfRequired(route.name()),
 						route -> Component.literal(route.stops().size() + (route.stops().size() == 1 ? " stop" : " stops"))));
+	}
+
+	/** How to get the automatic Xaero's Minimap sync, and whether it's on for you. */
+	private int syncHelp(CommandSourceStack source) {
+		mod.clientModTip().steps(source.getPlayer()).forEach(line -> reply(source, line));
+		return 1;
 	}
 
 	// -------------------------------------------------------------------- helpers

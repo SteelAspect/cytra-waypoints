@@ -24,6 +24,13 @@ public final class ModConfig {
 	 * waypoints in its own "Shared" set. Players without the client mod are never affected.
 	 */
 	public boolean syncToClientMod = true;
+	/**
+	 * On their first join, tell players who don't have sharedwaypoints-client how to get the Xaero sync
+	 * (once per player). {@code /waypoints sync} shows the steps any time.
+	 */
+	public boolean clientModTip = true;
+	/** Where [Download] in that tip and in {@code /waypoints sync} points. Empty: no link ("ask an admin"). */
+	public String clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
 	/** Show a particle beacon at the destination while navigating. */
 	public boolean navigationParticles = true;
 	/** Navigation ends when you get this close (blocks). */
@@ -60,6 +67,9 @@ public final class ModConfig {
 		arrivalRadius = Math.clamp(arrivalRadius, 1, 64);
 		pageSize = Math.clamp(pageSize, 3, 30);
 		nearRadius = Math.clamp(nearRadius, 16, 30_000_000);
+		if (clientModUrl == null) {
+			clientModUrl = "";
+		}
 		if (webMapLayerName == null || webMapLayerName.isBlank()) {
 			webMapLayerName = "Shared Waypoints";
 		}

@@ -19,7 +19,7 @@ public final class CategoryRegistry {
 	 */
 	public static final Set<String> RESERVED_IDS = Set.of(
 			"add", "remove", "rename", "describe", "info", "categories", "search", "near", "nearest", "go", "stop",
-			"tp", "favorite", "favorites", "xaero", "page", "reload", "route");
+			"tp", "favorite", "favorites", "xaero", "page", "reload", "route", "sync");
 
 	/** What a category id may look like: it must fit in a single command word. */
 	private static final Pattern ID_PATTERN = Pattern.compile("[a-z0-9_-]{1,24}");

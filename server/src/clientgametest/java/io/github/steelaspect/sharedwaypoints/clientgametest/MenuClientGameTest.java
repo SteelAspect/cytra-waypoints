@@ -59,6 +59,19 @@ public class MenuClientGameTest implements FabricClientGameTest {
 		}
 	}
 
+	/** Everything in the chat HUD so far, one message per line. */
+	private static String chatText(net.minecraft.client.Minecraft client) {
+		try {
+			var field = net.minecraft.client.gui.components.ChatComponent.class.getDeclaredField("allMessages");
+			field.setAccessible(true);
+			@SuppressWarnings("unchecked")
+			var messages = (List<net.minecraft.client.GuiMessage>) field.get(client.gui.getChat());
+			return String.join("\n", messages.stream().map(message -> message.content().getString()).toList());
+		} catch (ReflectiveOperationException e) {
+			throw new AssertionError("can't read the chat HUD", e);
+		}
+	}
+
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		// Fabric allows 1200 client ticks for the world to load, and the server ticks in step with the client. On a
@@ -77,6 +90,19 @@ public class MenuClientGameTest implements FabricClientGameTest {
 				client.options.menuBackgroundBlurriness().set(5);
 			});
 			world.getClientWorld().waitForChunksRender();
+			// No sync client mod in this game: the first join shows how to get the Xaero sync.
+			context.waitFor(client -> chatText(client).contains("Want these waypoints in Xaero's Minimap automatically?"));
+			context.setScreen(() -> new ChatScreen("", false));
+			context.waitTicks(3);
+			shot(context, "sync-tip");
+			context.setScreen(() -> null);
+			// [How it works] runs /waypoints sync: the steps.
+			context.runOnClient(client -> client.player.connection.sendCommand("waypoints sync"));
+			context.waitFor(client -> chatText(client).contains("1. Put sharedwaypoints-client-"));
+			context.setScreen(() -> new ChatScreen("", false));
+			context.waitTicks(3);
+			shot(context, "sync-steps");
+			context.setScreen(() -> null);
 			world.getServer().runCommand("waypoints add \"Main Storage\" storage 12 -60 -30");
 			world.getServer().runCommand("waypoints describe \"Main Storage\" Sorted chests, bring shulkers");
 			world.getServer().runCommand("waypoints add \"Iron Farm\" farms 140 -60 210");

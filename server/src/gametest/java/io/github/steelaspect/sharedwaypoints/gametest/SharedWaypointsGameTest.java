@@ -550,6 +550,8 @@ public class SharedWaypointsGameTest {
 		helper.assertValueEqual(many.size(), 1 + 8 + 1, "header, 8 lines, and the rest");
 		helper.assertTrue(many.get(9).getString().equals("…and 2 more. [Show all]"), many.get(9).getString());
 
+		clientModTip(helper, dispatcher, mod, aliceEntity);
+
 		// Joining records the time in waypoints.json.
 		mod.joinSummary().onJoin(aliceEntity);
 		helper.assertTrue(mod.waypoints().lastSeen(aliceEntity.getUUID()).isPresent(), "last seen recorded");
@@ -637,6 +639,57 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(toAlice.isEmpty(), "no updates after leaving");
 		run(helper, dispatcher, moderator, "waypoints remove Gone");
 		alice.out.take();
+	}
+
+	/** How players learn about the Xaero sync: the first-join tip and /waypoints sync. */
+	private static void clientModTip(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
+			ModContext mod, ServerPlayer aliceEntity) {
+		var tips = mod.clientModTip();
+		var config = mod.config();
+		// alice is a mock player without the client mod: tipped on her first visit only.
+		helper.assertTrue(tips.shouldTip(aliceEntity, true), "first visit without the client mod gets the tip");
+		helper.assertFalse(tips.shouldTip(aliceEntity, false), "no tip on later visits");
+		config.clientModTip = false;
+		helper.assertFalse(tips.shouldTip(aliceEntity, true), "clientModTip off: no tip");
+		config.clientModTip = true;
+		config.syncToClientMod = false;
+		helper.assertFalse(tips.shouldTip(aliceEntity, true), "sync off: no tip");
+		config.syncToClientMod = true;
+
+		Component tip = tips.tip();
+		helper.assertTrue(tip.getString().startsWith("✦ Want these waypoints in Xaero's Minimap automatically? "
+				+ "Install the sharedwaypoints-client mod. [Download] [How it works]"), tip.getString());
+		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/waypoints sync")),
+				"How it works runs /waypoints sync");
+		helper.assertValueEqual(clickOf(tip, "[Download]"), Optional.of(new ClickEvent.OpenUrl(
+				java.net.URI.create("https://github.com/SteelAspect/sharedwaypoints/releases/latest"))), "Download link");
+
+		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
+		run(helper, dispatcher, alice, "waypoints sync");
+		String steps = alice.out.take();
+		helper.assertTrue(steps.contains("Automatic Xaero's Minimap sync")
+				&& steps.contains("1. Put sharedwaypoints-client-2.0.0.jar in your .minecraft/mods folder.")
+				&& steps.contains("2. Also install Xaero's Minimap and Fabric API")
+				&& steps.contains("3. Rejoin.") && steps.contains("[Download]"), steps);
+
+		// No link configured (or not a web link): no button, ask an admin instead.
+		config.clientModUrl = "not a link";
+		helper.assertFalse(tips.tip().getString().contains("[Download]"), "no Download button without a link");
+		run(helper, dispatcher, alice, "waypoints sync");
+		helper.assertTrue(alice.out.take().contains("Ask a server admin for the file."), "no link: ask an admin");
+		config.clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
+
+		// With the client mod synced, /waypoints sync says so instead of the steps.
+		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), payload -> { });
+		run(helper, dispatcher, alice, "waypoints sync");
+		String synced = alice.out.take();
+		helper.assertTrue(synced.contains("You have it: your Xaero's Minimap is in sync") && !synced.contains("1. Put"), synced);
+		mod.sync().forget(aliceEntity.getUUID());
+
+		config.syncToClientMod = false;
+		run(helper, dispatcher, alice, "waypoints sync");
+		helper.assertTrue(alice.out.take().contains("This server has the sync turned off."), "sync off explained");
+		config.syncToClientMod = true;
 	}
 
 	private static Route route(ModContext mod) {

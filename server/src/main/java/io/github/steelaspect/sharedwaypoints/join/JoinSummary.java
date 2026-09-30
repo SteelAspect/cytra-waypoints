@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 /**
  * "3 new waypoints since you last played", shown on join with the usual [Add to Xaero] / [Copy coords] / [Go]
  * buttons, for everyone (no client mod needed). Last-seen times are kept per player in {@code waypoints.json}.
+ * On a player's first visit it also shows the {@link ClientModTip} to players without the client mod.
  */
 public final class JoinSummary {
 	/** Longer summaries end with a button to the full list instead. */
@@ -35,8 +36,14 @@ public final class JoinSummary {
 		UUID id = player.getUUID();
 		Optional<Instant> previous = mod.waypoints().lastSeen(id);
 		mod.waypoints().markSeen(id, Instant.now());
-		if (mod.config().joinSummary && WaypointPermissions.canView(player)) {
+		if (!WaypointPermissions.canView(player)) {
+			return;
+		}
+		if (mod.config().joinSummary) {
 			lines(previous, Viewer.of(player, mod.favorites())).forEach(player::sendSystemMessage);
+		}
+		if (mod.clientModTip().shouldTip(player, previous.isEmpty())) {
+			player.sendSystemMessage(mod.clientModTip().tip());
 		}
 	}
 
