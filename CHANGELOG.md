@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 — unreleased
+## 2.0.0 — 2026-09-30
 
 **Two jars now**
 - `sharedwaypoints-server` is the mod server owners install. It has everything 1.5.0 had, unchanged, and it's
@@ -17,8 +17,10 @@
 **New on the server (for everyone, no client mod needed)**
 - **Join summary:** "3 new waypoints since you last played", with the usual [Add to Xaero] / [Copy coords] / [Go]
   buttons. Last-seen times per player are stored in `waypoints.json` (`lastSeen`).
-- Config: `joinSummary` and `syncToClientMod`. `announceNewWaypoints` still controls the live broadcast of new
-  waypoints.
+- **How to get the sync:** players without the client mod get one line in chat on their first join, with
+  **[Download]** and **[How it works]**. `/waypoints sync` shows the steps, or says the sync is already on.
+- Config: `joinSummary`, `syncToClientMod`, `clientModTip` and `clientModUrl` (where [Download] points; defaults
+  to the latest GitHub release). `announceNewWaypoints` still controls the live broadcast of new waypoints.
 
 **How the sync works**
 - The client mod says hello on join, with a protocol version. Only then does the server send it the full list,

@@ -172,6 +172,7 @@ The mod also works in singleplayer and LAN worlds.
 | `/waypoints route delete <route>` | Delete a route (its waypoints stay) |
 | `/waypoints reload` | Reload `config.json`, waypoints and favourites from disk (ops) |
 | `/waypoints xaero <name>` | Send the Xaero share message (what **[Add to Xaero]** runs) |
+| `/waypoints sync` | How to get the automatic Xaero's Minimap sync, or whether you already have it |
 
 - Put names with spaces in quotes: `/waypoints add "Main Storage" storage`. Names are 1–32 characters (Xaero's limit)
   and unique regardless of case.
@@ -201,6 +202,8 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
   "announceNewWaypoints": true,
   "joinSummary": true,
   "syncToClientMod": true,
+  "clientModTip": true,
+  "clientModUrl": "https://github.com/SteelAspect/sharedwaypoints/releases/latest",
   "navigationParticles": true,
   "arrivalRadius": 6,
   "pageSize": 8,
@@ -222,6 +225,8 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 | `announceNewWaypoints` | Live broadcast: tell everyone online when a waypoint is added, with [Add to Xaero] |
 | `joinSummary` | On join, list the waypoints added since the player last played |
 | `syncToClientMod` | Keep players who have sharedwaypoints-client in sync (their Xaero's Minimap). Off: they get chat buttons like everyone else |
+| `clientModTip` | On their first join, tell players without sharedwaypoints-client how to get the Xaero sync (once per player) |
+| `clientModUrl` | Where **[Download]** in that tip and in `/waypoints sync` points, e.g. your Discord or website. Empty: no link, players are told to ask an admin |
 | `navigationParticles` | Show the particle beacon while navigating |
 | `arrivalRadius` | Distance in blocks that counts as "arrived" (1–64) |
 | `pageSize` | Waypoints per page (3–30) |
@@ -309,6 +314,13 @@ fills a waypoint set called **"Shared"** in Xaero:
   disappear too;
 - your own waypoints and sets are never read or changed. Only the "Shared" set belongs to the mod (so don't
   name one of your own sets "Shared").
+
+**How players find out:** players without the client mod get one line in chat on their first join, with
+**[Download]** and **[How it works]**. `/waypoints sync` shows the steps any time, or tells a player the sync is
+already on for them. Turn the tip off with `clientModTip`, and point **[Download]** at your own page with
+`clientModUrl`.
+
+![The first-join tip](docs/images/guide/sync-tip.png)
 
 **Where are they?** By default Xaero only shows the *selected* waypoint set. Pick **Shared** in Xaero's waypoint
 menu, or turn on **Render All WP Sets** in Xaero's settings to see shared and personal waypoints together. The

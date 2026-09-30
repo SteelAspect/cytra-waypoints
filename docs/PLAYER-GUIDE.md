@@ -10,7 +10,11 @@ You don't need the menu. It's just quicker than typing commands.
 
 ## Automatic Xaero's Minimap sync (optional)
 
-If you use **Xaero's Minimap**, you can have the server's shared waypoints appear in it automatically:
+If you use **Xaero's Minimap**, you can have the server's shared waypoints appear in it automatically. The first
+time you join, the server tells you how in chat. Type `/waypoints sync` to see the steps again, or to check it's
+working.
+
+![The steps from /waypoints sync](images/guide/sync-steps.png)
 
 1. Put `sharedwaypoints-client-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
    Fabric API. It's the same jar that gives you the menu below.
