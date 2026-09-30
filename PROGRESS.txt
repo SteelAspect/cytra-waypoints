@@ -155,3 +155,4 @@
 [2026-09-30 06:17] TESTED - both real-client tests on 2 CPU cores like the CI runner (taskset -c 0,1): they now run one after the other, menu test PASSED, Xaero sync test PASSED, BUILD SUCCESSFUL in 1m 24s
 [2026-09-30 06:22] TESTED - CI green on PR #6 (head 5c2e18d): build job (build, unit tests, server GameTest) and client job (menu test + Xaero sync test) pass on both the push and pull_request runs; no merge conflicts. Ready for in-game testing and your merge
 [2026-09-30 17:25] BLOCKED - PR #6 stays open by choice until someone tests in-game (checklist in the PR). CI green, no conflicts. Dxvid-Codes (collaborator) can merge from GitHub when happy
+[2026-09-30 19:46] STARTED - "✦ Waypoints" button in the top-right corner of the Esc (pause) menu that opens the waypoint menu, for players who don't want to use the J key
