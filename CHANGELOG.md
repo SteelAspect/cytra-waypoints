@@ -2,7 +2,32 @@
 
 ## 2.0.0 — unreleased
 
-(in progress on dev)
+**Two jars now**
+- `sharedwaypoints-server` is the mod server owners install. It has everything 1.5.0 had, unchanged, and it's
+  still all the server needs.
+- `sharedwaypoints-client` is a new, **optional** client mod that keeps **Xaero's Minimap** in sync with the
+  server:
+  - every shared waypoint appears in Xaero, in its own **"Shared"** waypoint set, in the right dimension, with its
+    category colour;
+  - adds, edits and deletes show up live, and the set is reconciled with the server on every join;
+  - players' own waypoints are never touched.
+  - Tested with Xaero's Minimap 26.5.0 (Fabric 1.21.11). If Xaero is missing or incompatible, the client mod logs
+    one warning and does nothing.
+
+**New on the server (for everyone, no client mod needed)**
+- **Join summary:** "3 new waypoints since you last played", with the usual [Add to Xaero] / [Copy coords] / [Go]
+  buttons. Last-seen times per player are stored in `waypoints.json` (`lastSeen`).
+- Config: `joinSummary` and `syncToClientMod`. `announceNewWaypoints` still controls the live broadcast of new
+  waypoints.
+
+**How the sync works**
+- The client mod says hello on join, with a protocol version. Only then does the server send it the full list,
+  and after that every change. Players without the client mod get nothing new: the chat works exactly as before.
+- `/waypoints reload` resends the full list to synced players.
+
+**Other**
+- The mod's author field is now `steelaspect`.
+- The build is a Gradle multi-project (`protocol`, `server`, `client`); `./gradlew build` produces both jars.
 
 ## 1.5.0 — 2026-09-30
 

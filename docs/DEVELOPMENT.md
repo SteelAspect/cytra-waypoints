@@ -17,13 +17,34 @@
 Loom 1.18+ needs a Java 25 JVM to run Gradle. 1.17.21 is the newest Loom that runs on Java 21 and still builds the
 obfuscated 1.21.11.
 
+## Projects
+
+One Gradle build, three projects:
+
+| Project | Jar | What it is |
+|---|---|---|
+| `server/` | `sharedwaypoints-server-<v>.jar` (mod id `sharedwaypoints`) | The mod server owners install: commands, chat, menu (its `client` source set), routes, web maps, join summary, sync sender. |
+| `client/` | `sharedwaypoints-client-<v>.jar` (mod id `sharedwaypoints-client`) | Optional client-only mod: receives the sync and writes Xaero's "Shared" set. All Xaero code is in `XaeroBridge`. |
+| `protocol/` | bundled in both (mod id `sharedwaypoints-protocol`) | The sync payloads and `SyncProtocol.VERSION`. Jar-in-jar in both mods, so a player with both installed loads one copy. |
+
+Versions are pinned in `gradle.properties`. `mod_version` applies to all three projects.
+
 ## Building and testing
 
 ```bash
-./gradlew build          # compile, unit tests, jar in build/libs/
-./gradlew runGametest    # start a headless 1.21.11 server and run the end-to-end GameTest
-xvfb-run -a ./gradlew --no-daemon runClientGametest   # real client: opens the menu, saves screenshots
+./gradlew build                     # compile everything, unit tests, both jars
+./gradlew runGametest               # headless 1.21.11 server: the end-to-end GameTest (server project)
+xvfb-run -a ./gradlew --no-daemon :server:runClientGametest   # real client: the J menu, saves screenshots
+xvfb-run -a ./gradlew --no-daemon :client:runClientGametest   # real client + Xaero's Minimap 26.5.0: the sync
 ```
+
+- **Xaero sync test** (`client/src/clientgametest`): runs the real game with the server mod, the client mod and
+  Xaero's Minimap 26.5.0. Xaero is dropped unchanged into the test game's `mods/` folder, because its bundled
+  XaeroLib only loads that way. The test checks that:
+  - adds reach Xaero's "Shared" set in the right dimension;
+  - renames and deletes follow live;
+  - stale entries and a waypoint deleted while the player was away are removed on rejoin;
+  - Xaero's saved files have the Shared set with category colours, and the default set is untouched.
 
 - **Unit tests** (`src/test`) cover the Xaero share format against `XaeroParserReplica`, a copy of Xaero's Minimap
   26.5.0's parser. They also cover the JSON stores, categories, navigation maths, paging, relative times and web-map markers
@@ -44,13 +65,14 @@ xvfb-run -a ./gradlew --no-daemon runClientGametest   # real client: opens the m
 
 ## Branches and jar names
 
-| Branch | Purpose | Jar in `build/libs/` | Version in-game |
+| Branch | Purpose | Jars | Version in-game |
 |---|---|---|---|
-| `main` | releases | `sharedwaypoints-<version>.jar` | `<version>` |
-| `dev` and others | testing | `sharedwaypoints-dev-<version>.jar` | `<version>+dev` |
+| `main` | releases | `sharedwaypoints-server-<version>.jar`, `sharedwaypoints-client-<version>.jar` | `<version>` |
+| `dev` and others | testing | `sharedwaypoints-server-dev-<version>.jar`, `sharedwaypoints-client-dev-<version>.jar` | `<version>+dev` |
 
 The branch is read from git (or `GITHUB_REF_NAME` in CI). Force either with `-Prelease=true` / `-Prelease=false`.
-`build/devlibs/` only holds a development jar that still uses Mojang names; it won't load on a normal server.
+The jars are in `server/build/libs/` and `client/build/libs/`. `build/devlibs/` only holds development jars that
+still use Mojang names; they won't load in a normal game.
 
 Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
 
@@ -68,7 +90,7 @@ Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
 
 The **Release** workflow (`.github/workflows/release.yml`) handles all three. It checks that the tag matches
 `mod_version`, builds with `-Prelease=true`, and runs the unit tests and the GameTest. Then it creates the release,
-or updates the one you published, with `sharedwaypoints-<version>.jar` attached. If the release has no notes, it
+or updates the one you published, with both jars attached. If the release has no notes, it
 fills them in from that version's changelog section. The **Build**
 workflow runs the same checks on every push to `main`/`dev` and on pull requests, and keeps the jar as a
 downloadable artifact.
@@ -76,7 +98,7 @@ downloadable artifact.
 ## Code layout
 
 ```
-src/main/java/io/github/steelaspect/sharedwaypoints/        (common: everything the server needs)
+server/src/main/java/io/github/steelaspect/sharedwaypoints/ (common: everything the server needs)
   SharedWaypoints.java                 entrypoint: lifecycle, tick and disconnect events, commands
   ModContext.java                      config + waypoints + favourites + navigation for the running server
   command/WaypointCommand.java         the /waypoints Brigadier tree and tab completion
@@ -95,12 +117,17 @@ src/main/java/io/github/steelaspect/sharedwaypoints/        (common: everything 
   network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
                                        MenuNetworking (actions run as the player's /waypoints command)
   xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
-src/client/java/.../client/            optional client: J keybind, WaypointMenuScreen, AddWaypointScreen,
+  sync/SyncService.java                client-mod sync: handshake, full list, live upserts and deletes
+  join/JoinSummary.java                "N new waypoints since you last played"
+protocol/src/main/java/.../protocol/   SyncProtocol (version, registration) and the five payloads
+client/src/main/java/.../xaerosync/    SharedWaypointsSync (entrypoint), SyncState, XaeroBridge (all Xaero code)
+server/src/client/java/.../client/     optional client: J keybind, WaypointMenuScreen, AddWaypointScreen,
                                        EditWaypointScreen, WaypointList, RoutesScreen, RouteLists, EditRouteScreen,
                                        WaypointPickerScreen, ClientWaypoints (latest snapshot)
-src/test/java/...                      unit tests
-src/gametest/...                       headless-server end-to-end test
-src/clientgametest/...                 real-client test: menu via keybind, add through the form, screenshots
+*/src/test/java/...                    unit tests (server, protocol codecs, client sync state)
+server/src/gametest/...                headless-server end-to-end test
+server/src/clientgametest/...          real-client test: menu via keybind, add through the form, screenshots
+client/src/clientgametest/...          real-client test with Xaero's Minimap: the "Shared" set follows the server
 PROGRESS.txt                           timestamped development log (repo root)
 ```
 

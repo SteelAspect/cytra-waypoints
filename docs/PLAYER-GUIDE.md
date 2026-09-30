@@ -8,6 +8,20 @@ SharedWaypoints is a list of waypoints that everyone on the server shares. You c
 
 You don't need the menu. It's just quicker than typing commands.
 
+## Automatic Xaero's Minimap sync (optional)
+
+If you use **Xaero's Minimap**, you can have the server's shared waypoints appear in it automatically:
+
+1. Put `sharedwaypoints-client-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
+   Fabric API.
+2. Join the server. The shared waypoints appear in a waypoint set called **"Shared"**. They stay up to date when
+   anyone adds, changes or removes one, and the set is refreshed every time you join.
+3. Xaero only shows the selected set. Pick **Shared** in Xaero's waypoint menu, or turn on **Render All WP Sets**
+   in Xaero's settings to see shared and personal waypoints together.
+
+Your own waypoints are never touched. Without the client mod, use the **[Add to Xaero]** buttons in chat as
+before.
+
 ## Installing the menu
 
 You need Minecraft **1.21.11** with **Fabric**.
