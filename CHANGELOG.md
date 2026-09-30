@@ -5,8 +5,8 @@
 **Two jars now**
 - `sharedwaypoints-server` is the mod server owners install. It has everything 1.5.0 had, unchanged, and it's
   still all the server needs.
-- `sharedwaypoints-client` is a new, **optional** client mod that keeps **Xaero's Minimap** in sync with the
-  server:
+- `sharedwaypoints-client` is a new, **optional** client mod: the waypoint menu, plus it keeps
+  **Xaero's Minimap** in sync with the server:
   - every shared waypoint appears in Xaero, in its own **"Shared"** waypoint set, in the right dimension, with its
     category colour;
   - adds, edits and deletes show up live, and the set is reconciled with the server on every join;
@@ -26,6 +26,8 @@
 - `/waypoints reload` resends the full list to synced players.
 
 **Waypoint menu**
+- Players now get the menu from `sharedwaypoints-client`: one jar for the menu and the Xaero sync. The server jar
+  is no longer needed on the client (it still works there).
 - A **✦ Waypoints** button in the top-right corner of the Esc menu opens the waypoint menu, for players who'd
   rather not use the J key. It only appears on servers running SharedWaypoints.
 

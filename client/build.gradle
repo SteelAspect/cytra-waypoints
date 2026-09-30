@@ -74,6 +74,9 @@ dependencies {
 
 	implementation project(path: ':protocol', configuration: 'namedElements')
 	include project(':protocol')
+	// The server mod rides along (jar-in-jar): it has the waypoint menu, the J key and the Esc menu button, so
+	// players get everything from this one jar. On the server it's still installed on its own.
+	include project(':server')
 
 	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 
@@ -104,6 +107,62 @@ tasks.named("runClientGametest") {
 	dependsOn copyClientTestMods
 	// Never run two game clients at once: on a 2-vCPU CI runner, software rendering for both starves world loading.
 	mustRunAfter ":server:runClientGametest"
+}
+
+// Install test: a production game (real Fabric Loader, remapped jars) whose mods folder holds only what a player
+// installs: the built client jar, Fabric API and Xaero's Minimap. Catches packaging mistakes the dev-run tests can't,
+// like the menu missing from the client jar. Run with `xvfb-run -a ./gradlew :client:runInstalledClientTest`.
+sourceSets {
+	prodtest {
+		compileClasspath += main.compileClasspath
+	}
+}
+
+configurations {
+	installedTestMods {
+		transitive = false
+	}
+}
+
+dependencies {
+	installedTestMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Not part of the Fabric API jar players download; only here to drive the test.
+	installedTestMods fabricApi.module("fabric-client-gametest-api-v1", project.fabric_api_version)
+}
+
+def prodTestJar = tasks.register("prodTestJar", Jar) {
+	from sourceSets.prodtest.output
+	archiveClassifier = "prodtest-named"
+	destinationDirectory = layout.buildDirectory.dir("prodtest")
+}
+
+def remapProdTestJar = tasks.register("remapProdTestJar", net.fabricmc.loom.task.RemapJarTask) {
+	inputFile = prodTestJar.flatMap { it.archiveFile }
+	archiveClassifier = "prodtest"
+	destinationDirectory = layout.buildDirectory.dir("prodtest")
+	addNestedDependencies = false
+}
+
+tasks.register("runInstalledClientTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+	description = "Runs the built client jar in a production game, like a player's mods folder."
+	mods.from(tasks.named("remapJar"))
+	mods.from(configurations.installedTestMods)
+	mods.from(configurations.clientTestMods)
+	mods.from(remapProdTestJar)
+	// -PwithServerJar: also the server jar, as players who followed the 1.5.0 instructions will have.
+	if (project.hasProperty("withServerJar")) {
+		mods.from(project(":server").tasks.named("remapJar"))
+	}
+	jvmArgs.add("-Dfabric.client.gametest")
+	useXVFB = false // CI and local runs already wrap Gradle in xvfb-run
+	timeout = java.time.Duration.ofMinutes(15) // a game that never starts the test would otherwise wait forever
+	def runDirectory = layout.buildDirectory.dir("installedtest")
+	runDir = runDirectory
+	doFirst {
+		["saves", "config", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }
+	}
+	// One game client at a time on the 2-vCPU CI runner.
+	mustRunAfter ":server:runClientGametest", "runClientGametest"
 }
 
 test {

@@ -141,7 +141,7 @@ final class XaeroBridge {
 		FabricLoader loader = FabricLoader.getInstance();
 		if (!loader.isModLoaded("xaerominimap") && !loader.isModLoaded("xaerominimapfair")) {
 			LOGGER.warn("Xaero's Minimap is not installed, so shared waypoints won't be synced into it. "
-					+ "The server's chat buttons still work.");
+					+ "The waypoint menu and the server's chat buttons still work.");
 			return Optional.empty();
 		}
 		try {

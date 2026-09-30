@@ -24,7 +24,7 @@ One Gradle build, three projects:
 | Project | Jar | What it is |
 |---|---|---|
 | `server/` | `sharedwaypoints-server-<v>.jar` (mod id `sharedwaypoints`) | The mod server owners install: commands, chat, menu (its `client` source set), routes, web maps, join summary, sync sender. |
-| `client/` | `sharedwaypoints-client-<v>.jar` (mod id `sharedwaypoints-client`) | Optional client-only mod: receives the sync and writes Xaero's "Shared" set. All Xaero code is in `XaeroBridge`. |
+| `client/` | `sharedwaypoints-client-<v>.jar` (mod id `sharedwaypoints-client`) | The one optional jar players install. It receives the sync and writes Xaero's "Shared" set (all Xaero code is in `XaeroBridge`), and it bundles the server mod jar-in-jar, which brings the menu, the J key and the Esc menu button. |
 | `protocol/` | bundled in both (mod id `sharedwaypoints-protocol`) | The sync payloads and `SyncProtocol.VERSION`. Jar-in-jar in both mods, so a player with both installed loads one copy. |
 
 Versions are pinned in `gradle.properties`. `mod_version` applies to all three projects.
@@ -36,7 +36,14 @@ Versions are pinned in `gradle.properties`. `mod_version` applies to all three p
 ./gradlew runGametest               # headless 1.21.11 server: the end-to-end GameTest (server project)
 xvfb-run -a ./gradlew --no-daemon :server:runClientGametest   # real client: the J menu, saves screenshots
 xvfb-run -a ./gradlew --no-daemon :client:runClientGametest   # real client + Xaero's Minimap 26.5.0: the sync
+xvfb-run -a ./gradlew --no-daemon :client:runInstalledClientTest   # the built client jar, installed like a player would
 ```
+
+- **Install test** (`client/src/prodtest`): a production game (real Fabric Loader, remapped jars) whose mods folder
+  has only the built `sharedwaypoints-client` jar, Fabric API and Xaero's Minimap, like a player's. It checks the
+  server mod loads from inside the client jar, the J keybind is registered, and the Esc menu's **✦ Waypoints**
+  button opens the menu. The dev-run tests above load the mods from source, so they can't catch a jar that's
+  missing something.
 
 - **Xaero sync test** (`client/src/clientgametest`): runs the real game with the server mod, the client mod and
   Xaero's Minimap 26.5.0. Xaero is dropped unchanged into the test game's `mods/` folder, because its bundled
