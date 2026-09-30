@@ -1,0 +1,17 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints-client-gametest",
+	"version": "1.0.0",
+	"name": "SharedWaypoints Client GameTest",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"io.github.steelaspect.sharedwaypoints.xaerosync.clientgametest.XaeroSyncClientGameTest"
+		]
+	},
+	"depends": {
+		"sharedwaypoints-client": "*",
+		"sharedwaypoints": "*",
+		"xaerominimap": "*"
+	}
+}
