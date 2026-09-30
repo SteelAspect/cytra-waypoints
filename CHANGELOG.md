@@ -25,6 +25,10 @@
   and after that every change. Players without the client mod get nothing new: the chat works exactly as before.
 - `/waypoints reload` resends the full list to synced players.
 
+**Waypoint menu**
+- A **✦ Waypoints** button in the top-right corner of the Esc menu opens the waypoint menu, for players who'd
+  rather not use the J key. It only appears on servers running SharedWaypoints.
+
 **Other**
 - The mod's author field is now `steelaspect`.
 - The build is a Gradle multi-project (`protocol`, `server`, `client`); `./gradlew build` produces both jars.

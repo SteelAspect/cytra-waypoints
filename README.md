@@ -19,7 +19,8 @@ install. Two optional extras for players:
 - **Automatic Xaero sync:** install the small **sharedwaypoints-client** mod, and every shared waypoint appears in
   Xaero's Minimap by itself, in its own **"Shared"** waypoint set. It stays up to date as waypoints are added,
   edited and removed.
-- **Waypoint menu:** install the server jar on your client too and press **J**.
+- **Waypoint menu:** install the server jar on your client too and press **J**, or click **✦ Waypoints** in the
+  top-right corner of the Esc menu.
 
 ## The two jars
 
@@ -76,7 +77,8 @@ Players without the client mod see exactly what they always did: chat lists with
   web maps.
 
 **Optional client menu**
-- Install the same jar on your client and press **J** on a server that runs SharedWaypoints: a full screen with
+- Install the same jar on your client and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
+  runs SharedWaypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
 - Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
   **Favourite**, **Edit** (name and description), **Remove**, **Teleport** (ops) and **+ Add** with your position
@@ -122,7 +124,8 @@ Both jars are on the **[latest release](https://github.com/SteelAspect/sharedway
 - **Automatic Xaero sync:** put `sharedwaypoints-client-<version>.jar`, [Fabric API](https://modrinth.com/mod/fabric-api)
   and [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) in your `.minecraft/mods/` folder. The shared
   waypoints appear in Xaero's **"Shared"** set when you join.
-- **The J menu:** also put `sharedwaypoints-server-<version>.jar` in your `.minecraft/mods/` folder and press **J**.
+- **The J menu:** also put `sharedwaypoints-server-<version>.jar` in your `.minecraft/mods/` folder and press **J**,
+  or open the Esc menu and click **✦ Waypoints** (top right).
   The [player guide](docs/PLAYER-GUIDE.md) has step-by-step instructions you can share.
 
 Both player extras need a server running SharedWaypoints 2.0.0 or newer.

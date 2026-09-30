@@ -126,7 +126,7 @@ server/src/client/java/.../client/     optional client: J keybind, WaypointMenuS
                                        WaypointPickerScreen, ClientWaypoints (latest snapshot)
 */src/test/java/...                    unit tests (server, protocol codecs, client sync state)
 server/src/gametest/...                headless-server end-to-end test
-server/src/clientgametest/...          real-client test: menu via keybind, add through the form, screenshots
+server/src/clientgametest/...          real-client test: menu via keybind and the Esc menu button, add through the form, screenshots
 client/src/clientgametest/...          real-client test with Xaero's Minimap: the "Shared" set follows the server
 PROGRESS.txt                           timestamped development log (repo root)
 ```

@@ -3,8 +3,8 @@
 SharedWaypoints is a list of waypoints that everyone on the server shares. You can use it in two ways:
 
 - **In chat.** This works for everyone and needs nothing installed: type `/waypoints` and click the buttons.
-- **With the waypoint menu.** Install the mod on your own game too and press **J**. You get one screen with
-  everything on buttons.
+- **With the waypoint menu.** Install the mod on your own game too and press **J**, or click **✦ Waypoints** in
+  the Esc menu. You get one screen with everything on buttons.
 
 You don't need the menu. It's just quicker than typing commands.
 
@@ -32,7 +32,9 @@ You need Minecraft **1.21.11** with **Fabric**.
    - `sharedwaypoints-<version>.jar`, the same file the server uses (ask your server admin, or download it from
      the latest release)
 3. Start Minecraft with the Fabric profile and join the server.
-4. Press **J**.
+4. Press **J**. Or press **Esc** and click **✦ Waypoints** in the top-right corner, if you'd rather not use a key.
+
+![The Waypoints button in the Esc menu](images/guide/pause-menu.png)
 
 On a server without SharedWaypoints, **J** just shows "SharedWaypoints isn't installed on this server".
 
