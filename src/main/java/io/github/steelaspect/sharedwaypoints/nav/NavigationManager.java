@@ -219,14 +219,15 @@ public final class NavigationManager {
 				.append(Component.literal(" " + waypoint.name()).withStyle(ChatFormatting.WHITE)));
 	}
 
-	/** Boss bars only have seven colours; this is the closest one per category. */
+	/** Boss bars only have seven colours; this picks the closest one to the category's chat colour. */
 	static BossEvent.BossBarColor barColor(Category category) {
-		return switch (category) {
-			case STORAGE -> BossEvent.BossBarColor.BLUE;
-			case FARMS -> BossEvent.BossBarColor.GREEN;
-			case BASES -> BossEvent.BossBarColor.YELLOW;
-			case PORTALS -> BossEvent.BossBarColor.PURPLE;
-			case OTHER -> BossEvent.BossBarColor.WHITE;
+		return switch (category.color()) {
+			case DARK_BLUE, BLUE, DARK_AQUA, AQUA -> BossEvent.BossBarColor.BLUE;
+			case DARK_GREEN, GREEN -> BossEvent.BossBarColor.GREEN;
+			case DARK_RED, RED -> BossEvent.BossBarColor.RED;
+			case DARK_PURPLE, LIGHT_PURPLE -> BossEvent.BossBarColor.PURPLE;
+			case GOLD, YELLOW -> BossEvent.BossBarColor.YELLOW;
+			default -> BossEvent.BossBarColor.WHITE;
 		};
 	}
 }

@@ -3,12 +3,16 @@ package io.github.steelaspect.sharedwaypoints.config;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import io.github.steelaspect.sharedwaypoints.util.Gsons;
 import io.github.steelaspect.sharedwaypoints.util.JsonFiles;
+import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Settings from {@code config/sharedwaypoints/config.json}. The file is created with defaults on first start
- * and rewritten on every load, so newly added options show up in it automatically.
+ * and rewritten on every load, so newly added options show up in it automatically. {@code /waypoints reload}
+ * re-reads it without a restart.
  */
 public final class ModConfig {
 	/** Tell everyone online when a waypoint is added (with the usual buttons). */
@@ -21,6 +25,12 @@ public final class ModConfig {
 	public int pageSize = 8;
 	/** Default radius (blocks) for /waypoints near. */
 	public int nearRadius = 512;
+	/** Show waypoints on BlueMap / squaremap when one of them is installed. */
+	public boolean webMapMarkers = true;
+	/** Name of the marker layer on the web map. */
+	public String webMapLayerName = "Shared Waypoints";
+	/** Categories in display order: id (a single lower-case word), name, and one of the 16 chat colours. */
+	public List<CategoryRegistry.Definition> categories = new ArrayList<>(CategoryRegistry.DEFAULT_DEFINITIONS);
 
 	public static ModConfig load(Path file) {
 		ModConfig config = JsonFiles.read(file, ModConfig.class, Gsons.GSON).orElseGet(ModConfig::new);
@@ -33,10 +43,21 @@ public final class ModConfig {
 		return config;
 	}
 
+	/** The categories as a registry; invalid entries are logged and skipped. */
+	public CategoryRegistry categoryRegistry() {
+		return CategoryRegistry.fromDefinitions(categories, SharedWaypoints.LOGGER::warn);
+	}
+
 	/** Keeps hand-edited values sensible. */
 	private void clamp() {
 		arrivalRadius = Math.clamp(arrivalRadius, 1, 64);
 		pageSize = Math.clamp(pageSize, 3, 30);
 		nearRadius = Math.clamp(nearRadius, 16, 30_000_000);
+		if (webMapLayerName == null || webMapLayerName.isBlank()) {
+			webMapLayerName = "Shared Waypoints";
+		}
+		if (categories == null || categories.isEmpty()) {
+			categories = new ArrayList<>(CategoryRegistry.DEFAULT_DEFINITIONS);
+		}
 	}
 }
