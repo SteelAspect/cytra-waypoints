@@ -1,0 +1,170 @@
+[2026-09-29 01:43:57 UTC] STARTED: SharedWaypoints build (Option B: PROGRESS.txt log; Option A webhook URL was a placeholder)
+[2026-09-29 01:46:15 UTC] RESEARCH: versions resolved (MC 1.21.11, Loader 0.19.5, Fabric API 0.141.6+1.21.11, permissions-api 0.6.1); downloaded Xaero's Minimap 26.5.0 (fabric 1.21.11) to verify share format
+[2026-09-29 01:50:22 UTC] RESEARCH: Xaero 26.5.0 decompiled - system chat IS parsed (ChatListener.handleSystemMessage mixin); format confirmed
+[2026-09-29 01:50:22 UTC] FILE CREATED: settings.gradle
+[2026-09-29 01:50:22 UTC] FILE CREATED: gradle.properties
+[2026-09-29 01:50:22 UTC] FILE CREATED: .gitignore
+[2026-09-29 01:50:39 UTC] FILE CREATED: build.gradle (Loom 1.18.2 fabric-loom-remap, Mojang mappings)
+[2026-09-29 01:50:39 UTC] FILE CREATED: src/main/resources/fabric.mod.json
+[2026-09-29 01:51:05 UTC] FILE CREATED: Gradle wrapper (gradlew, gradlew.bat, gradle/wrapper/*) pinned to Gradle 9.7.1
+[2026-09-29 01:51:11 UTC] BUILD: first Gradle/Loom setup run (downloads MC 1.21.11 + mappings)
+[2026-09-29 01:51:38 UTC] BUILD FAIL: Loom 1.18.2 needs a Java 25 JVM; switching to Loom 1.17.21 (Java 21)
+[2026-09-29 01:52:13 UTC] BUILD FAIL: Maven Central HTTP 429 (rate limit) in container; added container-local Gradle mirror init script, retrying
+[2026-09-29 01:53:48 UTC] BUILD PASS: Loom 1.17.21 setup OK (MC 1.21.11 mapped with Mojang mappings)
+[2026-09-29 01:57:06 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/SharedWaypoints.java
+[2026-09-29 01:57:06 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/Category.java
+[2026-09-29 01:57:06 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/Waypoint.java
+[2026-09-29 01:58:00 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStore.java
+[2026-09-29 01:58:00 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Dimensions.java
+[2026-09-29 01:58:00 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/xaero/XaeroShareFormat.java
+[2026-09-29 01:59:23 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/permission/WaypointPermissions.java
+[2026-09-29 01:59:23 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/WaypointText.java
+[2026-09-29 01:59:23 UTC] FILE CREATED: src/main/java/io/github/steelaspect/sharedwaypoints/command/WaypointCommand.java
+[2026-09-29 01:59:28 UTC] BUILD: compiling (./gradlew build)
+[2026-09-29 02:00:23 UTC] BUILD PASS: first full compile + remapJar OK
+[2026-09-29 02:01:55 UTC] FILE CREATED: src/test/java/io/github/steelaspect/sharedwaypoints/xaero/XaeroParserReplica.java
+[2026-09-29 02:01:55 UTC] FILE CREATED: src/test/java/io/github/steelaspect/sharedwaypoints/xaero/XaeroShareFormatTest.java
+[2026-09-29 02:01:55 UTC] FILE CREATED: src/test/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStoreTest.java
+[2026-09-29 02:01:55 UTC] BUILD: running unit tests (./gradlew build)
+[2026-09-29 02:02:28 UTC] BUILD FAIL: tests - Level static init needs game bootstrap; Dimensions now uses plain id strings; fixed CSV quoting in test
+[2026-09-29 02:02:42 UTC] BUILD PASS: 23/23 unit tests (Xaero parser replica round-trips, JSON store)
+[2026-09-29 02:04:12 UTC] FILE CREATED: src/gametest/resources/fabric.mod.json (+ gametest source set / runGametest in build.gradle)
+[2026-09-29 02:05:00 UTC] FILE CREATED: src/gametest/java/io/github/steelaspect/sharedwaypoints/gametest/SharedWaypointsGameTest.java
+[2026-09-29 02:05:00 UTC] BUILD: running headless server GameTest (./gradlew runGametest)
+[2026-09-29 02:06:35 UTC] BUILD PASS: GameTest on headless MC 1.21.11 server - commands, tab-complete, permissions, JSON all verified (negative control fails as expected)
+[2026-09-29 02:07:25 UTC] FILE CREATED: README.md (commands, JSON example, Xaero verification, build instructions)
+[2026-09-29 02:07:25 UTC] BUILD: final clean build + unit tests + GameTest
+[2026-09-29 02:07:57 UTC] BUILD PASS: final - 23/23 unit tests, GameTest passed, jar at build/libs/sharedwaypoints-1.0.0.jar
+[2026-09-29 02:07:57 UTC] DONE: all deliverables complete; committed and pushed to the working branch
+[2026-09-29 02:19:37 UTC] WORKFLOW: main is locked (no pushes); all work and testing now happens on the dev branch
+[2026-09-29 02:21:44 UTC] STARTED: '10x cooler' update on dev - live navigation (boss-bar compass, beacon, nearest, nether conversion, teleport) + sharing & polish (announce, search, paging, descriptions, favourites, hover cards, near)
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/Waypoint.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/JsonFiles.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Gsons.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStore.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/waypoint/FavoritesStore.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/config/ModConfig.java
+[2026-09-29 02:24:34 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/nav/NavMath.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Dimensions.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/permission/WaypointPermissions.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/Formats.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/util/Page.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/Viewer.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/text/WaypointText.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/nav/NavigationManager.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/ModContext.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/SharedWaypoints.java
+[2026-09-29 02:28:36 UTC] FILE CREATED/UPDATED: src/main/java/io/github/steelaspect/sharedwaypoints/command/WaypointCommand.java
+[2026-09-29 02:28:36 UTC] BUILD: compiling main sources
+[2026-09-29 02:29:15 UTC] BUILD PASS: main sources compile
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/waypoint/WaypointStoreTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/waypoint/FavoritesStoreTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/nav/NavMathTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/test/java/io/github/steelaspect/sharedwaypoints/text/FormatsTest.java
+[2026-09-29 02:31:36 UTC] FILE CREATED/UPDATED: src/gametest/java/io/github/steelaspect/sharedwaypoints/gametest/SharedWaypointsGameTest.java
+[2026-09-29 02:31:36 UTC] BUILD: build + unit tests + GameTest
+[2026-09-29 02:32:15 UTC] BUILD FAIL: GameTest - test left earlier output in the recorder (mod output correct); fixed test
+[2026-09-29 02:33:25 UTC] FILE UPDATED: README.md (navigation, near/nearest, search, paging, favourites, descriptions, config, teleport)
+[2026-09-29 02:33:36 UTC] FILE UPDATED: gradle.properties (version 1.1.0)
+[2026-09-29 02:33:36 UTC] BUILD: final clean build + unit tests + GameTest for 1.1.0
+[2026-09-29 02:34:10 UTC] BUILD PASS: 51/51 unit tests + GameTest; jar build/libs/sharedwaypoints-1.1.0.jar
+[2026-09-29 02:34:10 UTC] DONE: '10x cooler' update committed and pushed to dev (main untouched)
+[2026-09-29 02:37:30 UTC] STARTED: separate jar names for dev vs main builds; dev jar into build/libs
+[2026-09-29 02:37:30 UTC] FILE UPDATED: build.gradle (branch-based jar name: main -> sharedwaypoints-<v>.jar, other branches -> sharedwaypoints-dev-<v>.jar)
+[2026-09-29 02:38:40 UTC] FILE UPDATED: README.md (jar naming per branch)
+[2026-09-29 02:38:40 UTC] BUILD PASS: dev -> build/libs/sharedwaypoints-dev-1.1.0.jar (1.1.0+dev); main -> sharedwaypoints-1.0.0.jar; -Prelease=true -> sharedwaypoints-1.1.0.jar
+[2026-09-29 02:38:40 UTC] DONE: jar naming committed and pushed to dev; dev jar sent to user
+[2026-09-29 02:44:11 UTC] STARTED: release 1.1.1 - bump version on dev, then push dev to main as the release build
+[2026-09-29 02:44:11 UTC] FILE UPDATED: gradle.properties + README.md (version 1.1.1)
+[2026-09-29 02:44:11 UTC] BUILD: clean build + unit tests + GameTest for 1.1.1
+[2026-09-29 02:45:07 UTC] BUILD PASS: 1.1.1 - 51/51 unit tests + GameTest
+[2026-09-29 02:45:07 UTC] RELEASE: pushing dev to main (fast-forward) as release 1.1.1
+[2026-09-29 02:45:34 UTC] DONE: main = dev = 60a779f (Release 1.1.1); release jar build/libs/sharedwaypoints-1.1.1.jar (1.1.1), dev jar sharedwaypoints-dev-1.1.1.jar (1.1.1+dev); release jar sent to user
+[2026-09-29 02:48:52 UTC] STARTED: 1.2.0 release - remove the old personal name (package io.github.steelaspect.sharedwaypoints, author SteelAspect, history rewrite), clean GitHub page, GitHub release with jar
+[2026-09-29 02:50:23 UTC] HISTORY: rewrote all commits - package now io.github.steelaspect.sharedwaypoints, author SteelAspect; verified no old-name mentions in any commit
+[2026-09-29 02:50:23 UTC] FILE MOVED: PROGRESS.txt -> docs/PROGRESS.txt; gradle.properties version 1.2.0
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: README.md
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: docs/DEVELOPMENT.md
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: CHANGELOG.md
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: .github/workflows/build.yml
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: .github/workflows/release.yml
+[2026-09-29 02:52:19 UTC] FILE CREATED/UPDATED: src/main/resources/fabric.mod.json
+[2026-09-29 02:52:29 UTC] BUILD: clean build + unit tests + GameTest for 1.2.0
+[2026-09-29 02:53:24 UTC] BUILD PASS: 1.2.0 - 51/51 unit tests + GameTest
+[2026-09-29 02:53:24 UTC] RELEASE: force-pushing rewritten history (main, dev, working branch, tags), then tag v1.2.0 for the Release workflow
+[2026-09-29 02:55:12 UTC] RELEASE: tag push rejected by this environment's git connection; Release workflow now also runs when a release is published on GitHub
+[2026-09-29 02:58:28 UTC] CI: GitHub Build workflow passed on dev (8bc73b2, 83f6086); main force-pushed by owner to 83f6086, Build running; waiting for v1.2.0 release to be published
+[2026-09-29 03:00:47 UTC] RELEASE: v1.2.0 published on GitHub by the owner (target main); Release workflow building and attaching sharedwaypoints-1.2.0.jar
+[2026-09-29 03:00:47 UTC] GIT: commits from now on use plain messages without attribution lines
+[2026-09-29 03:02:00 UTC] DONE: Release workflow succeeded (both runs); sharedwaypoints-1.2.0.jar (85,607 bytes) and changelog notes attached to https://github.com/SteelAspect/sharedwaypoints/releases/tag/v1.2.0
+[2026-09-29 03:06:01 UTC] MERGED: PR #1 (dev -> main) merged by request as 3a622d4; dev fast-forwarded to main
+[2026-09-29 17:20:09 UTC] STARTED: 1.3.0 on dev - cleanup (MIT license, icon, /waypoints reload, output despite sendCommandFeedback=false) + web map markers + custom categories
+[2026-09-29 17:26:19 UTC] FILES: categories from config (Category record, CategoryRegistry), map/ package (BlueMap + squaremap layers, marker icons, HTML-escaped popups), /waypoints reload, replies despite sendCommandFeedback=false
+[2026-09-29 17:26:43 UTC] FILE CREATED: LICENSE (MIT); build.gradle (optional BlueMap/squaremap APIs, LICENSE in jar); version 1.3.0
+[2026-09-29 17:26:43 UTC] BUILD: compiling main sources
+[2026-09-29 17:29:04 UTC] FILES: tests - CategoryRegistryTest, MapMarkerTest (HTML escaping, icons), TestCategories; icon.png; fabric.mod.json license/icon
+[2026-09-29 17:29:04 UTC] BUILD: build + unit tests
+[2026-09-29 17:30:14 UTC] FILES: GameTest - squaremap runs on the test server (markers checked), reload + custom category, reserved-id check
+[2026-09-29 17:30:14 UTC] BUILD: build + unit tests + GameTest (with squaremap)
+[2026-09-29 17:33:13 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.3.0), docs/DEVELOPMENT.md
+[2026-09-29 17:33:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.3.0), docs/DEVELOPMENT.md
+[2026-09-29 17:33:37 UTC] BUILD: final clean build + unit tests + GameTest (with squaremap) for 1.3.0
+[2026-09-29 17:35:57 UTC] BUILD PASS: 1.3.0 - 60/60 unit tests; GameTest passes with squaremap (markers verified) and without any map mod
+[2026-09-29 17:40:24 UTC] STARTED: 1.4.0 optional client menu (branch client-menu): keybind screen synced over a network channel, server stays authoritative
+[2026-09-29 17:43:30 UTC] FILES: network/ (SyncPayload, ActionPayload, ResultPayload, MenuNetworking), navigation change listener, lifecycle wiring
+[2026-09-29 17:48:22 UTC] FILES: client/ (SharedWaypointsClient, ClientWaypoints, WaypointMenuScreen, WaypointList, AddWaypointScreen, TextInputScreen, Colors), lang, client entrypoint
+[2026-09-29 17:48:51 UTC] BUILD: build + unit tests + server GameTest (menu network handler)
+[2026-09-29 17:52:43 UTC] FILES: clientgametest source set + MenuClientGameTest (real client under Xvfb, screenshots)
+[2026-09-29 17:52:53 UTC] BUILD: real client GameTest under Xvfb (downloads client assets on first run)
+[2026-09-29 17:53:17 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0
+[2026-09-29 17:53:27 UTC] FILE UPDATED: README.md, CHANGELOG.md (1.4.0), docs/DEVELOPMENT.md, version 1.4.0
+[2026-09-29 17:56:46 UTC] FIX: menu layout (3 button rows, Edit screen replaces Rename/Description, shorter filter label, status without chat buttons); rerunning all tests
+[2026-09-29 17:58:33 UTC] BUILD PASS: 1.4.0 - unit tests, server GameTest (menu handler) and real-client GameTest (menu via J, add/favourite/edit, screenshots) all pass
+[2026-09-29 18:06:28 UTC] FIX: CI client test timed out loading the world (software GL on 2-core runner) -> render/simulation distance lowered; menu now rebuilds when teleport permission arrives (Teleport button was missing for ops); client test tours every screen (13 screenshots) and clicks Teleport
+[2026-09-29 19:05:34 UTC] INVESTIGATING: CI client test still times out on 7a98636 (stuck at 'Preparing spawn area: 16%'). Client and server tick in lockstep; software GL (llvmpipe) threads starve chunk generation on the 2-vCPU private-repo runner. Testing single-threaded llvmpipe (LP_NUM_THREADS=0) on 1 core
+[2026-09-29 19:16:00 UTC] FIX: client test caps the frame rate at 10 fps and turns blur off while the world loads (both restored after). On 1 core the world loads in 68 ticks (was: timeout at 1200); build, unit tests, server GameTest and client test all pass
+[2026-09-30 00:03:24 UTC] STATUS: CI green on PR #3 (build + client) and PR #2 (build); both mergeable. Waiting on merge (#2 first, then #3), then releases v1.3.0 and v1.4.0. Hourly check-ins armed
+[2026-09-30 00:05:34 UTC] MERGED: PR #2 (1.3.0) into main (80e34f9). Tag push is refused by this session's git proxy, so the Release workflow gets a manual 'Run workflow' trigger that creates the tag and release itself (rides on PR #3)
+[2026-09-30 00:18:06 UTC] RELEASED: v1.3.0 (jar attached) via the new manual Release run; v1.4.0 release run started. PR #3 merged (334d5e4); dev fast-forwarded to main
+[2026-09-30 00:18:06 UTC] STARTED: 1.4.1 on dev (README badges that work while the repo is private, player guide for the client menu), then 1.5.0 Routes
+[2026-09-30 00:21:12 UTC] BUILD PASS: 1.4.1 - player guide (docs/PLAYER-GUIDE.md, 6 screenshots), static README badges (work while private), checkDocs build check (badge + changelog match mod_version); build, unit tests, GameTest pass
+[2026-09-30 00:21:44 UTC] RELEASED: v1.4.0 (jar attached, marked latest). PR #4 opened for 1.4.1 (dev -> main)
+[2026-09-30 00:21:44 UTC] STARTED: 1.5.0 Routes on branch routes (from dev)
+[2026-09-30 00:41:48 UTC] MERGED: PR #4 (1.4.1) into main (f85057f); v1.4.1 release run started
+[2026-09-30 00:41:48 UTC] BUILD PASS: 1.5.0 Routes - unit tests (route store, route length, map lines), server GameTest (commands, following a route, deleting a stop mid-route, menu actions, permissions, squaremap lines, routes.json, reload), real-client test (routes screen, picker, reorder, start; 19 screenshots)
+[2026-09-30 00:45:06 UTC] RELEASED: v1.4.1 (jar attached, latest). PR #5 (1.5.0 routes) CI green (build + client); waiting on go-ahead to merge and release
+[2026-09-30 05:02:42 UTC] RELEASED: v1.5.0 Routes (PR #5 merged as 38917f1; jar attached, marked latest). dev reset to main for the next round
+[2026-09-30 05:10:03 UTC] CLEANUP: history rewritten so every commit is authored by SteelAspect, AI trailers removed from messages, old branch name removed from this log; release tags v1.2.0-v1.5.0 re-pointed to the rewritten commits; v1.0.0/v1.1.0 to be deleted (old history)
+[2026-09-30 05:14:14 UTC] CLEANUP DONE: cleaned history is live on GitHub (main, dev, tags v1.2.0-v1.5.0); old tags v1.0.0/v1.1.0 and merged branches deleted. Every reachable commit is authored by SteelAspect, and no commit message or file mentions AI tools
+[2026-09-30 05:27] STARTED - 2.0.0 on dev: split into sharedwaypoints-server + optional sharedwaypoints-client (Xaero's Minimap auto-sync into a "Shared" waypoint set), sync protocol with handshake, join summary, last-seen tracking. Menu stays in the server jar. Log moved to PROGRESS.txt in the repo root
+[2026-09-30 05:29] DONE - Researched Xaero's Minimap 26.5.0 (Fabric 1.21.11): no public API; ThirdPartyWaypoints is in-memory only. Hook: MinimapSession -> per-dimension MinimapWorld (same lookup as Xaero's own shared-waypoint add) -> WaypointSet "Shared" -> saveWorld, all via reflection. Notes in docs/DEVELOPMENT.md
+[2026-09-30 05:35] DONE - Gradle multi-project build: protocol (sync messages, bundled in both jars), server (the existing mod, moved unchanged into server/), client (new sharedwaypoints-client). ./gradlew build makes sharedwaypoints-server-<v>.jar and sharedwaypoints-client-<v>.jar. Author set to steelaspect; version 2.0.0; CI and release workflows handle both jars
+[2026-09-30 05:35] TESTED - after the move: protocol round-trip tests, server unit tests, server GameTest (2/2) and the real-client menu test (19 screenshots) all pass
+[2026-09-30 05:38] DONE - Server sync: SyncService answers the client mod's hello (protocol version checked), sends the full list, then live add/edit (upsert) and delete; resends everything after /waypoints reload. Only players who completed the handshake get anything. Config: syncToClientMod, joinSummary (next step); announceNewWaypoints is the live broadcast
+[2026-09-30 05:38] TESTED - server GameTest: handshake, full list contents (category, Xaero colour, initials, dimension), wrong protocol version, add/rename/describe/delete events, non-subscribed player gets nothing, reload resends, config off, leaving unsubscribes
+[2026-09-30 05:41] DONE - Join summary: "N new waypoints since you last played" with the usual [Add to Xaero] [Copy coords] [Go] buttons (max 8 lines, then [Show all]); first-time players get a one-line pointer. Last-seen per player UUID saved in waypoints.json ("lastSeen"), updated on join and leave. Toggle: joinSummary. Live broadcast of new waypoints already existed (announceNewWaypoints)
+[2026-09-30 05:41] TESTED - unit tests (lastSeen save/load, old files without it, added-since order and same-second edge) and server GameTest (summary text and Xaero button, first visit, long list cut-off, lastSeen written to waypoints.json)
+[2026-09-30 06:00] DONE - Client mod sharedwaypoints-client: handshake on join, SyncState (full list, upserts, deletes, reconcile on join across every server dimension), XaeroBridge (all Xaero code, reflection, one warning and sync off if Xaero is missing or a hook fails). Writes only the "Shared" set; keeps each shared waypoint's "disabled" flag; one-time chat hint because Xaero only draws the selected set unless "Render All WP Sets" is on
+[2026-09-30 06:00] FIXED - Xaero's MinimapWorld.addWaypointSet returns the previous set (Map.put), not the new one; the bridge now keeps its own reference (found by running against the real Xaero jar)
+[2026-09-30 06:00] TESTED - real client with sharedwaypoints + sharedwaypoints-client + Xaero's Minimap 26.5.0 (XaeroLib 1.7.3 bundled): handshake; adds land in the Overworld and Nether Shared sets; rename and delete follow live; stale Shared entries and a waypoint deleted while away are removed on rejoin; Xaero's files on disk have the Shared set with category colours (farms 10, portals 13) and the default set untouched. Unit tests: SyncState, initials, Xaero missing -> sync off without errors
+[2026-09-30 06:00] BLOCKED - can't verify here: a dedicated server with a remote client (singleplayer skips payload encoding; codecs are unit-tested), Xaero multiworld servers, and how it looks on screen. Test in-game: join your server with both jars + Xaero, open Xaero's waypoint menu, pick the "Shared" set, add/rename/remove a waypoint with /waypoints and watch it update; rejoin after removing one while offline
+[2026-09-30 06:03] DONE - Docs: README (the two jars, install steps for owners and players, client mod optional, tested Xaero 26.5.0, known limitation, "Render All WP Sets" note, new config and lastSeen), CHANGELOG 2.0.0, docs/DEVELOPMENT.md (projects, tests), player guide section on the sync
+[2026-09-30 06:03] TESTED - full suite on the final code: ./gradlew build (unit tests of all three projects, docs check), server GameTest 2/2, real-client menu test and real-client Xaero sync test both PASSED
+[2026-09-30 06:04] DONE - Opened PR #6 dev -> main (2.0.0) with summary and in-game test checklist; watching its CI
+[2026-09-30 06:16] FIXED - CI client job timed out loading the world in the Xaero sync test: both real-client tests ran at the same time (parallel Gradle) on the 2-vCPU runner, and the Xaero test kept the menu blur on. Client tests now run one after the other (mustRunAfter), and the Xaero test turns blur off and caps frames while worlds load. The Xaero test alone passes on 2 cores (49 ticks)
+[2026-09-30 06:17] TESTED - both real-client tests on 2 CPU cores like the CI runner (taskset -c 0,1): they now run one after the other, menu test PASSED, Xaero sync test PASSED, BUILD SUCCESSFUL in 1m 24s
+[2026-09-30 06:22] TESTED - CI green on PR #6 (head 5c2e18d): build job (build, unit tests, server GameTest) and client job (menu test + Xaero sync test) pass on both the push and pull_request runs; no merge conflicts. Ready for in-game testing and your merge
+[2026-09-30 17:25] BLOCKED - PR #6 stays open by choice until someone tests in-game (checklist in the PR). CI green, no conflicts. Dxvid-Codes (collaborator) can merge from GitHub when happy
+[2026-09-30 19:46] STARTED - "✦ Waypoints" button in the top-right corner of the Esc (pause) menu that opens the waypoint menu, for players who don't want to use the J key
+[2026-09-30 19:48] DONE - Esc menu "✦ Waypoints" button, top right: opens the waypoint menu (same as J), tooltip shows the current key, only shown on servers running SharedWaypoints and not on the F3+Esc pause-without-menu screen
+[2026-09-30 19:48] TESTED - real-client menu test on 2 cores: opens the Esc menu, screenshot shows the button top right clear of the vanilla buttons, clicking it opens the waypoint menu; ./gradlew build passes; PASSED
+[2026-09-30 19:49] DONE - Docs for the Esc menu button: README (features, client menu, player install), player guide (step 4 + screenshot docs/images/guide/pause-menu.png), CHANGELOG 2.0.0, DEVELOPMENT.md; docs check and ./gradlew build pass
+[2026-09-30 19:58] STARTED - Move the waypoint menu, J keybind and Esc menu button from the server jar into sharedwaypoints-client, so players only install the client jar (reported: server jar on server + client jar on client showed no button and no keybind)
+[2026-09-30 20:15] FIXED - Players with only sharedwaypoints-client on their game had no menu, no J keybind and no Esc button: those lived only in the server jar. The client jar now bundles the server mod (jar-in-jar, like the protocol), so the one client jar gives the menu, the J key, the Esc button and the Xaero sync. Servers are unchanged. Docs updated: players install only the client jar
+[2026-09-30 20:15] TESTED - New install test (client/src/prodtest, :client:runInstalledClientTest): a production game with only the built client jar + Fabric API + Xaero 26.5.0 in mods/. Server mod loads from inside the client jar, J keybind registered, Esc button shown and opens the menu: PASSED. Also PASSED with the server jar installed too (Loader keeps one copy). Full ./gradlew build, menu test, Xaero sync test and install test all PASSED on 2 cores. Added to CI
+[2026-09-30 20:25] STARTED - Tell players how to get the Xaero auto sync: a one-time join tip for players without the client mod ([Download] + [How it works]), /waypoints sync with the steps, listed in /waypoints help; config clientModTip + clientModUrl (default: GitHub releases/latest). Then merge to main and release 2.0.0 (asked by the user)
+[2026-09-30 20:38] DONE - Xaero sync tip: players without sharedwaypoints-client get one chat line on their first join ("Want these waypoints in Xaero's Minimap automatically?" [Download] [How it works]); /waypoints sync shows the steps, or "You have it" when synced, or that sync is off. Config: clientModTip (on), clientModUrl (GitHub releases/latest; empty = no link, "ask an admin"). "sync" reserved as a category id
+[2026-09-30 20:38] TESTED - Server GameTest: tip text and buttons, first visit only, config switches, /waypoints sync for unsynced/synced/sync-off players and without a link: PASSED. Real client without the client mod: tip appears in chat on first join (screenshots sync-tip, sync-steps); real client with the client mod (Xaero test): no tip; install test: PASSED; ./gradlew build PASSED; all on 2 cores
+[2026-09-30 20:39] DONE - Docs for the sync tip: README (how players find out, /waypoints sync in the command table, clientModTip/clientModUrl in the config), player guide (screenshot of /waypoints sync), CHANGELOG 2.0.0 dated 2026-09-30 for the release; docs check passes
+[2026-09-30 20:41] STARTED - Rename the command /waypoints -> /cway (the user's choice; /waypoints removed, no alias). Merge and 2.0.0 release wait until this is done
+[2026-09-30 20:45] DONE - Command renamed /waypoints -> /cway everywhere (commands, chat buttons, tip, docs; 2.0.0 changelog notes it). /waypoints no longer exists. Build, unit tests and server GameTest passed with the rename; the new GameTest check that /waypoints is gone, the docs check and the real-client tests have not been run yet (paused by the user)

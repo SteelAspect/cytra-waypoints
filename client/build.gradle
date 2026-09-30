@@ -1,0 +1,190 @@
+plugins {
+	id 'net.fabricmc.fabric-loom-remap'
+}
+
+// The optional client mod: mirrors the server's shared waypoints into Xaero's Minimap ("Shared" waypoint set).
+base {
+	archivesName = project.ext.isRelease ? "sharedwaypoints-client" : "sharedwaypoints-client-dev"
+}
+
+repositories {
+	mavenCentral()
+	// Xaero's Minimap, only at runtime in the client GameTest (never compiled against or bundled).
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
+}
+
+// Real-client test: singleplayer with the server mod, this mod and the real Xaero's Minimap, checking what ends up
+// in Xaero's "Shared" set. Needs a display (xvfb-run in CI). Never part of the released jar.
+evaluationDependsOn(':server')
+def serverProject = project(':server')
+
+sourceSets {
+	clientgametest {
+		compileClasspath += main.compileClasspath + main.output
+		runtimeClasspath += main.runtimeClasspath + main.output
+	}
+}
+
+loom {
+	mods {
+		"sharedwaypoints-client" {
+			sourceSet sourceSets.main
+		}
+		// The server mod from the neighbouring project, so the singleplayer server runs it.
+		"sharedwaypoints" {
+			sourceSet("main", ":server")
+			sourceSet("client", ":server")
+		}
+		"sharedwaypoints-client-gametest" {
+			sourceSet sourceSets.clientgametest
+		}
+	}
+	runs {
+		clientGametest {
+			client()
+			name = "Client Game Test (Xaero sync)"
+			vmArg "-Dfabric.client.gametest"
+			runDir "build/clientgametest"
+			source sourceSets.clientgametest
+		}
+	}
+}
+
+tasks.named("runClientGametest") {
+	// Fresh config, saves and Xaero data every run.
+	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
+	doFirst {
+		["config/sharedwaypoints", "saves", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	implementation project(path: ':protocol', configuration: 'namedElements')
+	include project(':protocol')
+	// The server mod rides along (jar-in-jar): it has the waypoint menu, the J key and the Esc menu button, so
+	// players get everything from this one jar. On the server it's still installed on its own.
+	include project(':server')
+
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+
+	// Only for the client GameTest: the server mod (its classes, and its bundled permissions library) and Xaero.
+	clientgametestRuntimeOnly serverProject.sourceSets.main.output
+	clientgametestRuntimeOnly serverProject.sourceSets.client.output
+	modLocalRuntime "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
+}
+
+configurations {
+	// Mod jars dropped unchanged into the test game's mods/ folder, like a player installs them. Xaero's Minimap
+	// bundles XaeroLib (jar-in-jar), which only loads this way; Fabric Loader remaps the jar at runtime.
+	clientTestMods {
+		transitive = false
+	}
+}
+
+dependencies {
+	clientTestMods "maven.modrinth:xaeros-minimap:${project.xaero_minimap_modrinth_version}"
+}
+
+def copyClientTestMods = tasks.register("copyClientTestMods", Sync) {
+	from configurations.clientTestMods
+	into layout.buildDirectory.dir("clientgametest/mods")
+}
+
+tasks.named("runClientGametest") {
+	dependsOn copyClientTestMods
+	// Never run two game clients at once: on a 2-vCPU CI runner, software rendering for both starves world loading.
+	mustRunAfter ":server:runClientGametest"
+}
+
+// Install test: a production game (real Fabric Loader, remapped jars) whose mods folder holds only what a player
+// installs: the built client jar, Fabric API and Xaero's Minimap. Catches packaging mistakes the dev-run tests can't,
+// like the menu missing from the client jar. Run with `xvfb-run -a ./gradlew :client:runInstalledClientTest`.
+sourceSets {
+	prodtest {
+		compileClasspath += main.compileClasspath
+	}
+}
+
+configurations {
+	installedTestMods {
+		transitive = false
+	}
+}
+
+dependencies {
+	installedTestMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	// Not part of the Fabric API jar players download; only here to drive the test.
+	installedTestMods fabricApi.module("fabric-client-gametest-api-v1", project.fabric_api_version)
+}
+
+def prodTestJar = tasks.register("prodTestJar", Jar) {
+	from sourceSets.prodtest.output
+	archiveClassifier = "prodtest-named"
+	destinationDirectory = layout.buildDirectory.dir("prodtest")
+}
+
+def remapProdTestJar = tasks.register("remapProdTestJar", net.fabricmc.loom.task.RemapJarTask) {
+	inputFile = prodTestJar.flatMap { it.archiveFile }
+	archiveClassifier = "prodtest"
+	destinationDirectory = layout.buildDirectory.dir("prodtest")
+	addNestedDependencies = false
+}
+
+tasks.register("runInstalledClientTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+	description = "Runs the built client jar in a production game, like a player's mods folder."
+	mods.from(tasks.named("remapJar"))
+	mods.from(configurations.installedTestMods)
+	mods.from(configurations.clientTestMods)
+	mods.from(remapProdTestJar)
+	// -PwithServerJar: also the server jar, as players who followed the 1.5.0 instructions will have.
+	if (project.hasProperty("withServerJar")) {
+		mods.from(project(":server").tasks.named("remapJar"))
+	}
+	jvmArgs.add("-Dfabric.client.gametest")
+	useXVFB = false // CI and local runs already wrap Gradle in xvfb-run
+	timeout = java.time.Duration.ofMinutes(15) // a game that never starts the test would otherwise wait forever
+	def runDirectory = layout.buildDirectory.dir("installedtest")
+	runDir = runDirectory
+	doFirst {
+		["saves", "config", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }
+	}
+	// One game client at a time on the 2-vCPU CI runner.
+	mustRunAfter ":server:runClientGametest", "runClientGametest"
+}
+
+test {
+	useJUnitPlatform()
+}
+
+processResources {
+	def version = project.ext.modVersion
+	inputs.property "version", version
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+jar {
+	from(rootProject.file("LICENSE")) {
+		rename { "${it}_sharedwaypoints-client" }
+	}
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}

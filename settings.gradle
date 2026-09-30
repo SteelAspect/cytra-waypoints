@@ -10,3 +10,8 @@ pluginManagement {
 }
 
 rootProject.name = 'sharedwaypoints'
+
+// protocol: the sync messages both mods speak (a small library bundled inside both jars)
+// server:   the mod server owners install (commands, chat buttons, menu, routes, web maps, sync sender)
+// client:   the optional client mod that mirrors shared waypoints into Xaero's Minimap
+include 'protocol', 'server', 'client'

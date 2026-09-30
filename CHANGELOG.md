@@ -1,5 +1,45 @@
 # Changelog
 
+## 2.0.0 — 2026-09-30
+
+**The command is now `/cway`** (it was `/waypoints`, which is gone). Every subcommand is the same, e.g.
+`/cway add`, `/cway route go`, and the chat buttons use the new name.
+
+**Two jars now**
+- `sharedwaypoints-server` is the mod server owners install. It has everything 1.5.0 had, unchanged, and it's
+  still all the server needs.
+- `sharedwaypoints-client` is a new, **optional** client mod: the waypoint menu, plus it keeps
+  **Xaero's Minimap** in sync with the server:
+  - every shared waypoint appears in Xaero, in its own **"Shared"** waypoint set, in the right dimension, with its
+    category colour;
+  - adds, edits and deletes show up live, and the set is reconciled with the server on every join;
+  - players' own waypoints are never touched.
+  - Tested with Xaero's Minimap 26.5.0 (Fabric 1.21.11). If Xaero is missing or incompatible, the client mod logs
+    one warning and does nothing.
+
+**New on the server (for everyone, no client mod needed)**
+- **Join summary:** "3 new waypoints since you last played", with the usual [Add to Xaero] / [Copy coords] / [Go]
+  buttons. Last-seen times per player are stored in `waypoints.json` (`lastSeen`).
+- **How to get the sync:** players without the client mod get one line in chat on their first join, with
+  **[Download]** and **[How it works]**. `/cway sync` shows the steps, or says the sync is already on.
+- Config: `joinSummary`, `syncToClientMod`, `clientModTip` and `clientModUrl` (where [Download] points; defaults
+  to the latest GitHub release). `announceNewWaypoints` still controls the live broadcast of new waypoints.
+
+**How the sync works**
+- The client mod says hello on join, with a protocol version. Only then does the server send it the full list,
+  and after that every change. Players without the client mod get nothing new: the chat works exactly as before.
+- `/cway reload` resends the full list to synced players.
+
+**Waypoint menu**
+- Players now get the menu from `sharedwaypoints-client`: one jar for the menu and the Xaero sync. The server jar
+  is no longer needed on the client (it still works there).
+- A **✦ Waypoints** button in the top-right corner of the Esc menu opens the waypoint menu, for players who'd
+  rather not use the J key. It only appears on servers running SharedWaypoints.
+
+**Other**
+- The mod's author field is now `steelaspect`.
+- The build is a Gradle multi-project (`protocol`, `server`, `client`); `./gradlew build` produces both jars.
+
 ## 1.5.0 — 2026-09-30
 
 **New: routes**

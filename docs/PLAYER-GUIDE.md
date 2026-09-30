@@ -2,11 +2,29 @@
 
 SharedWaypoints is a list of waypoints that everyone on the server shares. You can use it in two ways:
 
-- **In chat.** This works for everyone and needs nothing installed: type `/waypoints` and click the buttons.
-- **With the waypoint menu.** Install the mod on your own game too and press **J**. You get one screen with
-  everything on buttons.
+- **In chat.** This works for everyone and needs nothing installed: type `/cway` and click the buttons.
+- **With the waypoint menu.** Install `sharedwaypoints-client` on your own game and press **J**, or click
+  **✦ Waypoints** in the Esc menu. You get one screen with everything on buttons.
 
 You don't need the menu. It's just quicker than typing commands.
+
+## Automatic Xaero's Minimap sync (optional)
+
+If you use **Xaero's Minimap**, you can have the server's shared waypoints appear in it automatically. The first
+time you join, the server tells you how in chat. Type `/cway sync` to see the steps again, or to check it's
+working.
+
+![The steps from /cway sync](images/guide/sync-steps.png)
+
+1. Put `sharedwaypoints-client-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
+   Fabric API. It's the same jar that gives you the menu below.
+2. Join the server. The shared waypoints appear in a waypoint set called **"Shared"**. They stay up to date when
+   anyone adds, changes or removes one, and the set is refreshed every time you join.
+3. Xaero only shows the selected set. Pick **Shared** in Xaero's waypoint menu, or turn on **Render All WP Sets**
+   in Xaero's settings to see shared and personal waypoints together.
+
+Your own waypoints are never touched. Without the client mod, use the **[Add to Xaero]** buttons in chat as
+before.
 
 ## Installing the menu
 
@@ -15,10 +33,12 @@ You need Minecraft **1.21.11** with **Fabric**.
 1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for 1.21.11, if you haven't already.
 2. Put these two files in your `.minecraft/mods/` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.21.11
-   - `sharedwaypoints-<version>.jar`, the same file the server uses (ask your server admin, or download it from
-     the latest release)
+   - `sharedwaypoints-client-<version>.jar` (ask your server admin, or download it from the latest release). You
+     don't need the server's jar.
 3. Start Minecraft with the Fabric profile and join the server.
-4. Press **J**.
+4. Press **J**. Or press **Esc** and click **✦ Waypoints** in the top-right corner, if you'd rather not use a key.
+
+![The Waypoints button in the Esc menu](images/guide/pause-menu.png)
 
 On a server without SharedWaypoints, **J** just shows "SharedWaypoints isn't installed on this server".
 
@@ -109,7 +129,7 @@ Anyone can create a route. Only its creator and admins can change or delete it, 
 
 ![Picking a stop](images/guide/route-picker.png)
 
-Everything also works in chat. `/waypoints route` lists the routes, and `/waypoints route info <name>` shows the
+Everything also works in chat. `/cway route` lists the routes, and `/cway route info <name>` shows the
 stops with buttons: **[Go from here]**, and for the creator **[↑]** and **[✕]**.
 
 ![A route in chat](images/guide/route-chat.png)

@@ -1,14 +1,11 @@
 plugins {
 	// 1.21.11 is the last obfuscated Minecraft release, so it needs the remapping flavour of Loom.
-	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}" apply false
 }
 
-version = project.mod_version
-group = project.maven_group
-
-// Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-<version>.jar); builds from
-// any other branch, e.g. `dev`, are test builds (sharedwaypoints-dev-<version>.jar, version "<version>+dev" in-game),
-// so the two can never be mixed up. Force either with -Prelease=true / -Prelease=false.
+// Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-server-<version>.jar);
+// builds from any other branch, e.g. `dev`, are test builds (sharedwaypoints-server-dev-<version>.jar, version
+// "<version>+dev" in-game), so the two can never be mixed up. Force either with -Prelease=true / -Prelease=false.
 def gitBranch = ''
 try {
 	gitBranch = providers.exec {
@@ -23,202 +20,15 @@ if (gitBranch == 'HEAD') {
 	gitBranch = providers.environmentVariable('GITHUB_REF_NAME').getOrElse('')
 }
 def isRelease = project.hasProperty('release') ? project.property('release').toString().toBoolean() : gitBranch == 'main'
-def modVersion = isRelease ? project.version.toString() : "${project.version}+dev"
 
-base {
-	archivesName = isRelease ? project.archives_base_name : "${project.archives_base_name}-dev"
-}
+subprojects {
+	version = rootProject.mod_version
+	group = rootProject.maven_group
+	ext.isRelease = isRelease
+	ext.modVersion = isRelease ? rootProject.mod_version : "${rootProject.mod_version}+dev"
 
-repositories {
-	// fabric-permissions-api and squaremap-api are published to Maven Central.
-	mavenCentral {
-		content { excludeGroup "de.bluecolored" }
+	tasks.withType(JavaCompile).configureEach {
+		it.options.release = 21
+		it.options.encoding = "UTF-8"
 	}
-	maven {
-		name = "BlueMap"
-		url = "https://repo.bluecolored.de/releases"
-		content { includeGroup "de.bluecolored" }
-	}
-	// Only for the GameTest server (squaremap), never for the released jar.
-	exclusiveContent {
-		forRepository {
-			maven {
-				name = "Modrinth"
-				url = "https://api.modrinth.com/maven"
-			}
-		}
-		filter { includeGroup "maven.modrinth" }
-	}
-}
-
-sourceSets {
-	// Headless-server integration tests (Fabric GameTest, run with `./gradlew runGametest`).
-	// Kept in their own source set so they never end up in the released jar.
-	gametest {
-		compileClasspath += main.compileClasspath + main.output
-		runtimeClasspath += main.runtimeClasspath + main.output
-	}
-}
-
-loom {
-	// src/main is common (everything the server needs); src/client is the optional menu, only loaded on clients.
-	splitEnvironmentSourceSets()
-
-	mods {
-		"sharedwaypoints" {
-			sourceSet sourceSets.main
-			sourceSet sourceSets.client
-		}
-		"sharedwaypoints-gametest" {
-			sourceSet sourceSets.gametest
-		}
-	}
-
-	runs {
-		gametest {
-			server()
-			name = "Game Test"
-			// Runs the tests on a throwaway headless server, then exits (non-zero on failure).
-			vmArg "-Dfabric-api.gametest"
-			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.file('gametest/report.xml').get().asFile}"
-			runDir "build/gametest"
-			source sourceSets.gametest
-		}
-	}
-}
-
-sourceSets {
-	// Real-client test (Fabric client GameTest): opens the menu in a singleplayer world and takes screenshots.
-	// Needs a display; in CI or a container run it under xvfb-run. Not part of the released jar.
-	clientgametest {
-		compileClasspath += main.compileClasspath + main.output + client.compileClasspath + client.output
-		runtimeClasspath += main.runtimeClasspath + main.output + client.runtimeClasspath + client.output
-	}
-}
-
-loom {
-	mods {
-		"sharedwaypoints-clientgametest" {
-			sourceSet sourceSets.clientgametest
-		}
-	}
-	runs {
-		clientGametest {
-			client()
-			name = "Client Game Test"
-			vmArg "-Dfabric.client.gametest"
-			runDir "build/clientgametest"
-			source sourceSets.clientgametest
-		}
-	}
-}
-
-tasks.named("runClientGametest") {
-	// Fresh config and saves every run.
-	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
-	doFirst {
-		new File(runDirectory.get().asFile, "config/sharedwaypoints").deleteDir()
-		new File(runDirectory.get().asFile, "saves").deleteDir()
-	}
-}
-
-configurations {
-	// Mod jars dropped unchanged into the GameTest server's mods/ folder, like a server owner would install them.
-	// Fabric Loader remaps them at runtime and loads the libraries they bundle.
-	gametestServerMods {
-		transitive = false
-	}
-}
-
-def copyGametestMods = tasks.register("copyGametestMods", Sync) {
-	from configurations.gametestServerMods
-	into layout.buildDirectory.dir("gametest/mods")
-}
-
-tasks.named("runGametest") {
-	dependsOn copyGametestMods
-	// Start every run from an empty waypoint list.
-	def waypointConfig = project.layout.buildDirectory.dir("gametest/config/sharedwaypoints")
-	doFirst {
-		waypointConfig.get().asFile.deleteDir()
-	}
-}
-
-dependencies {
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	// Official Mojang mappings (Yarn is not maintained past 1.21.11).
-	mappings loom.officialMojangMappings()
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-	// Permissions API, bundled (jar-in-jar) so server owners don't need to install it separately.
-	// Without a permissions provider (e.g. LuckPerms) it falls back to vanilla op levels.
-	modImplementation "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
-	include "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
-
-	// Optional web-map integrations: compiled against, never bundled. Used only when the server has them.
-	compileOnly "de.bluecolored:bluemap-api:${project.bluemap_api_version}"
-	compileOnly "xyz.jpenilla:squaremap-api:${project.squaremap_api_version}"
-
-	// The GameTest server also runs squaremap 1.3.12, to check the web-map layer for real (see copyGametestMods).
-	gametestServerMods "maven.modrinth:squaremap:${project.squaremap_modrinth_version}"
-
-	// JUnit 5 running inside Fabric Loader, so tests can use Minecraft classes.
-	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
-	testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.0"
-}
-
-test {
-	useJUnitPlatform()
-}
-
-processResources {
-	def version = modVersion
-	inputs.property "version", version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": version
-	}
-}
-
-jar {
-	def projectName = project.name
-	inputs.property "projectName", projectName
-
-	from("LICENSE") {
-		rename { "${it}_${projectName}" }
-	}
-}
-
-// The README's download badge and the changelog are written by hand; fail the build if they miss a version bump.
-def checkDocs = tasks.register("checkDocs") {
-	def version = project.version.toString()
-	def readme = file("README.md")
-	def changelog = file("CHANGELOG.md")
-	inputs.property "version", version
-	inputs.files readme, changelog
-	doLast {
-		if (!readme.text.contains("badge/download-${version}-")) {
-			throw new GradleException("README.md: the download badge doesn't say ${version} (mod_version)")
-		}
-		if (!changelog.readLines().any { it == "## ${version}" || it.startsWith("## ${version} ") }) {
-			throw new GradleException("CHANGELOG.md has no '## ${version}' section")
-		}
-	}
-}
-
-tasks.named("check") {
-	dependsOn checkDocs
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 21
-	it.options.encoding = "UTF-8"
-}
-
-java {
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
 }

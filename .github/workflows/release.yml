@@ -1,11 +1,11 @@
 name: Release
 
 # Three ways to release version X.Y.Z (mod_version in gradle.properties must match):
-#   - push a tag vX.Y.Z               -> this creates the GitHub release with the jar attached
-#   - publish a release on GitHub     -> this builds the jar and attaches it to that release
+#   - push a tag vX.Y.Z               -> this creates the GitHub release with the jars attached
+#   - publish a release on GitHub     -> this builds the jars and attaches them to that release
 #   - Actions -> Release -> Run workflow with tag vX.Y.Z (and optionally a commit, default: the branch's latest)
-#                                     -> this creates the tag and the release with the jar attached
-# Every way the jar is built from the released commit and has passed the unit tests and the GameTest.
+#                                     -> this creates the tag and the release with the jars attached
+# Every way the jars are built from the released commit and have passed the unit tests and the GameTest.
 on:
   push:
     tags: ['v*']
@@ -59,20 +59,21 @@ jobs:
           test -s release-notes.md || echo "SharedWaypoints $VERSION" > release-notes.md
           cat release-notes.md
 
-      - name: Publish the jar
+      - name: Publish the jars
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          jar="build/libs/sharedwaypoints-$VERSION.jar"
+          # Two jars: the server mod (what server owners install) and the optional client mod.
+          jars="server/build/libs/sharedwaypoints-server-$VERSION.jar client/build/libs/sharedwaypoints-client-$VERSION.jar"
           if gh release view "$TAG" > /dev/null 2>&1; then
-            gh release upload "$TAG" "$jar" --clobber
+            gh release upload "$TAG" $jars --clobber
             # A release written by hand with no notes gets the changelog section.
             if [ -z "$(gh release view "$TAG" --json body --jq .body)" ]; then
               gh release edit "$TAG" --notes-file release-notes.md
             fi
           elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
             # Creates the tag on the checked-out commit.
-            gh release create "$TAG" "$jar" --target "$(git rev-parse HEAD)" --title "SharedWaypoints $VERSION" --notes-file release-notes.md
+            gh release create "$TAG" $jars --target "$(git rev-parse HEAD)" --title "SharedWaypoints $VERSION" --notes-file release-notes.md
           else
-            gh release create "$TAG" "$jar" --title "SharedWaypoints $VERSION" --notes-file release-notes.md --verify-tag
+            gh release create "$TAG" $jars --title "SharedWaypoints $VERSION" --notes-file release-notes.md --verify-tag
           fi

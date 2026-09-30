@@ -25,11 +25,14 @@ jobs:
       - name: Build, unit tests and headless-server GameTest
         run: ./gradlew build runGametest --stacktrace
 
-      - name: Upload jar
+      - name: Upload jars
         uses: actions/upload-artifact@v4
         with:
           name: sharedwaypoints-${{ github.sha }}
-          path: build/libs/*.jar
+          path: |
+            server/build/libs/sharedwaypoints-server-*.jar
+            client/build/libs/sharedwaypoints-client-*.jar
+            !**/*-sources.jar
           if-no-files-found: error
 
   client:
@@ -53,10 +56,18 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon runClientGametest --stacktrace
 
+      - name: Install test (built client jar + Fabric API + Xaero, like a player's mods folder)
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon :client:runInstalledClientTest --stacktrace
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: client-screenshots-${{ github.sha }}
-          path: build/clientgametest/screenshots/
+          path: |
+            server/build/clientgametest/screenshots/
+            client/build/clientgametest/screenshots/
+            client/build/installedtest/screenshots/
           if-no-files-found: ignore
