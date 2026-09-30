@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.1 — 2026-09-30
+
+- **Player guide** ([docs/PLAYER-GUIDE.md](docs/PLAYER-GUIDE.md)): how to install the waypoint menu, what each
+  button does, and how to change the key, with screenshots. Server owners can send it to players.
+- The README badges work while the repository is private.
+- Releases can be started from GitHub's Actions tab (**Release → Run workflow**); the workflow creates the tag.
+- The client test no longer times out on slow CI machines.
+
 ## 1.4.0 — 2026-09-29
 
 **New**
