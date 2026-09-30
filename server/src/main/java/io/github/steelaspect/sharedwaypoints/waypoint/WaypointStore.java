@@ -42,6 +42,8 @@ public final class WaypointStore {
 	private final Map<UUID, Waypoint> byId = new HashMap<>();
 	private final List<Consumer<Waypoint>> removalListeners = new ArrayList<>();
 	private final List<Runnable> changeListeners = new ArrayList<>();
+	private final List<Consumer<Waypoint>> saveListeners = new ArrayList<>();
+	private final List<Runnable> loadListeners = new ArrayList<>();
 	/** True when the last save failed, so commands can warn that changes are only in memory. */
 	private boolean saveFailed;
 
@@ -57,6 +59,16 @@ public final class WaypointStore {
 	/** Called with every waypoint that gets removed (favourites and navigation clean up through this). */
 	public void onRemoved(Consumer<Waypoint> listener) {
 		removalListeners.add(listener);
+	}
+
+	/** Called with every waypoint that is added or edited, as it is now (client-mod sync sends these). */
+	public void onSaved(Consumer<Waypoint> listener) {
+		saveListeners.add(listener);
+	}
+
+	/** Called after the whole list is (re)loaded from disk. */
+	public void onLoaded(Runnable listener) {
+		loadListeners.add(listener);
 	}
 
 	/** Called after every add, remove, edit and load (web-map markers refresh through this). */
@@ -128,6 +140,7 @@ public final class WaypointStore {
 		}
 		put(waypoint);
 		save();
+		saveListeners.forEach(listener -> listener.accept(waypoint));
 		changed();
 		return true;
 	}
@@ -155,6 +168,7 @@ public final class WaypointStore {
 		}
 		put(updated);
 		save();
+		saveListeners.forEach(listener -> listener.accept(updated));
 		changed();
 		return updated;
 	}
@@ -170,6 +184,7 @@ public final class WaypointStore {
 		Optional<StoreFile> data = JsonFiles.read(file, StoreFile.class, Gsons.withCategories(categories.get()));
 		if (data.isEmpty()) {
 			SharedWaypoints.LOGGER.info("No readable waypoint file at {}; starting with an empty list", file);
+			loadListeners.forEach(Runnable::run);
 			changed();
 			return;
 		}
@@ -190,6 +205,7 @@ public final class WaypointStore {
 			save();
 		}
 		SharedWaypoints.LOGGER.info("Loaded {} shared waypoint(s) from {}", byName.size(), file);
+		loadListeners.forEach(Runnable::run);
 		changed();
 	}
 

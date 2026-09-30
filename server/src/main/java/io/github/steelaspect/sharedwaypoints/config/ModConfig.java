@@ -15,8 +15,15 @@ import java.util.List;
  * re-reads it without a restart.
  */
 public final class ModConfig {
-	/** Tell everyone online when a waypoint is added (with the usual buttons). */
+	/** Live broadcast: tell everyone online when a waypoint is added (with the usual buttons). */
 	public boolean announceNewWaypoints = true;
+	/** On join, tell players which waypoints were added since they last played (with the usual buttons). */
+	public boolean joinSummary = true;
+	/**
+	 * Keep players who have the optional sharedwaypoints-client mod in sync: their Xaero's Minimap gets the shared
+	 * waypoints in its own "Shared" set. Players without the client mod are never affected.
+	 */
+	public boolean syncToClientMod = true;
 	/** Show a particle beacon at the destination while navigating. */
 	public boolean navigationParticles = true;
 	/** Navigation ends when you get this close (blocks). */

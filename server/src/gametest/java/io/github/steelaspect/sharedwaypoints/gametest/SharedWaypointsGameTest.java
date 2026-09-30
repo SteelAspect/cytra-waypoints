@@ -12,6 +12,13 @@ import io.github.steelaspect.sharedwaypoints.network.ActionPayload;
 import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
 import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
 import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
+import io.github.steelaspect.sharedwaypoints.protocol.DeletePayload;
+import io.github.steelaspect.sharedwaypoints.protocol.FullSyncPayload;
+import io.github.steelaspect.sharedwaypoints.protocol.HelloPayload;
+import io.github.steelaspect.sharedwaypoints.protocol.SyncProtocol;
+import io.github.steelaspect.sharedwaypoints.protocol.SyncedWaypoint;
+import io.github.steelaspect.sharedwaypoints.protocol.UpsertPayload;
+import io.github.steelaspect.sharedwaypoints.protocol.WelcomePayload;
 import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
@@ -313,6 +320,7 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(!gone.success() && gone.message().contains("no longer exists"), "stale id: " + gone.message());
 
 		routes(helper, server, dispatcher, mod, aliceEntity, bobEntity, alice, bob, moderator);
+		clientModSync(helper, dispatcher, mod, aliceEntity, bobEntity, alice, moderator);
 
 		// Every /waypoints subcommand must be a reserved word, so no category can ever hide one.
 		for (var child : dispatcher.getRoot().getChild("waypoints").getChildren()) {
@@ -499,6 +507,77 @@ public class SharedWaypointsGameTest {
 		for (String name : List.of("R1", "R3", "R4")) {
 			run(helper, dispatcher, moderator, "waypoints remove " + name);
 		}
+	}
+
+	// ------------------------------------------------------ client-mod sync
+
+	/**
+	 * The sharedwaypoints-client handshake and live updates, with a recording "connection" per player instead of a
+	 * real client.
+	 */
+	private static void clientModSync(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
+			ModContext mod, ServerPlayer aliceEntity, ServerPlayer bobEntity, Source alice, Source moderator) {
+		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toAlice = new ArrayList<>();
+		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toBob = new ArrayList<>();
+
+		// Alice has the client mod: welcome, then the full list.
+		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toAlice::add);
+		helper.assertValueEqual(toAlice.get(0), new WelcomePayload(SyncProtocol.VERSION, true), "welcome, sync on");
+		FullSyncPayload full = (FullSyncPayload) toAlice.get(1);
+		helper.assertValueEqual(full.waypoints().size(), mod.waypoints().size(), "full list sent");
+		SyncedWaypoint sorting = full.waypoints().stream().filter(w -> w.name().equals("Sorting Room")).findFirst().orElseThrow();
+		helper.assertValueEqual(sorting.categoryId(), "storage", "category id");
+		helper.assertValueEqual(sorting.colorIndex(), 11, "storage is Xaero colour 11 (aqua)");
+		helper.assertValueEqual(sorting.initials(), "S", "Xaero initials, as in the chat share line");
+		helper.assertValueEqual(sorting.dimension(), "minecraft:overworld", "dimension");
+		helper.assertTrue(mod.sync().isSubscribed(aliceEntity.getUUID()), "alice subscribed");
+
+		// Bob's client mod speaks another protocol version: told so, never subscribed.
+		mod.sync().onHello(bobEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), toBob::add);
+		helper.assertValueEqual(toBob, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "version mismatch");
+		helper.assertTrue(!mod.sync().isSubscribed(bobEntity.getUUID()), "bob not subscribed");
+
+		// Live: add, edit, delete.
+		toAlice.clear();
+		run(helper, dispatcher, moderator, "waypoints add \"Sync Test\" farms 1 64 2");
+		Waypoint syncTest = mod.waypoints().get("Sync Test").orElseThrow();
+		helper.assertValueEqual(toAlice.size(), 1, "one update for an add");
+		helper.assertValueEqual(((UpsertPayload) toAlice.get(0)).waypoint().id(), syncTest.id(), "add sent as upsert");
+		helper.assertValueEqual(((UpsertPayload) toAlice.get(0)).waypoint().colorIndex(), 10, "farms is Xaero colour 10");
+		run(helper, dispatcher, moderator, "waypoints rename \"Sync Test\" \"Sync Renamed\"");
+		UpsertPayload renamed = (UpsertPayload) toAlice.get(1);
+		helper.assertTrue(renamed.waypoint().id().equals(syncTest.id()) && renamed.waypoint().name().equals("Sync Renamed"),
+				"rename keeps the id");
+		run(helper, dispatcher, moderator, "waypoints describe \"Sync Renamed\" A note");
+		helper.assertValueEqual(((UpsertPayload) toAlice.get(2)).waypoint().description(), "A note", "describe sent");
+		run(helper, dispatcher, moderator, "waypoints remove \"Sync Renamed\"");
+		helper.assertValueEqual(toAlice.get(3), new DeletePayload(SyncProtocol.VERSION, syncTest.id()), "delete sent");
+		helper.assertTrue(toBob.size() == 1, "bob (not subscribed) got nothing more");
+
+		// Reload resends everything (categories or colours may have changed).
+		toAlice.clear();
+		run(helper, dispatcher, moderator, "waypoints reload");
+		moderator.out.take();
+		helper.assertTrue(toAlice.size() == 1 && toAlice.get(0) instanceof FullSyncPayload, "full list after reload");
+
+		// Turned off in config: nothing more is sent, and new clients are told sync is off.
+		mod.config().syncToClientMod = false;
+		toAlice.clear();
+		run(helper, dispatcher, moderator, "waypoints add Quiet other 3 64 3");
+		helper.assertTrue(toAlice.isEmpty(), "no updates while sync is off");
+		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toLate = new ArrayList<>();
+		mod.sync().onHello(bobEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toLate::add);
+		helper.assertValueEqual(toLate, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "sync off at hello");
+		mod.config().syncToClientMod = true;
+		run(helper, dispatcher, moderator, "waypoints remove Quiet");
+
+		// Leaving ends the subscription.
+		mod.sync().forget(aliceEntity.getUUID());
+		toAlice.clear();
+		run(helper, dispatcher, moderator, "waypoints add Gone other 4 64 4");
+		helper.assertTrue(toAlice.isEmpty(), "no updates after leaving");
+		run(helper, dispatcher, moderator, "waypoints remove Gone");
+		alice.out.take();
 	}
 
 	private static Route route(ModContext mod) {

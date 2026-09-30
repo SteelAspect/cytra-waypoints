@@ -4,6 +4,7 @@ import io.github.steelaspect.sharedwaypoints.config.ModConfig;
 import io.github.steelaspect.sharedwaypoints.map.MapIntegrations;
 import io.github.steelaspect.sharedwaypoints.nav.NavigationManager;
 import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
+import io.github.steelaspect.sharedwaypoints.sync.SyncService;
 import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import io.github.steelaspect.sharedwaypoints.waypoint.FavoritesStore;
 import io.github.steelaspect.sharedwaypoints.waypoint.RouteStore;
@@ -23,6 +24,7 @@ public final class ModContext {
 	private final NavigationManager navigation;
 	private final MapIntegrations maps;
 	private final MenuNetworking menus;
+	private final SyncService sync;
 	private ModConfig config = new ModConfig();
 	private CategoryRegistry categories = CategoryRegistry.DEFAULT;
 
@@ -34,6 +36,7 @@ public final class ModContext {
 		this.navigation = new NavigationManager(this);
 		this.maps = new MapIntegrations(this);
 		this.menus = new MenuNetworking(this);
+		this.sync = new SyncService(this);
 		// Deleted waypoints disappear from favourites and routes; navigation notices on its next tick.
 		waypoints.onRemoved(waypoint -> favorites.forget(waypoint.id()));
 		waypoints.onRemoved(waypoint -> routes.forgetWaypoint(waypoint.id()));
@@ -43,6 +46,10 @@ public final class ModContext {
 		waypoints.onChanged(menus::pushToAll);
 		routes.onChanged(menus::pushToAll);
 		navigation.onChange(menus::pushTo);
+		// Players with the sharedwaypoints-client mod get every change in their Xaero's Minimap.
+		waypoints.onSaved(sync::onSaved);
+		waypoints.onRemoved(sync::onRemoved);
+		waypoints.onLoaded(sync::onLoaded);
 	}
 
 	/** (Re)loads every file. Runs when a server starts. Categories load first: waypoints refer to them. */
@@ -91,5 +98,9 @@ public final class ModContext {
 
 	public MenuNetworking menus() {
 		return menus;
+	}
+
+	public SyncService sync() {
+		return sync;
 	}
 }

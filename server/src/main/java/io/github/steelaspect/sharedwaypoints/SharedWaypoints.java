@@ -31,22 +31,28 @@ public final class SharedWaypoints implements ModInitializer {
 		// Optional client menu: payload types must be registered on both sides; only modded clients use them.
 		MenuNetworking.registerPayloads();
 		context.menus().registerReceiver();
+		// Optional Xaero's Minimap sync for players with sharedwaypoints-client (handshake first; see SyncService).
+		context.sync().registerReceiver();
 
 		// (Re)load from disk every time a server starts. In singleplayer this runs for each world opened.
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> context.load());
 		// Web maps (BlueMap, squaremap) set up their worlds while the server starts, so hook in afterwards.
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			context.menus().setServer(server);
+			context.sync().setServer(server);
 			context.maps().start(server);
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			context.navigation().clear();
 			context.maps().stop();
 			context.menus().setServer(null);
+			context.sync().setServer(null);
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> context.navigation().tick(server));
-		ServerPlayConnectionEvents.DISCONNECT.register(
-				(handler, server) -> context.navigation().stop(handler.getPlayer().getUUID()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			context.navigation().stop(handler.getPlayer().getUUID());
+			context.sync().forget(handler.getPlayer().getUUID());
+		});
 
 		CommandRegistrationCallback.EVENT.register(
 				(dispatcher, registryAccess, environment) -> WaypointCommand.register(dispatcher, context));

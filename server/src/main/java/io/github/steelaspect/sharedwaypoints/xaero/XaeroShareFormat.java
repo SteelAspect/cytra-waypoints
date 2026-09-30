@@ -91,7 +91,7 @@ public final class XaeroShareFormat {
 	}
 
 	/** One upper-case letter for the minimap icon (Xaero allows 1-3 characters). */
-	static String initials(String name) {
+	public static String initials(String name) {
 		for (int i = 0; i < name.length(); ) {
 			int codePoint = name.codePointAt(i);
 			if (Character.isLetterOrDigit(codePoint)) {
