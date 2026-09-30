@@ -2,6 +2,9 @@
 
 ## 2.0.0 — 2026-09-30
 
+**The command is now `/cway`** (it was `/waypoints`, which is gone). Every subcommand is the same, e.g.
+`/cway add`, `/cway route go`, and the chat buttons use the new name.
+
 **Two jars now**
 - `sharedwaypoints-server` is the mod server owners install. It has everything 1.5.0 had, unchanged, and it's
   still all the server needs.
@@ -18,14 +21,14 @@
 - **Join summary:** "3 new waypoints since you last played", with the usual [Add to Xaero] / [Copy coords] / [Go]
   buttons. Last-seen times per player are stored in `waypoints.json` (`lastSeen`).
 - **How to get the sync:** players without the client mod get one line in chat on their first join, with
-  **[Download]** and **[How it works]**. `/waypoints sync` shows the steps, or says the sync is already on.
+  **[Download]** and **[How it works]**. `/cway sync` shows the steps, or says the sync is already on.
 - Config: `joinSummary`, `syncToClientMod`, `clientModTip` and `clientModUrl` (where [Download] points; defaults
   to the latest GitHub release). `announceNewWaypoints` still controls the live broadcast of new waypoints.
 
 **How the sync works**
 - The client mod says hello on join, with a protocol version. Only then does the server send it the full list,
   and after that every change. Players without the client mod get nothing new: the chat works exactly as before.
-- `/waypoints reload` resends the full list to synced players.
+- `/cway reload` resends the full list to synced players.
 
 **Waypoint menu**
 - Players now get the menu from `sharedwaypoints-client`: one jar for the menu and the Xaero sync. The server jar

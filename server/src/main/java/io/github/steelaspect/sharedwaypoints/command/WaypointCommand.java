@@ -44,17 +44,17 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * The {@code /waypoints} command tree.
+ * The {@code /cway} command tree.
  *
  * <pre>
- * Browsing                  /waypoints [page &lt;n&gt;] | &lt;category&gt; [page] | categories | search &lt;text&gt; | info &lt;name&gt;
- * Around you                /waypoints near [radius] | nearest [category]
- * Navigation                /waypoints go &lt;name&gt; | stop | tp &lt;name&gt; (op)
- * Personal                  /waypoints favorite &lt;name&gt; | favorites
- * Editing                   /waypoints add &lt;name&gt; &lt;category&gt; [x y z] [dimension] | remove | rename | describe
- * Routes                    /waypoints route [list] | info | go &lt;route&gt; [stop] | skip | create | add | drop | move
+ * Browsing                  /cway [page &lt;n&gt;] | &lt;category&gt; [page] | categories | search &lt;text&gt; | info &lt;name&gt;
+ * Around you                /cway near [radius] | nearest [category]
+ * Navigation                /cway go &lt;name&gt; | stop | tp &lt;name&gt; (op)
+ * Personal                  /cway favorite &lt;name&gt; | favorites
+ * Editing                   /cway add &lt;name&gt; &lt;category&gt; [x y z] [dimension] | remove | rename | describe
+ * Routes                    /cway route [list] | info | go &lt;route&gt; [stop] | skip | create | add | drop | move
  *                           | rename | describe | delete
- * Xaero                     /waypoints xaero &lt;name&gt;   (what [Add to Xaero] runs)
+ * Xaero                     /cway xaero &lt;name&gt;   (what [Add to Xaero] runs)
  * </pre>
  *
  * <p>Only vanilla argument types are used (string, word, greedy string, integer, block_pos, dimension) so
@@ -105,12 +105,12 @@ public final class WaypointCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher, ModContext mod) {
 		WaypointCommand command = new WaypointCommand(mod);
-		// Categories come from config.json and can change on /waypoints reload, so suggest the current ones.
+		// Categories come from config.json and can change on /cway reload, so suggest the current ones.
 		SuggestionProvider<CommandSourceStack> categorySuggestions =
 				(context, builder) -> SharedSuggestionProvider.suggest(mod.categories().ids(), builder);
 		BiPredicate<CommandSourceStack, Waypoint> anyWaypoint = (source, waypoint) -> true;
 
-		dispatcher.register(Commands.literal("waypoints")
+		dispatcher.register(Commands.literal("cway")
 				.requires(WaypointPermissions.requireView())
 				.executes(context -> command.listAll(context.getSource(), 1))
 
@@ -224,16 +224,16 @@ public final class WaypointCommand {
 					.withStyle(ChatFormatting.GRAY)
 					.append(Component.literal("[Add one]").withStyle(style -> style
 							.withColor(ChatFormatting.YELLOW)
-							.withClickEvent(new ClickEvent.SuggestCommand("/waypoints add "))
+							.withClickEvent(new ClickEvent.SuggestCommand("/cway add "))
 							.withHoverEvent(new HoverEvent.ShowText(
-									Component.literal("/waypoints add <name> <category> [x y z]"))))));
+									Component.literal("/cway add <name> <category> [x y z]"))))));
 			return 0;
 		}
 		Page<Waypoint> page = Page.of(all, requestedPage, mod.config().pageSize);
 		reply(source, WaypointText.header("Shared Waypoints (" + all.size() + ")"));
 		sendGrouped(source, page.items());
 		if (page.count() > 1) {
-			reply(source, WaypointText.pageFooter(page, "/waypoints page"));
+			reply(source, WaypointText.pageFooter(page, "/cway page"));
 		}
 		return page.items().size();
 	}
@@ -250,7 +250,7 @@ public final class WaypointCommand {
 			reply(source, WaypointText.line(waypoint, viewer));
 		}
 		if (page.count() > 1) {
-			reply(source, WaypointText.pageFooter(page, "/waypoints " + category.id()));
+			reply(source, WaypointText.pageFooter(page, "/cway " + category.id()));
 		}
 		return page.items().size();
 	}
@@ -316,7 +316,7 @@ public final class WaypointCommand {
 				.toList();
 		reply(source, WaypointText.header("Within " + radius + "m (" + nearby.size() + ")"));
 		if (nearby.isEmpty()) {
-			reply(source, WaypointText.muted("Nothing that close. Try /waypoints nearest."));
+			reply(source, WaypointText.muted("Nothing that close. Try /cway nearest."));
 			return 0;
 		}
 		nearby.stream().limit(MAX_NEAR_RESULTS)
@@ -384,7 +384,7 @@ public final class WaypointCommand {
 						.append(WaypointText.success(waypoint.name() + " added to your favourites. "))
 						.append(Component.literal("[View favourites]").withStyle(style -> style
 								.withColor(ChatFormatting.YELLOW)
-								.withClickEvent(new ClickEvent.RunCommand("/waypoints favorites"))))
+								.withClickEvent(new ClickEvent.RunCommand("/cway favorites"))))
 				: WaypointText.muted("☆ " + waypoint.name() + " removed from your favourites."));
 		return 1;
 	}
@@ -399,7 +399,7 @@ public final class WaypointCommand {
 				.toList();
 		reply(source, WaypointText.header("★ Your favourites (" + favorites.size() + ")"));
 		if (favorites.isEmpty()) {
-			reply(source, WaypointText.muted("None yet. Open a waypoint with /waypoints info and click [☆ Favourite]."));
+			reply(source, WaypointText.muted("None yet. Open a waypoint with /cway info and click [☆ Favourite]."));
 		}
 		favorites.forEach(waypoint -> reply(source, WaypointText.line(waypoint, viewer)));
 		return favorites.size();
@@ -577,9 +577,9 @@ public final class WaypointCommand {
 			reply(source, WaypointText.muted("No routes yet. ")
 					.copy().append(Component.literal("[Create one]").withStyle(style -> style
 							.withColor(ChatFormatting.YELLOW)
-							.withClickEvent(new ClickEvent.SuggestCommand("/waypoints route create "))
+							.withClickEvent(new ClickEvent.SuggestCommand("/cway route create "))
 							.withHoverEvent(new HoverEvent.ShowText(Component.literal(
-									"/waypoints route create <name>, then /waypoints route add <route> <waypoint>"))))));
+									"/cway route create <name>, then /cway route add <route> <waypoint>"))))));
 			return 0;
 		}
 		boolean isPlayer = source.getPlayer() != null;
@@ -825,7 +825,7 @@ public final class WaypointCommand {
 
 	/**
 	 * Sends a reply to whoever ran the command. Vanilla drops command replies when the {@code sendCommandFeedback}
-	 * gamerule is off, but for /waypoints the reply <em>is</em> the result, so players get it anyway.
+	 * gamerule is off, but for /cway the reply <em>is</em> the result, so players get it anyway.
 	 */
 	private static void reply(CommandSourceStack source, Component message) {
 		ServerPlayer player = source.getPlayer();

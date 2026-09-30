@@ -28,7 +28,7 @@ import net.minecraft.server.level.ServerPlayer;
  * Server side of the optional client menu.
  *
  * <p>Players with the mod on their client get a {@link SyncPayload} when they open the menu and after every change.
- * Buttons arrive as {@link ActionPayload}s, which are turned into the matching /waypoints command and run as the
+ * Buttons arrive as {@link ActionPayload}s, which are turned into the matching /cway command and run as the
  * player, so permissions and validation are exactly the same as typing the command. The command's reply goes back
  * as a {@link ResultPayload}. Players without the client mod never receive anything from here.
  */
@@ -136,32 +136,32 @@ public final class MenuNetworking {
 		try {
 			command = switch (payload.action()) {
 				case SYNC -> null;
-				case GO -> "waypoints go " + name(args, 0);
-				case STOP -> "waypoints stop";
-				case FAVORITE -> "waypoints favorite " + name(args, 0);
-				case TELEPORT -> "waypoints tp " + name(args, 0);
-				case REMOVE -> "waypoints remove " + name(args, 0);
-				case RENAME -> "waypoints rename " + name(args, 0) + " " + quoted(arg(args, 1));
+				case GO -> "cway go " + name(args, 0);
+				case STOP -> "cway stop";
+				case FAVORITE -> "cway favorite " + name(args, 0);
+				case TELEPORT -> "cway tp " + name(args, 0);
+				case REMOVE -> "cway remove " + name(args, 0);
+				case RENAME -> "cway rename " + name(args, 0) + " " + quoted(arg(args, 1));
 				case DESCRIBE -> {
 					String text = oneLine(arg(args, 1));
-					yield "waypoints describe " + name(args, 0) + (text.isEmpty() ? "" : " " + text);
+					yield "cway describe " + name(args, 0) + (text.isEmpty() ? "" : " " + text);
 				}
-				case ADD -> "waypoints add " + quoted(arg(args, 0)) + " " + matching(arg(args, 1), CATEGORY_ID)
+				case ADD -> "cway add " + quoted(arg(args, 0)) + " " + matching(arg(args, 1), CATEGORY_ID)
 						+ " " + Integer.parseInt(arg(args, 2)) + " " + Integer.parseInt(arg(args, 3))
 						+ " " + Integer.parseInt(arg(args, 4)) + " " + matching(arg(args, 5), DIMENSION_ID);
-				case ROUTE_GO -> "waypoints route go " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1));
-				case ROUTE_SKIP -> "waypoints route skip";
-				case ROUTE_CREATE -> "waypoints route create " + quoted(arg(args, 0));
-				case ROUTE_ADD -> "waypoints route add " + routeName(args, 0) + " " + name(args, 1);
-				case ROUTE_DROP -> "waypoints route drop " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1));
-				case ROUTE_MOVE -> "waypoints route move " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1))
+				case ROUTE_GO -> "cway route go " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1));
+				case ROUTE_SKIP -> "cway route skip";
+				case ROUTE_CREATE -> "cway route create " + quoted(arg(args, 0));
+				case ROUTE_ADD -> "cway route add " + routeName(args, 0) + " " + name(args, 1);
+				case ROUTE_DROP -> "cway route drop " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1));
+				case ROUTE_MOVE -> "cway route move " + routeName(args, 0) + " " + Integer.parseInt(arg(args, 1))
 						+ " " + Integer.parseInt(arg(args, 2));
-				case ROUTE_RENAME -> "waypoints route rename " + routeName(args, 0) + " " + quoted(arg(args, 1));
+				case ROUTE_RENAME -> "cway route rename " + routeName(args, 0) + " " + quoted(arg(args, 1));
 				case ROUTE_DESCRIBE -> {
 					String text = oneLine(arg(args, 1));
-					yield "waypoints route describe " + routeName(args, 0) + (text.isEmpty() ? "" : " " + text);
+					yield "cway route describe " + routeName(args, 0) + (text.isEmpty() ? "" : " " + text);
 				}
-				case ROUTE_DELETE -> "waypoints route delete " + routeName(args, 0);
+				case ROUTE_DELETE -> "cway route delete " + routeName(args, 0);
 			};
 		} catch (BadRequest e) {
 			return new ResultPayload(false, e.getMessage());

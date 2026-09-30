@@ -14,8 +14,8 @@ import net.minecraft.ChatFormatting;
 /** The configured categories, in display order. */
 public final class CategoryRegistry {
 	/**
-	 * Words that are /waypoints subcommands. A category with one of these ids could never be listed with
-	 * {@code /waypoints <category>}, because Brigadier prefers the subcommand.
+	 * Words that are /cway subcommands. A category with one of these ids could never be listed with
+	 * {@code /cway <category>}, because Brigadier prefers the subcommand.
 	 */
 	public static final Set<String> RESERVED_IDS = Set.of(
 			"add", "remove", "rename", "describe", "info", "categories", "search", "near", "nearest", "go", "stop",
@@ -82,7 +82,7 @@ public final class CategoryRegistry {
 			return Optional.of("id must be 1-24 characters of a-z, 0-9, _ or -");
 		}
 		if (RESERVED_IDS.contains(id)) {
-			return Optional.of("\"" + id + "\" is a /waypoints subcommand");
+			return Optional.of("\"" + id + "\" is a /cway subcommand");
 		}
 		if (accepted.stream().anyMatch(category -> category.id().equals(id))) {
 			return Optional.of("duplicate id");

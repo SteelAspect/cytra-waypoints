@@ -14,7 +14,7 @@ import java.util.UUID;
  * @param y           block Y
  * @param z           block Z
  * @param dimension   dimension id, e.g. {@code minecraft:overworld}
- * @param description optional short note shown in hover cards and /waypoints info (null if none)
+ * @param description optional short note shown in hover cards and /cway info (null if none)
  * @param creatorUuid UUID of the player who added it (all zeros for the console / command blocks)
  * @param creatorName name of the creator at the time it was added
  * @param created     when it was added (stored as ISO-8601 UTC)

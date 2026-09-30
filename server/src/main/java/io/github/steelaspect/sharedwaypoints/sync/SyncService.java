@@ -98,7 +98,7 @@ public final class SyncService {
 		broadcast(new DeletePayload(SyncProtocol.VERSION, waypoint.id()));
 	}
 
-	/** The list was reloaded ({@code /waypoints reload}): categories or colours may have changed, so resend it all. */
+	/** The list was reloaded ({@code /cway reload}): categories or colours may have changed, so resend it all. */
 	public void onLoaded() {
 		if (!subscribers.isEmpty()) {
 			broadcast(fullSync());

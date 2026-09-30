@@ -84,7 +84,7 @@ public final class JoinSummary {
 	private static Component showAllButton() {
 		return Component.literal("[Show all]").withStyle(style -> style
 				.withColor(ChatFormatting.YELLOW)
-				.withClickEvent(new ClickEvent.RunCommand("/waypoints"))
+				.withClickEvent(new ClickEvent.RunCommand("/cway"))
 				.withHoverEvent(new HoverEvent.ShowText(Component.literal("List every shared waypoint"))));
 	}
 }

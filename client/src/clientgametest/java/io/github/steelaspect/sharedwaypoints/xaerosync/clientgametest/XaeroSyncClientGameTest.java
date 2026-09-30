@@ -53,18 +53,18 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 			}
 
 			// Added on the server: appear in Xaero, in the right dimension's Shared set.
-			world.getServer().runCommand("waypoints add \"Main Storage\" storage 12 -60 -30");
-			world.getServer().runCommand("waypoints add Farm farms 140 -60 210");
-			world.getServer().runCommand("waypoints add Hub portals 10 70 -20 minecraft:the_nether");
-			world.getServer().runCommand("waypoints add \"Gone While Away\" other 5 -60 5");
+			world.getServer().runCommand("cway add \"Main Storage\" storage 12 -60 -30");
+			world.getServer().runCommand("cway add Farm farms 140 -60 210");
+			world.getServer().runCommand("cway add Hub portals 10 70 -20 minecraft:the_nether");
+			world.getServer().runCommand("cway add \"Gone While Away\" other 5 -60 5");
 			waitForNames(context, OVERWORLD, List.of("Farm", "Gone While Away", "Main Storage"));
 			waitForNames(context, NETHER, List.of("Hub"));
 			log("adds synced");
 
 			// Edits: rename (matched by id, no duplicate), recategorise (new colour), delete.
-			world.getServer().runCommand("waypoints rename Farm \"Iron Farm\"");
+			world.getServer().runCommand("cway rename Farm \"Iron Farm\"");
 			waitForNames(context, OVERWORLD, List.of("Gone While Away", "Iron Farm", "Main Storage"));
-			world.getServer().runCommand("waypoints remove \"Main Storage\"");
+			world.getServer().runCommand("cway remove \"Main Storage\"");
 			waitForNames(context, OVERWORLD, List.of("Gone While Away", "Iron Farm"));
 			log("rename and delete synced");
 

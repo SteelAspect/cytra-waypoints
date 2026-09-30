@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * Settings from {@code config/sharedwaypoints/config.json}. The file is created with defaults on first start
- * and rewritten on every load, so newly added options show up in it automatically. {@code /waypoints reload}
+ * and rewritten on every load, so newly added options show up in it automatically. {@code /cway reload}
  * re-reads it without a restart.
  */
 public final class ModConfig {
@@ -26,18 +26,18 @@ public final class ModConfig {
 	public boolean syncToClientMod = true;
 	/**
 	 * On their first join, tell players who don't have sharedwaypoints-client how to get the Xaero sync
-	 * (once per player). {@code /waypoints sync} shows the steps any time.
+	 * (once per player). {@code /cway sync} shows the steps any time.
 	 */
 	public boolean clientModTip = true;
-	/** Where [Download] in that tip and in {@code /waypoints sync} points. Empty: no link ("ask an admin"). */
+	/** Where [Download] in that tip and in {@code /cway sync} points. Empty: no link ("ask an admin"). */
 	public String clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
 	/** Show a particle beacon at the destination while navigating. */
 	public boolean navigationParticles = true;
 	/** Navigation ends when you get this close (blocks). */
 	public int arrivalRadius = 6;
-	/** Waypoint lines per page in /waypoints listings. */
+	/** Waypoint lines per page in /cway listings. */
 	public int pageSize = 8;
-	/** Default radius (blocks) for /waypoints near. */
+	/** Default radius (blocks) for /cway near. */
 	public int nearRadius = 512;
 	/** Show waypoints on BlueMap / squaremap when one of them is installed. */
 	public boolean webMapMarkers = true;

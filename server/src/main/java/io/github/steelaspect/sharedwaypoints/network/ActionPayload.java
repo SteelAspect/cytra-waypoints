@@ -8,7 +8,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * Client → server: a button pressed in the client menu. The server turns it into the matching /waypoints command
+ * Client → server: a button pressed in the client menu. The server turns it into the matching /cway command
  * and runs it as the player, so the same permissions and validation apply as when typing it in chat.
  *
  * @param action what to do

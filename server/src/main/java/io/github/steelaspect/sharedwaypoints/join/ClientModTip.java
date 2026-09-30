@@ -17,7 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Tells players how to get the automatic Xaero's Minimap sync: a short tip on their first join (only for players
- * who don't have sharedwaypoints-client yet) and the full steps in {@code /waypoints sync}.
+ * who don't have sharedwaypoints-client yet) and the full steps in {@code /cway sync}.
  */
 public final class ClientModTip {
 	private final ModContext mod;
@@ -47,11 +47,11 @@ public final class ClientModTip {
 		downloadButton().ifPresent(button -> line.append(button).append(" "));
 		return line.append(Component.literal("[How it works]").withStyle(style -> style
 				.withColor(ChatFormatting.YELLOW)
-				.withClickEvent(new ClickEvent.RunCommand("/waypoints sync"))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show the steps (/waypoints sync)")))));
+				.withClickEvent(new ClickEvent.RunCommand("/cway sync"))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show the steps (/cway sync)")))));
 	}
 
-	/** {@code /waypoints sync}: whether it's on for you, and how to set it up. */
+	/** {@code /cway sync}: whether it's on for you, and how to set it up. */
 	public List<Component> steps(ServerPlayer player) {
 		List<Component> lines = new ArrayList<>();
 		lines.add(Component.literal("Automatic Xaero's Minimap sync").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD));

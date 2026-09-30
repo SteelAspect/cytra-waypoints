@@ -80,7 +80,7 @@ public final class MapIntegrations {
 		layers.clear();
 	}
 
-	/** Names of the maps currently showing markers, for /waypoints reload. */
+	/** Names of the maps currently showing markers, for /cway reload. */
 	public List<String> activeMaps() {
 		return layers.stream().map(layer -> layer instanceof BlueMapLayer ? "BlueMap" : "squaremap").toList();
 	}

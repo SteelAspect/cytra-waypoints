@@ -41,7 +41,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 
 /**
- * End-to-end test on a real (headless) 1.21.11 server: runs the /waypoints commands as two ordinary players and
+ * End-to-end test on a real (headless) 1.21.11 server: runs the /cway commands as two ordinary players and
  * a moderator, and checks chat output, click events, tab completion, permissions, navigation, favourites, routes,
  * the client menu's network handler and the JSON files.
  */
@@ -102,18 +102,18 @@ public class SharedWaypointsGameTest {
 		Source moderator = source(server.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER));
 
 		// --- add
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints add \"Main Storage\" storage"), 1, "add here");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway add \"Main Storage\" storage"), 1, "add here");
 		helper.assertTrue(alice.out.take().contains("Added waypoint Main Storage"), "add confirmation");
-		run(helper, dispatcher, alice, "waypoints add Hub portals 10 70 -20 minecraft:the_nether");
-		run(helper, dispatcher, bob, "waypoints add Iron-Farm farms 100 64 200");
-		expectError(helper, dispatcher, alice, "waypoints add \"main storage\" bases", "already exists");
-		expectError(helper, dispatcher, alice, "waypoints add Thing shops", "Unknown category");
-		expectError(helper, dispatcher, moderator, "waypoints add Console bases", "Give coordinates");
+		run(helper, dispatcher, alice, "cway add Hub portals 10 70 -20 minecraft:the_nether");
+		run(helper, dispatcher, bob, "cway add Iron-Farm farms 100 64 200");
+		expectError(helper, dispatcher, alice, "cway add \"main storage\" bases", "already exists");
+		expectError(helper, dispatcher, alice, "cway add Thing shops", "Unknown category");
+		expectError(helper, dispatcher, moderator, "cway add Console bases", "Give coordinates");
 		helper.assertTrue(Files.exists(configDir().resolve("config.json")), "config.json created with defaults");
 
 		// --- list all: grouped by category, each line in the required format with working buttons
 		alice.out.take();
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints"), 3, "list all");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway"), 3, "list all");
 		String listing = alice.out.text();
 		helper.assertTrue(listing.contains("[Portals] Hub — 10 70 -20 (the_nether) [Add to Xaero] [Copy coords] [Go]"), listing);
 		helper.assertTrue(listing.contains("[Farms] Iron-Farm — 100 64 200 (overworld) [Add to Xaero] [Copy coords] [Go]"), listing);
@@ -122,75 +122,75 @@ public class SharedWaypointsGameTest {
 		Component hubLine = alice.out.messages.stream()
 				.filter(line -> line.getString().startsWith("[Portals] Hub")).findFirst().orElseThrow();
 		helper.assertValueEqual(clickOf(hubLine, "[Add to Xaero]"),
-				Optional.of(new ClickEvent.RunCommand("/waypoints xaero Hub")), "Add to Xaero click");
+				Optional.of(new ClickEvent.RunCommand("/cway xaero Hub")), "Add to Xaero click");
 		helper.assertValueEqual(clickOf(hubLine, "[Copy coords]"),
 				Optional.of(new ClickEvent.CopyToClipboard("10 70 -20")), "Copy coords click");
 		helper.assertValueEqual(clickOf(hubLine, "[Go]"),
-				Optional.of(new ClickEvent.RunCommand("/waypoints go Hub")), "Go click");
+				Optional.of(new ClickEvent.RunCommand("/cway go Hub")), "Go click");
 		helper.assertTrue(!listing.contains("xaero-waypoint:"), "listing must not trigger Xaero's parser");
 		alice.out.take();
 
 		// --- one category, categories, info, xaero
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints storage"), 1, "list storage");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway storage"), 1, "list storage");
 		helper.assertTrue(alice.out.take().contains("[Storage] Main Storage"), "storage listing");
-		expectError(helper, dispatcher, alice, "waypoints shops", "Unknown category");
-		run(helper, dispatcher, alice, "waypoints categories");
+		expectError(helper, dispatcher, alice, "cway shops", "Unknown category");
+		run(helper, dispatcher, alice, "cway categories");
 		String categories = alice.out.take();
 		helper.assertTrue(categories.contains("[Portals] portals — 1 waypoint · Xaero colour: Purple (13)"), categories);
-		run(helper, dispatcher, alice, "waypoints info Hub");
+		run(helper, dispatcher, alice, "cway info Hub");
 		String hubInfo = alice.out.take();
 		helper.assertTrue(hubInfo.contains("Overworld side: 80 70 -160"), "portal conversion in info:\n" + hubInfo);
 		helper.assertTrue(hubInfo.contains("via Nether portal"), "distance through the portal:\n" + hubInfo);
 		helper.assertTrue(!hubInfo.contains("[Teleport]"), "no teleport button for ordinary players");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints xaero \"Main Storage\""), 1, "xaero share");
-		expectError(helper, dispatcher, moderator, "waypoints xaero Hub", "player");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway xaero \"Main Storage\""), 1, "xaero share");
+		expectError(helper, dispatcher, moderator, "cway xaero Hub", "player");
 
 		// --- around you (alice stands at 0 64 0)
-		run(helper, dispatcher, alice, "waypoints nearest");
+		run(helper, dispatcher, alice, "cway nearest");
 		helper.assertTrue(alice.out.take().contains("Main Storage"), "nearest is the one at your feet");
-		run(helper, dispatcher, alice, "waypoints nearest farms");
+		run(helper, dispatcher, alice, "cway nearest farms");
 		String nearestFarm = alice.out.take();
 		helper.assertTrue(nearestFarm.contains("224m SE") && nearestFarm.contains("Iron-Farm"), nearestFarm);
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints near 150"), 1, "only Main Storage within 150m");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints near"), 3, "Hub counts via its portal spot");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway near 150"), 1, "only Main Storage within 150m");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway near"), 3, "Hub counts via its portal spot");
 		helper.assertTrue(alice.out.take().contains("⟳"), "portal marker in near list");
 
 		// --- search, descriptions
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints search iron"), 1, "search by name");
-		run(helper, dispatcher, alice, "waypoints describe \"Main Storage\" Sorted chests, bring shulkers");
-		expectError(helper, dispatcher, bob, "waypoints describe \"Main Storage\" mine now", "only edit waypoints you created");
-		helper.assertValueEqual(run(helper, dispatcher, bob, "waypoints search shulkers"), 1, "search by description");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway search iron"), 1, "search by name");
+		run(helper, dispatcher, alice, "cway describe \"Main Storage\" Sorted chests, bring shulkers");
+		expectError(helper, dispatcher, bob, "cway describe \"Main Storage\" mine now", "only edit waypoints you created");
+		helper.assertValueEqual(run(helper, dispatcher, bob, "cway search shulkers"), 1, "search by description");
 		alice.out.take();
-		run(helper, dispatcher, alice, "waypoints info \"Main Storage\"");
+		run(helper, dispatcher, alice, "cway info \"Main Storage\"");
 		helper.assertTrue(alice.out.take().contains("“Sorted chests, bring shulkers”"), "description in info");
 
 		// --- favourites (by id, so they survive renames)
-		run(helper, dispatcher, alice, "waypoints favorite Hub");
+		run(helper, dispatcher, alice, "cway favorite Hub");
 		helper.assertTrue(alice.out.take().contains("added to your favourites"), "favourite added");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints favorites"), 1, "one favourite");
-		run(helper, dispatcher, alice, "waypoints portals");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway favorites"), 1, "one favourite");
+		run(helper, dispatcher, alice, "cway portals");
 		helper.assertTrue(alice.out.take().contains("Hub ★"), "star next to favourites");
-		run(helper, dispatcher, bob, "waypoints portals");
+		run(helper, dispatcher, bob, "cway portals");
 		helper.assertTrue(!bob.out.take().contains("★"), "favourites are personal");
 
 		// --- paging
-		run(helper, dispatcher, moderator, "waypoints add Spawn other 300 64 300");
+		run(helper, dispatcher, moderator, "cway add Spawn other 300 64 300");
 		int pageSize = mod.config().pageSize;
 		mod.config().pageSize = 3;
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints"), 3, "page 1 holds 3");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway"), 3, "page 1 holds 3");
 		helper.assertTrue(alice.out.take().contains("Page 1/2"), "page footer");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints page 2"), 1, "page 2 holds the rest");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway page 2"), 1, "page 2 holds the rest");
 		mod.config().pageSize = pageSize;
 
 		// --- navigation
-		run(helper, dispatcher, alice, "waypoints go Iron-Farm");
+		run(helper, dispatcher, alice, "cway go Iron-Farm");
 		Waypoint ironFarm = mod.waypoints().get("Iron-Farm").orElseThrow();
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(ironFarm.id()), "navigating");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints stop"), 1, "stop");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway stop"), 1, "stop");
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty(), "stopped");
-		run(helper, dispatcher, alice, "waypoints go \"Main Storage\"");
+		run(helper, dispatcher, alice, "cway go \"Main Storage\"");
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty(), "already there -> arrived at once");
-		run(helper, dispatcher, alice, "waypoints go Iron-Farm");
+		run(helper, dispatcher, alice, "cway go Iron-Farm");
 
 		// --- web map: squaremap runs on this test server, so its layer must hold our markers
 		Waypoint hub = mod.waypoints().get("Hub").orElseThrow();
@@ -204,29 +204,29 @@ public class SharedWaypointsGameTest {
 		}
 
 		// --- tab completion
-		helper.assertTrue(suggestions(dispatcher, alice, "waypoints info ").contains("\"Main Storage\""),
+		helper.assertTrue(suggestions(dispatcher, alice, "cway info ").contains("\"Main Storage\""),
 				"name suggestions are quoted when needed");
-		helper.assertTrue(suggestions(dispatcher, alice, "waypoints add X ").containsAll(
+		helper.assertTrue(suggestions(dispatcher, alice, "cway add X ").containsAll(
 				List.of("storage", "farms", "bases", "portals", "other")), "category suggestions");
-		helper.assertValueEqual(suggestions(dispatcher, bob, "waypoints remove "), List.of("Iron-Farm"),
+		helper.assertValueEqual(suggestions(dispatcher, bob, "cway remove "), List.of("Iron-Farm"),
 				"remove only suggests your own waypoints");
 
 		// --- permissions: players can only change their own; op level 2 can change any, and teleport
-		expectError(helper, dispatcher, bob, "waypoints remove \"Main Storage\"", "only remove waypoints you created");
-		expectError(helper, dispatcher, bob, "waypoints rename Hub Nope", "only edit waypoints you created");
-		expectError(helper, dispatcher, alice, "waypoints tp Hub", "");
+		expectError(helper, dispatcher, bob, "cway remove \"Main Storage\"", "only remove waypoints you created");
+		expectError(helper, dispatcher, bob, "cway rename Hub Nope", "only edit waypoints you created");
+		expectError(helper, dispatcher, alice, "cway tp Hub", "");
 		Source aliceOp = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER));
-		run(helper, dispatcher, aliceOp, "waypoints info Spawn");
+		run(helper, dispatcher, aliceOp, "cway info Spawn");
 		helper.assertTrue(aliceOp.out.take().contains("[Teleport]"), "teleport button for ops");
-		run(helper, dispatcher, aliceOp, "waypoints tp Spawn");
+		run(helper, dispatcher, aliceOp, "cway tp Spawn");
 		helper.assertTrue(Math.abs(aliceEntity.getX() - 300.5) < 0.01 && Math.abs(aliceEntity.getZ() - 300.5) < 0.01,
 				"teleported to Spawn, now at " + aliceEntity.position());
 
-		run(helper, dispatcher, alice, "waypoints rename \"Main Storage\" \"Sorting Room\"");
-		run(helper, dispatcher, bob, "waypoints remove Iron-Farm");
-		run(helper, dispatcher, moderator, "waypoints remove Hub");
-		run(helper, dispatcher, moderator, "waypoints remove Spawn");
-		expectError(helper, dispatcher, alice, "waypoints info Hub", "No waypoint named");
+		run(helper, dispatcher, alice, "cway rename \"Main Storage\" \"Sorting Room\"");
+		run(helper, dispatcher, bob, "cway remove Iron-Farm");
+		run(helper, dispatcher, moderator, "cway remove Hub");
+		run(helper, dispatcher, moderator, "cway remove Spawn");
+		expectError(helper, dispatcher, alice, "cway info Hub", "No waypoint named");
 		helper.assertValueEqual(mod.favorites().of(aliceEntity.getUUID()), java.util.Set.<UUID>of(), "removed waypoint left favourites");
 		for (int i = 0; i < 5; i++) {
 			mod.navigation().tick(server);
@@ -248,7 +248,7 @@ public class SharedWaypointsGameTest {
 		helper.assertValueEqual(entry.get("creatorUuid").getAsString(), aliceEntity.getUUID().toString(), "creator");
 		helper.assertTrue(entry.has("id") && entry.has("created"), "id and timestamp on disk");
 
-		// --- custom categories from config.json, picked up by /waypoints reload
+		// --- custom categories from config.json, picked up by /cway reload
 		Path config = configDir().resolve("config.json");
 		try {
 			JsonObject json = JsonParser.parseString(Files.readString(config)).getAsJsonObject();
@@ -261,15 +261,15 @@ public class SharedWaypointsGameTest {
 		} catch (IOException e) {
 			helper.fail("could not edit " + config + ": " + e);
 		}
-		expectError(helper, dispatcher, alice, "waypoints reload", ""); // ops only
-		run(helper, dispatcher, moderator, "waypoints reload");
+		expectError(helper, dispatcher, alice, "cway reload", ""); // ops only
+		run(helper, dispatcher, moderator, "cway reload");
 		helper.assertTrue(moderator.out.take().contains("Reloaded SharedWaypoints: 1 waypoints, 0 routes, 6 categories"), "reload summary");
-		run(helper, dispatcher, moderator, "waypoints add Market shops 5 64 5");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints shops"), 1, "list the new category");
+		run(helper, dispatcher, moderator, "cway add Market shops 5 64 5");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway shops"), 1, "list the new category");
 		String shopsList = alice.out.take();
 		helper.assertTrue(shopsList.contains("[Shops] Market — 5 64 5"), shopsList);
-		helper.assertTrue(suggestions(dispatcher, alice, "waypoints add X ").contains("shops"), "new category suggested");
-		run(helper, dispatcher, alice, "waypoints categories");
+		helper.assertTrue(suggestions(dispatcher, alice, "cway add X ").contains("shops"), "new category suggested");
+		run(helper, dispatcher, alice, "cway categories");
 		helper.assertTrue(alice.out.take().contains("[Shops] shops — 1 waypoint · Xaero colour: Yellow (14)"), "category summary");
 
 		// --- the optional client menu's network handler (driven directly, no real client needed)
@@ -323,13 +323,15 @@ public class SharedWaypointsGameTest {
 		clientModSync(helper, dispatcher, mod, aliceEntity, bobEntity, alice, moderator);
 		joinSummary(helper, dispatcher, mod, aliceEntity, moderator);
 
-		// Every /waypoints subcommand must be a reserved word, so no category can ever hide one.
-		for (var child : dispatcher.getRoot().getChild("waypoints").getChildren()) {
+		// Every /cway subcommand must be a reserved word, so no category can ever hide one.
+		for (var child : dispatcher.getRoot().getChild("cway").getChildren()) {
 			if (child instanceof com.mojang.brigadier.tree.LiteralCommandNode<?>) {
 				helper.assertTrue(CategoryRegistry.RESERVED_IDS.contains(child.getName()),
 						"subcommand \"" + child.getName() + "\" missing from CategoryRegistry.RESERVED_IDS");
 			}
 		}
+		// 2.0.0 renamed the command: the old /waypoints is gone, not kept as an alias.
+		helper.assertTrue(dispatcher.getRoot().getChild("waypoints") == null, "/waypoints must no longer exist");
 
 		helper.succeed();
 	}
@@ -339,14 +341,14 @@ public class SharedWaypointsGameTest {
 	private static void routes(GameTestHelper helper, MinecraftServer server, CommandDispatcher<CommandSourceStack> dispatcher,
 			ModContext mod, ServerPlayer aliceEntity, ServerPlayer bobEntity, Source alice, Source bob, Source moderator) {
 		alice.out.take();
-		helper.assertValueEqual(run(helper, dispatcher, alice, "waypoints route"), 0, "no routes yet");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway route"), 0, "no routes yet");
 		helper.assertTrue(alice.out.take().contains("No routes yet"), "empty route list");
 
 		// Stops: three in the overworld along +X, one in the Nether in between.
-		run(helper, dispatcher, alice, "waypoints add R1 other 20 64 0");
-		run(helper, dispatcher, alice, "waypoints add R2 other 40 64 0");
-		run(helper, dispatcher, alice, "waypoints add R3 portals 5 70 0 minecraft:the_nether");
-		run(helper, dispatcher, alice, "waypoints add R4 other 60 64 0");
+		run(helper, dispatcher, alice, "cway add R1 other 20 64 0");
+		run(helper, dispatcher, alice, "cway add R2 other 40 64 0");
+		run(helper, dispatcher, alice, "cway add R3 portals 5 70 0 minecraft:the_nether");
+		run(helper, dispatcher, alice, "cway add R4 other 60 64 0");
 		Waypoint r1 = mod.waypoints().get("R1").orElseThrow();
 		Waypoint r2 = mod.waypoints().get("R2").orElseThrow();
 		Waypoint r3 = mod.waypoints().get("R3").orElseThrow();
@@ -354,50 +356,50 @@ public class SharedWaypointsGameTest {
 		Waypoint market = mod.waypoints().get("Market").orElseThrow();
 
 		// --- create and fill
-		run(helper, dispatcher, alice, "waypoints route create \"Grand Tour\"");
+		run(helper, dispatcher, alice, "cway route create \"Grand Tour\"");
 		helper.assertTrue(alice.out.take().contains("Created route Grand Tour"), "route created");
-		expectError(helper, dispatcher, bob, "waypoints route create \"grand tour\"", "already exists");
+		expectError(helper, dispatcher, bob, "cway route create \"grand tour\"", "already exists");
 		for (String stop : List.of("R1", "R2", "R3", "R4", "Market")) {
-			run(helper, dispatcher, alice, "waypoints route add \"Grand Tour\" " + stop);
+			run(helper, dispatcher, alice, "cway route add \"Grand Tour\" " + stop);
 		}
 		helper.assertTrue(alice.out.take().contains("Added Market to Grand Tour as stop 5"), "stop numbering");
-		expectError(helper, dispatcher, bob, "waypoints route add \"Grand Tour\" R1", "only change routes you created");
-		expectError(helper, dispatcher, bob, "waypoints route delete \"Grand Tour\"", "only delete routes you created");
-		expectError(helper, dispatcher, alice, "waypoints route add \"Grand Tour\" Nowhere", "No waypoint named");
-		expectError(helper, dispatcher, alice, "waypoints route drop \"Grand Tour\" 9", "Stop numbers go from 1 to 5");
-		helper.assertTrue(suggestions(dispatcher, alice, "waypoints route add ").contains("\"Grand Tour\""),
+		expectError(helper, dispatcher, bob, "cway route add \"Grand Tour\" R1", "only change routes you created");
+		expectError(helper, dispatcher, bob, "cway route delete \"Grand Tour\"", "only delete routes you created");
+		expectError(helper, dispatcher, alice, "cway route add \"Grand Tour\" Nowhere", "No waypoint named");
+		expectError(helper, dispatcher, alice, "cway route drop \"Grand Tour\" 9", "Stop numbers go from 1 to 5");
+		helper.assertTrue(suggestions(dispatcher, alice, "cway route add ").contains("\"Grand Tour\""),
 				"route names suggested (quoted) to its creator");
-		helper.assertTrue(suggestions(dispatcher, bob, "waypoints route add ").isEmpty(),
+		helper.assertTrue(suggestions(dispatcher, bob, "cway route add ").isEmpty(),
 				"no editable routes suggested to others");
-		helper.assertTrue(suggestions(dispatcher, bob, "waypoints route go ").contains("\"Grand Tour\""),
+		helper.assertTrue(suggestions(dispatcher, bob, "cway route go ").contains("\"Grand Tour\""),
 				"anyone may follow it");
 
 		// --- list and info
-		helper.assertValueEqual(run(helper, dispatcher, bob, "waypoints route list"), 1, "one route");
+		helper.assertValueEqual(run(helper, dispatcher, bob, "cway route list"), 1, "one route");
 		Component routeLine = bob.out.messages.stream()
 				.filter(line -> line.getString().startsWith("[Route] Grand Tour")).findFirst().orElseThrow();
 		helper.assertTrue(routeLine.getString().contains("5 stops ·"), "stop count and length: " + routeLine.getString());
 		helper.assertValueEqual(clickOf(routeLine, "[Go]"),
-				Optional.of(new ClickEvent.RunCommand("/waypoints route go \"Grand Tour\"")), "route Go click");
+				Optional.of(new ClickEvent.RunCommand("/cway route go \"Grand Tour\"")), "route Go click");
 		bob.out.take();
-		run(helper, dispatcher, bob, "waypoints route info \"Grand Tour\"");
+		run(helper, dispatcher, bob, "cway route info \"Grand Tour\"");
 		String info = bob.out.take();
 		helper.assertTrue(info.contains("1. [Other] R1") && info.contains("3. [Portals] R3") && info.contains("5. [Shops] Market"),
 				"numbered stops:\n" + info);
 		helper.assertTrue(info.contains("[Go from here]") && !info.contains("[✕]") && !info.contains("[Delete]"),
 				"no editing buttons for others:\n" + info);
-		run(helper, dispatcher, alice, "waypoints route info \"Grand Tour\"");
+		run(helper, dispatcher, alice, "cway route info \"Grand Tour\"");
 		String aliceInfo = alice.out.take();
 		helper.assertTrue(aliceInfo.contains("[✕]") && aliceInfo.contains("[↑]") && aliceInfo.contains("[Delete]"),
 				"editing buttons for the creator:\n" + aliceInfo);
 
 		// --- move and drop
-		run(helper, dispatcher, alice, "waypoints route move \"Grand Tour\" 5 1");
+		run(helper, dispatcher, alice, "cway route move \"Grand Tour\" 5 1");
 		helper.assertValueEqual(route(mod).stops(), List.of(market.id(), r1.id(), r2.id(), r3.id(), r4.id()), "moved to the front");
-		run(helper, dispatcher, alice, "waypoints route drop \"Grand Tour\" 1");
+		run(helper, dispatcher, alice, "cway route drop \"Grand Tour\" 1");
 		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r2.id(), r3.id(), r4.id()), "dropped");
 		helper.assertTrue(mod.waypoints().get(market.id()).isPresent(), "dropping a stop keeps the waypoint");
-		run(helper, dispatcher, alice, "waypoints route describe \"Grand Tour\" Bring fire resistance");
+		run(helper, dispatcher, alice, "cway route describe \"Grand Tour\" Bring fire resistance");
 		helper.assertValueEqual(route(mod).description(), "Bring fire resistance", "route description");
 
 		// --- web map: R1 -> R2 is an overworld stretch, drawn as a line
@@ -410,39 +412,39 @@ public class SharedWaypointsGameTest {
 
 		// --- following the route: arrive, skip, finish
 		aliceEntity.teleportTo(0.5, 64, 0.5);
-		run(helper, dispatcher, alice, "waypoints route go \"Grand Tour\"");
+		run(helper, dispatcher, alice, "cway route go \"Grand Tour\"");
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r1.id()), "heading to stop 1");
 		helper.assertValueEqual(mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(0), "stop index 0");
 		aliceEntity.teleportTo(20.5, 64, 0.5);
 		tick(mod, server);
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r2.id()),
 				"arriving at stop 1 moves on to stop 2");
-		run(helper, dispatcher, alice, "waypoints route skip");
+		run(helper, dispatcher, alice, "cway route skip");
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "skipped to stop 3");
-		run(helper, dispatcher, alice, "waypoints route skip");
+		run(helper, dispatcher, alice, "cway route skip");
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r4.id()), "skipped to stop 4");
 		aliceEntity.teleportTo(60.5, 64, 0.5);
 		tick(mod, server);
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty()
 				&& mod.navigation().routeOf(aliceEntity.getUUID()).isEmpty(), "arriving at the last stop finishes the route");
-		expectError(helper, dispatcher, alice, "waypoints route skip", "aren't following a route");
+		expectError(helper, dispatcher, alice, "cway route skip", "aren't following a route");
 
 		// Start from a later stop.
-		run(helper, dispatcher, alice, "waypoints route go \"Grand Tour\" 3");
+		run(helper, dispatcher, alice, "cway route go \"Grand Tour\" 3");
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "go from stop 3");
-		run(helper, dispatcher, alice, "waypoints stop");
+		run(helper, dispatcher, alice, "cway stop");
 
 		// Deleting the waypoint you're heading to moves on to the next stop (the list shifts under the session).
 		aliceEntity.teleportTo(0.5, 64, 0.5);
-		run(helper, dispatcher, alice, "waypoints route go \"Grand Tour\" 2");
-		run(helper, dispatcher, moderator, "waypoints remove R2");
+		run(helper, dispatcher, alice, "cway route go \"Grand Tour\" 2");
+		run(helper, dispatcher, moderator, "cway remove R2");
 		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "deleted waypoint left the route");
 		tick(mod, server);
 		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()),
 				"deleted stop is skipped, not the one after it");
 		helper.assertValueEqual(mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(1),
 				"index follows the shorter route");
-		run(helper, dispatcher, alice, "waypoints stop");
+		run(helper, dispatcher, alice, "cway stop");
 
 		// --- the client menu drives routes through the same commands
 		MenuNetworking menus = mod.menus();
@@ -491,22 +493,22 @@ public class SharedWaypointsGameTest {
 		} catch (IOException e) {
 			helper.fail("could not read routes.json: " + e);
 		}
-		run(helper, dispatcher, moderator, "waypoints reload");
+		run(helper, dispatcher, moderator, "cway reload");
 		helper.assertTrue(moderator.out.take().contains("2 routes"), "routes reloaded");
 		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "stops survive a reload");
 
 		// --- delete: creators and ops only; the waypoints stay
 		ResultPayload deleteDenied = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DELETE, loopId));
 		helper.assertTrue(!deleteDenied.success(), "alice can't delete bob's route");
-		run(helper, dispatcher, moderator, "waypoints route delete \"Loop route delete Grand\"");
-		run(helper, dispatcher, alice, "waypoints route delete \"Grand Tour\"");
+		run(helper, dispatcher, moderator, "cway route delete \"Loop route delete Grand\"");
+		run(helper, dispatcher, alice, "cway route delete \"Grand Tour\"");
 		helper.assertValueEqual(mod.routes().size(), 0, "both routes deleted");
 		helper.assertTrue(mod.waypoints().get(r1.id()).isPresent(), "deleting a route keeps its waypoints");
 		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
 			helper.assertTrue(!SquaremapProbe.hasMarker("route-" + loop.id() + "-0"), "route lines removed from the map");
 		}
 		for (String name : List.of("R1", "R3", "R4")) {
-			run(helper, dispatcher, moderator, "waypoints remove " + name);
+			run(helper, dispatcher, moderator, "cway remove " + name);
 		}
 	}
 
@@ -533,7 +535,7 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(text.contains("[Bases] New Base"), text);
 		Component farmLine = lines.stream().filter(line -> line.getString().contains("New Farm")).findFirst().orElseThrow();
 		helper.assertValueEqual(clickOf(farmLine, "[Add to Xaero]"),
-				Optional.of(new ClickEvent.RunCommand("/waypoints xaero \"New Farm\"")), "the usual Xaero add button");
+				Optional.of(new ClickEvent.RunCommand("/cway xaero \"New Farm\"")), "the usual Xaero add button");
 
 		// First visit: no "new" list, just a pointer to the waypoints.
 		List<Component> first = mod.joinSummary().lines(Optional.empty(), viewer);
@@ -563,10 +565,10 @@ public class SharedWaypointsGameTest {
 			helper.fail("could not read waypoints.json: " + e);
 		}
 		for (String name : extra) {
-			run(helper, dispatcher, moderator, "waypoints remove " + name);
+			run(helper, dispatcher, moderator, "cway remove " + name);
 		}
-		run(helper, dispatcher, moderator, "waypoints remove \"New Farm\"");
-		run(helper, dispatcher, moderator, "waypoints remove \"New Base\"");
+		run(helper, dispatcher, moderator, "cway remove \"New Farm\"");
+		run(helper, dispatcher, moderator, "cway remove \"New Base\"");
 		moderator.out.take();
 	}
 
@@ -600,48 +602,48 @@ public class SharedWaypointsGameTest {
 
 		// Live: add, edit, delete.
 		toAlice.clear();
-		run(helper, dispatcher, moderator, "waypoints add \"Sync Test\" farms 1 64 2");
+		run(helper, dispatcher, moderator, "cway add \"Sync Test\" farms 1 64 2");
 		Waypoint syncTest = mod.waypoints().get("Sync Test").orElseThrow();
 		helper.assertValueEqual(toAlice.size(), 1, "one update for an add");
 		helper.assertValueEqual(((UpsertPayload) toAlice.get(0)).waypoint().id(), syncTest.id(), "add sent as upsert");
 		helper.assertValueEqual(((UpsertPayload) toAlice.get(0)).waypoint().colorIndex(), 10, "farms is Xaero colour 10");
-		run(helper, dispatcher, moderator, "waypoints rename \"Sync Test\" \"Sync Renamed\"");
+		run(helper, dispatcher, moderator, "cway rename \"Sync Test\" \"Sync Renamed\"");
 		UpsertPayload renamed = (UpsertPayload) toAlice.get(1);
 		helper.assertTrue(renamed.waypoint().id().equals(syncTest.id()) && renamed.waypoint().name().equals("Sync Renamed"),
 				"rename keeps the id");
-		run(helper, dispatcher, moderator, "waypoints describe \"Sync Renamed\" A note");
+		run(helper, dispatcher, moderator, "cway describe \"Sync Renamed\" A note");
 		helper.assertValueEqual(((UpsertPayload) toAlice.get(2)).waypoint().description(), "A note", "describe sent");
-		run(helper, dispatcher, moderator, "waypoints remove \"Sync Renamed\"");
+		run(helper, dispatcher, moderator, "cway remove \"Sync Renamed\"");
 		helper.assertValueEqual(toAlice.get(3), new DeletePayload(SyncProtocol.VERSION, syncTest.id()), "delete sent");
 		helper.assertTrue(toBob.size() == 1, "bob (not subscribed) got nothing more");
 
 		// Reload resends everything (categories or colours may have changed).
 		toAlice.clear();
-		run(helper, dispatcher, moderator, "waypoints reload");
+		run(helper, dispatcher, moderator, "cway reload");
 		moderator.out.take();
 		helper.assertTrue(toAlice.size() == 1 && toAlice.get(0) instanceof FullSyncPayload, "full list after reload");
 
 		// Turned off in config: nothing more is sent, and new clients are told sync is off.
 		mod.config().syncToClientMod = false;
 		toAlice.clear();
-		run(helper, dispatcher, moderator, "waypoints add Quiet other 3 64 3");
+		run(helper, dispatcher, moderator, "cway add Quiet other 3 64 3");
 		helper.assertTrue(toAlice.isEmpty(), "no updates while sync is off");
 		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toLate = new ArrayList<>();
 		mod.sync().onHello(bobEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toLate::add);
 		helper.assertValueEqual(toLate, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "sync off at hello");
 		mod.config().syncToClientMod = true;
-		run(helper, dispatcher, moderator, "waypoints remove Quiet");
+		run(helper, dispatcher, moderator, "cway remove Quiet");
 
 		// Leaving ends the subscription.
 		mod.sync().forget(aliceEntity.getUUID());
 		toAlice.clear();
-		run(helper, dispatcher, moderator, "waypoints add Gone other 4 64 4");
+		run(helper, dispatcher, moderator, "cway add Gone other 4 64 4");
 		helper.assertTrue(toAlice.isEmpty(), "no updates after leaving");
-		run(helper, dispatcher, moderator, "waypoints remove Gone");
+		run(helper, dispatcher, moderator, "cway remove Gone");
 		alice.out.take();
 	}
 
-	/** How players learn about the Xaero sync: the first-join tip and /waypoints sync. */
+	/** How players learn about the Xaero sync: the first-join tip and /cway sync. */
 	private static void clientModTip(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
 			ModContext mod, ServerPlayer aliceEntity) {
 		var tips = mod.clientModTip();
@@ -659,13 +661,13 @@ public class SharedWaypointsGameTest {
 		Component tip = tips.tip();
 		helper.assertTrue(tip.getString().startsWith("✦ Want these waypoints in Xaero's Minimap automatically? "
 				+ "Install the sharedwaypoints-client mod. [Download] [How it works]"), tip.getString());
-		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/waypoints sync")),
-				"How it works runs /waypoints sync");
+		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/cway sync")),
+				"How it works runs /cway sync");
 		helper.assertValueEqual(clickOf(tip, "[Download]"), Optional.of(new ClickEvent.OpenUrl(
 				java.net.URI.create("https://github.com/SteelAspect/sharedwaypoints/releases/latest"))), "Download link");
 
 		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
-		run(helper, dispatcher, alice, "waypoints sync");
+		run(helper, dispatcher, alice, "cway sync");
 		String steps = alice.out.take();
 		helper.assertTrue(steps.contains("Automatic Xaero's Minimap sync")
 				&& steps.contains("1. Put sharedwaypoints-client-2.0.0.jar in your .minecraft/mods folder.")
@@ -675,19 +677,19 @@ public class SharedWaypointsGameTest {
 		// No link configured (or not a web link): no button, ask an admin instead.
 		config.clientModUrl = "not a link";
 		helper.assertFalse(tips.tip().getString().contains("[Download]"), "no Download button without a link");
-		run(helper, dispatcher, alice, "waypoints sync");
+		run(helper, dispatcher, alice, "cway sync");
 		helper.assertTrue(alice.out.take().contains("Ask a server admin for the file."), "no link: ask an admin");
 		config.clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
 
-		// With the client mod synced, /waypoints sync says so instead of the steps.
+		// With the client mod synced, /cway sync says so instead of the steps.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), payload -> { });
-		run(helper, dispatcher, alice, "waypoints sync");
+		run(helper, dispatcher, alice, "cway sync");
 		String synced = alice.out.take();
 		helper.assertTrue(synced.contains("You have it: your Xaero's Minimap is in sync") && !synced.contains("1. Put"), synced);
 		mod.sync().forget(aliceEntity.getUUID());
 
 		config.syncToClientMod = false;
-		run(helper, dispatcher, alice, "waypoints sync");
+		run(helper, dispatcher, alice, "cway sync");
 		helper.assertTrue(alice.out.take().contains("This server has the sync turned off."), "sync off explained");
 		config.syncToClientMod = true;
 	}

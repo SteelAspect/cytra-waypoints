@@ -108,7 +108,7 @@ downloadable artifact.
 server/src/main/java/io/github/steelaspect/sharedwaypoints/ (common: everything the server needs)
   SharedWaypoints.java                 entrypoint: lifecycle, tick and disconnect events, commands
   ModContext.java                      config + waypoints + favourites + navigation for the running server
-  command/WaypointCommand.java         the /waypoints Brigadier tree and tab completion
+  command/WaypointCommand.java         the /cway Brigadier tree and tab completion
   config/ModConfig.java                config.json (including categories)
   map/                                 web maps: MapIntegrations, BlueMapLayer, SquaremapLayer, MapMarker, MapRoute (lines),
                                        MarkerIcons
@@ -122,7 +122,7 @@ server/src/main/java/io/github/steelaspect/sharedwaypoints/ (common: everything 
   waypoint/                            Category, CategoryRegistry, Waypoint (record = JSON shape), WaypointStore, FavoritesStore,
                                        Route (record = JSON shape), RouteStore
   network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
-                                       MenuNetworking (actions run as the player's /waypoints command)
+                                       MenuNetworking (actions run as the player's /cway command)
   xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
   sync/SyncService.java                client-mod sync: handshake, full list, live upserts and deletes
   join/JoinSummary.java                "N new waypoints since you last played"
@@ -151,7 +151,7 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
   server-sent system message works like a player's chat share. Xaero hides the raw line and shows its own
   "shared a waypoint … [Add]" message.
 - **The share line must be its own message.** Xaero treats everything after the prefix as fields and replaces the
-  whole message. That's why **[Add to Xaero]** runs `/waypoints xaero <name>`, which sends only the share line.
+  whole message. That's why **[Add to Xaero]** runs `/cway xaero <name>`, which sends only the share line.
 - **Escaping:** `:` → `^col^`, `-` → `^min^`, `_` → `-`, `*` → `^ast^`, the same as Xaero.
 - **Dimension:** `overworld`, `the_nether` or `the_end` for vanilla, and `dim%<namespace>$<path>` for modded
   dimensions, escaped the same way (so the Nether is sent as `the-nether`). Xaero reads the dimension up to the
@@ -165,7 +165,7 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
 
 ## Design notes
 
-- Categories come from `config.json`. Ids are single lower-case words and can't be a /waypoints subcommand
+- Categories come from `config.json`. Ids are single lower-case words and can't be a /cway subcommand
   (`CategoryRegistry.RESERVED_IDS`; the GameTest fails if a new subcommand is missing from that list). Unknown
   ids stored on waypoints are kept and shown in gray.
 - Web maps are optional. Their classes are only loaded after `FabricLoader.isModLoaded` says they're present,
@@ -178,7 +178,7 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
   from different protocol versions never exchange data they can't read. The client sees the old `action` channel
   and tells the player the server is older. Change the suffix whenever a payload's layout changes.
 - The waypoint Y is the block the player stands in. Distances in lists are horizontal; arrival also counts height.
-- Chat replies are sent even when `sendCommandFeedback` is off, because for /waypoints the reply is the result.
+- Chat replies are sent even when `sendCommandFeedback` is off, because for /cway the reply is the result.
 - In singleplayer, every world shares the same `config/sharedwaypoints/` list.
 
 ## Xaero's Minimap auto-sync (sharedwaypoints-client)

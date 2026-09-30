@@ -96,18 +96,18 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitTicks(3);
 			shot(context, "sync-tip");
 			context.setScreen(() -> null);
-			// [How it works] runs /waypoints sync: the steps.
-			context.runOnClient(client -> client.player.connection.sendCommand("waypoints sync"));
+			// [How it works] runs /cway sync: the steps.
+			context.runOnClient(client -> client.player.connection.sendCommand("cway sync"));
 			context.waitFor(client -> chatText(client).contains("1. Put sharedwaypoints-client-"));
 			context.setScreen(() -> new ChatScreen("", false));
 			context.waitTicks(3);
 			shot(context, "sync-steps");
 			context.setScreen(() -> null);
-			world.getServer().runCommand("waypoints add \"Main Storage\" storage 12 -60 -30");
-			world.getServer().runCommand("waypoints describe \"Main Storage\" Sorted chests, bring shulkers");
-			world.getServer().runCommand("waypoints add \"Iron Farm\" farms 140 -60 210");
-			world.getServer().runCommand("waypoints add Hub portals 10 70 -20 minecraft:the_nether");
-			world.getServer().runCommand("waypoints add \"Spawn Base\" bases 0 -60 0");
+			world.getServer().runCommand("cway add \"Main Storage\" storage 12 -60 -30");
+			world.getServer().runCommand("cway describe \"Main Storage\" Sorted chests, bring shulkers");
+			world.getServer().runCommand("cway add \"Iron Farm\" farms 140 -60 210");
+			world.getServer().runCommand("cway add Hub portals 10 70 -20 minecraft:the_nether");
+			world.getServer().runCommand("cway add \"Spawn Base\" bases 0 -60 0");
 
 			// Open the menu the way a player does: the keybind.
 			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
@@ -221,7 +221,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 
 			// The same route in chat.
 			context.setScreen(() -> null);
-			context.runOnClient(client -> client.player.connection.sendCommand("waypoints route info \"Farm Run\""));
+			context.runOnClient(client -> client.player.connection.sendCommand("cway route info \"Farm Run\""));
 			context.waitTicks(5);
 			context.setScreen(() -> new ChatScreen("", false));
 			context.waitTicks(3);

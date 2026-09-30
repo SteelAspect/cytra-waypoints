@@ -67,7 +67,7 @@ public final class ModContext {
 		favorites.load();
 	}
 
-	/** Reloads every file on a running server and re-creates the web-map layers ({@code /waypoints reload}). */
+	/** Reloads every file on a running server and re-creates the web-map layers ({@code /cway reload}). */
 	public void reload(MinecraftServer server) {
 		load();
 		maps.start(server);

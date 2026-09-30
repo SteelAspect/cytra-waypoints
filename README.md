@@ -24,7 +24,7 @@ install. Players who want more install one optional jar, **sharedwaypoints-clien
 
 | Jar | Who installs it | What it does |
 |---|---|---|
-| `sharedwaypoints-server-<version>.jar` | **Server owners** (required). | Everything: `/waypoints`, chat buttons, [Add to Xaero], compass, routes, web maps, join summary, and syncing to players who have the client mod. |
+| `sharedwaypoints-server-<version>.jar` | **Server owners** (required). | Everything: `/cway`, chat buttons, [Add to Xaero], compass, routes, web maps, join summary, and syncing to players who have the client mod. |
 | `sharedwaypoints-client-<version>.jar` | **Players, optional.** The only jar a player needs. | The waypoint menu (**J** or **✦ Waypoints** in the Esc menu), and, with Xaero's Minimap installed, keeps Xaero in sync with the server's shared waypoints in a "Shared" waypoint set. Your own waypoints are never touched. It works without Xaero too (menu only). |
 
 Players without the client mod see exactly what they always did: chat lists with **[Add to Xaero]** buttons.
@@ -55,15 +55,15 @@ Players without the client mod see exactly what they always did: chat lists with
 - **★ Favourites** per player, marked in every list.
 
 **Navigate**
-- **[Go] / `/waypoints go`:** the boss bar becomes a compass. It shows an arrow relative to where you look, the
+- **[Go] / `/cway go`:** the boss bar becomes a compass. It shows an arrow relative to where you look, the
   distance, how far up or down, and a progress bar.
 - **Beacon:** a particle column only you can see marks the destination. You get an **Arrived!** title and a sound
   when you reach it.
 - **Overworld ↔ Nether aware:** the compass points you to the matching portal spot (÷8 / ×8), and the details
   view shows the portal-side coordinates.
-- **Near and nearest:** `/waypoints near` lists what's around you, closest first. `/waypoints nearest [category]`
+- **Near and nearest:** `/cway near` lists what's around you, closest first. `/cway nearest [category]`
   finds the closest one.
-- **Teleport** for ops: a **[Teleport]** button and `/waypoints tp`.
+- **Teleport** for ops: a **[Teleport]** button and `/cway tp`.
 
 **Routes**
 - A **route** is a named list of waypoints to visit in order, e.g. a Nether highway tour or a round of your farms.
@@ -101,7 +101,7 @@ Players without the client mod see exactly what they always did: chat lists with
 **For server owners**
 - **Your own categories:** shops, mines, farms, whatever fits your server, each with its own colour (see
   [Configuration](#configuration)).
-- **`/waypoints reload`** applies config changes and hand edits without a restart.
+- **`/cway reload`** applies config changes and hand edits without a restart.
 - **Permissions** through [fabric-permissions-api](https://github.com/lucko/fabric-permissions-api) (bundled), so it
   works with LuckPerms and falls back to vanilla op levels.
 - **Players manage their own waypoints:** anyone can add, and creators can rename, describe or remove what they
@@ -143,38 +143,38 @@ The mod also works in singleplayer and LAN worlds.
 
 | Command | What it does |
 |---|---|
-| `/waypoints [page <n>]` | List all waypoints, grouped by category |
-| `/waypoints <category> [page]` | List one category, e.g. `storage` (see `/waypoints categories`) |
-| `/waypoints categories` | Categories with their counts and Xaero colours |
-| `/waypoints info <name>` | Details, portal-side coordinates, distance and all buttons |
-| `/waypoints search <text>` | Search names, descriptions and creators |
-| `/waypoints near [radius]` | Waypoints around you, closest first (default 512 blocks) |
-| `/waypoints nearest [category]` | The closest waypoint |
-| `/waypoints go <name>` | Start compass navigation |
-| `/waypoints stop` | Stop navigating |
-| `/waypoints favorite <name>` | Add or remove a ★ favourite |
-| `/waypoints favorites` | List your favourites |
-| `/waypoints add <name> <category> [x y z] [dimension]` | Add a waypoint at your position, or at the given coordinates |
-| `/waypoints rename <old> <new>` | Rename a waypoint |
-| `/waypoints describe <name> [text]` | Set a description (max 120 characters). Leave the text out to clear it |
-| `/waypoints remove <name>` | Remove a waypoint |
-| `/waypoints tp <name>` | Teleport to a waypoint (ops) |
-| `/waypoints route [list]` | List routes with their stop count and length |
-| `/waypoints route info <route>` | A route's numbered stops, with buttons |
-| `/waypoints route go <route> [stop]` | Follow a route, optionally starting at a later stop |
-| `/waypoints route skip` | Go straight to the next stop |
-| `/waypoints route create <name>` | Create an empty route |
-| `/waypoints route add <route> <waypoint>` | Add a waypoint as the last stop (up to 64 stops) |
-| `/waypoints route drop <route> <stop>` | Remove stop number *n* (the waypoint stays) |
-| `/waypoints route move <route> <from> <to>` | Move a stop to another position |
-| `/waypoints route rename <old> <new>` | Rename a route |
-| `/waypoints route describe <route> [text]` | Set or clear a route's description |
-| `/waypoints route delete <route>` | Delete a route (its waypoints stay) |
-| `/waypoints reload` | Reload `config.json`, waypoints and favourites from disk (ops) |
-| `/waypoints xaero <name>` | Send the Xaero share message (what **[Add to Xaero]** runs) |
-| `/waypoints sync` | How to get the automatic Xaero's Minimap sync, or whether you already have it |
+| `/cway [page <n>]` | List all waypoints, grouped by category |
+| `/cway <category> [page]` | List one category, e.g. `storage` (see `/cway categories`) |
+| `/cway categories` | Categories with their counts and Xaero colours |
+| `/cway info <name>` | Details, portal-side coordinates, distance and all buttons |
+| `/cway search <text>` | Search names, descriptions and creators |
+| `/cway near [radius]` | Waypoints around you, closest first (default 512 blocks) |
+| `/cway nearest [category]` | The closest waypoint |
+| `/cway go <name>` | Start compass navigation |
+| `/cway stop` | Stop navigating |
+| `/cway favorite <name>` | Add or remove a ★ favourite |
+| `/cway favorites` | List your favourites |
+| `/cway add <name> <category> [x y z] [dimension]` | Add a waypoint at your position, or at the given coordinates |
+| `/cway rename <old> <new>` | Rename a waypoint |
+| `/cway describe <name> [text]` | Set a description (max 120 characters). Leave the text out to clear it |
+| `/cway remove <name>` | Remove a waypoint |
+| `/cway tp <name>` | Teleport to a waypoint (ops) |
+| `/cway route [list]` | List routes with their stop count and length |
+| `/cway route info <route>` | A route's numbered stops, with buttons |
+| `/cway route go <route> [stop]` | Follow a route, optionally starting at a later stop |
+| `/cway route skip` | Go straight to the next stop |
+| `/cway route create <name>` | Create an empty route |
+| `/cway route add <route> <waypoint>` | Add a waypoint as the last stop (up to 64 stops) |
+| `/cway route drop <route> <stop>` | Remove stop number *n* (the waypoint stays) |
+| `/cway route move <route> <from> <to>` | Move a stop to another position |
+| `/cway route rename <old> <new>` | Rename a route |
+| `/cway route describe <route> [text]` | Set or clear a route's description |
+| `/cway route delete <route>` | Delete a route (its waypoints stay) |
+| `/cway reload` | Reload `config.json`, waypoints and favourites from disk (ops) |
+| `/cway xaero <name>` | Send the Xaero share message (what **[Add to Xaero]** runs) |
+| `/cway sync` | How to get the automatic Xaero's Minimap sync, or whether you already have it |
 
-- Put names with spaces in quotes: `/waypoints add "Main Storage" storage`. Names are 1–32 characters (Xaero's limit)
+- Put names with spaces in quotes: `/cway add "Main Storage" storage`. Names are 1–32 characters (Xaero's limit)
   and unique regardless of case.
 - Coordinates use normal command syntax, including `~ ~ ~`.
 - Tip: `/execute as @a run waypoints go "Event"` points everyone's compass at a waypoint.
@@ -226,11 +226,11 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 | `joinSummary` | On join, list the waypoints added since the player last played |
 | `syncToClientMod` | Keep players who have sharedwaypoints-client in sync (their Xaero's Minimap). Off: they get chat buttons like everyone else |
 | `clientModTip` | On their first join, tell players without sharedwaypoints-client how to get the Xaero sync (once per player) |
-| `clientModUrl` | Where **[Download]** in that tip and in `/waypoints sync` points, e.g. your Discord or website. Empty: no link, players are told to ask an admin |
+| `clientModUrl` | Where **[Download]** in that tip and in `/cway sync` points, e.g. your Discord or website. Empty: no link, players are told to ask an admin |
 | `navigationParticles` | Show the particle beacon while navigating |
 | `arrivalRadius` | Distance in blocks that counts as "arrived" (1–64) |
 | `pageSize` | Waypoints per page (3–30) |
-| `nearRadius` | Default radius for `/waypoints near` |
+| `nearRadius` | Default radius for `/cway near` |
 | `webMapMarkers` | Show waypoints on BlueMap / squaremap when installed |
 | `webMapLayerName` | Name of the layer on the web map |
 | `categories` | Your categories, in the order they're listed |
@@ -244,7 +244,7 @@ maps.
 If you remove a category, its waypoints keep it and show up in gray until you add it back or move them.
 Invalid entries are skipped with a warning in the server log.
 
-Apply changes with `/waypoints reload`, or restart the server.
+Apply changes with `/cway reload`, or restart the server.
 
 ## Data files
 
@@ -316,7 +316,7 @@ fills a waypoint set called **"Shared"** in Xaero:
   name one of your own sets "Shared").
 
 **How players find out:** players without the client mod get one line in chat on their first join, with
-**[Download]** and **[How it works]**. `/waypoints sync` shows the steps any time, or tells a player the sync is
+**[Download]** and **[How it works]**. `/cway sync` shows the steps any time, or tells a player the sync is
 already on for them. Turn the tip off with `clientModTip`, and point **[Download]** at your own page with
 `clientModUrl`.
 
@@ -327,7 +327,7 @@ menu, or turn on **Render All WP Sets** in Xaero's settings to see shared and pe
 mod reminds you once per game.
 
 Hiding (disabling) a shared waypoint in Xaero is kept across updates. Other edits made in Xaero to the "Shared"
-set are overwritten; change waypoints with `/waypoints` instead.
+set are overwritten; change waypoints with `/cway` instead.
 
 **Tested version:** Xaero's Minimap **26.5.0 for Fabric 1.21.11** (`xaerominimap-fabric-1.21.11-26.5.0.jar`,
 which bundles XaeroLib 1.7.3).

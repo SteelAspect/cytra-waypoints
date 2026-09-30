@@ -31,9 +31,9 @@ public final class WaypointText {
 	private WaypointText() {
 	}
 
-	/** Command that re-runs a name through Brigadier's quoting rules, e.g. {@code /waypoints info "Main Base"}. */
+	/** Command that re-runs a name through Brigadier's quoting rules, e.g. {@code /cway info "Main Base"}. */
 	public static String command(String subcommand, String name) {
-		return "/waypoints " + subcommand + " " + StringArgumentType.escapeIfRequired(name);
+		return "/cway " + subcommand + " " + StringArgumentType.escapeIfRequired(name);
 	}
 
 	// ------------------------------------------------------------------ lines
@@ -64,7 +64,7 @@ public final class WaypointText {
 		return line;
 	}
 
-	/** A listing line prefixed with distance and compass direction, for /waypoints near and nearest. */
+	/** A listing line prefixed with distance and compass direction, for /cway near and nearest. */
 	public static MutableComponent distanceLine(Waypoint waypoint, Viewer viewer) {
 		MutableComponent prefix = Component.empty();
 		viewer.target(waypoint).ifPresent(target -> {
@@ -82,7 +82,7 @@ public final class WaypointText {
 		return prefix.append(line(waypoint, viewer));
 	}
 
-	/** Multi-line details for {@code /waypoints info}. */
+	/** Multi-line details for {@code /cway info}. */
 	public static List<Component> info(Waypoint waypoint, Viewer viewer, boolean canEdit) {
 		List<Component> lines = new ArrayList<>();
 		lines.add(Component.literal("=== ").withStyle(ChatFormatting.YELLOW)
@@ -150,14 +150,14 @@ public final class WaypointText {
 		return Component.literal("➜ Navigating to ").withStyle(ChatFormatting.GREEN)
 				.append(Component.literal(waypoint.name()).withStyle(waypoint.category().color()))
 				.append(Component.literal(" — follow the compass at the top of your screen. ").withStyle(ChatFormatting.GRAY))
-				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/waypoints stop"), "Stop navigating"));
+				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/cway stop"), "Stop navigating"));
 	}
 
 	// ----------------------------------------------------------------- routes
 
-	/** Command for a route subcommand, e.g. {@code /waypoints route go "Nether Tour"}. */
+	/** Command for a route subcommand, e.g. {@code /cway route go "Nether Tour"}. */
 	public static String routeCommand(String subcommand, String routeName) {
-		return "/waypoints route " + subcommand + " " + StringArgumentType.escapeIfRequired(routeName);
+		return "/cway route " + subcommand + " " + StringArgumentType.escapeIfRequired(routeName);
 	}
 
 	/** One line of the route list: {@code [Route] Nether Tour — 5 stops · 1.2km [Go] [Info]}. */
@@ -198,7 +198,7 @@ public final class WaypointText {
 	}
 
 	/**
-	 * Multi-line details for {@code /waypoints route info}: the numbered stops, with editing buttons for players
+	 * Multi-line details for {@code /cway route info}: the numbered stops, with editing buttons for players
 	 * who may change the route.
 	 */
 	public static List<Component> routeInfo(Route route, List<Waypoint> stops, Viewer viewer, boolean canEdit,
@@ -212,7 +212,7 @@ public final class WaypointText {
 		lines.add(Component.literal("  " + routeSummary(stops) + " · created by " + route.creatorName() + ", "
 				+ Formats.relativeAge(route.created(), Instant.now())).withStyle(ChatFormatting.GRAY));
 		if (stops.isEmpty()) {
-			lines.add(muted("  Add stops with /waypoints route add " + StringArgumentType.escapeIfRequired(route.name())
+			lines.add(muted("  Add stops with /cway route add " + StringArgumentType.escapeIfRequired(route.name())
 					+ " <waypoint>"));
 		}
 		for (int i = 0; i < stops.size(); i++) {
@@ -272,10 +272,10 @@ public final class WaypointText {
 						.withStyle(ChatFormatting.GRAY))
 				.append(Component.literal(firstStop.name()).withStyle(firstStop.category().color()))
 				.append(" ")
-				.append(button("[Skip stop]", ChatFormatting.YELLOW, new ClickEvent.RunCommand("/waypoints route skip"),
+				.append(button("[Skip stop]", ChatFormatting.YELLOW, new ClickEvent.RunCommand("/cway route skip"),
 						"Go straight to the next stop"))
 				.append(" ")
-				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/waypoints stop"), "Stop navigating"));
+				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/cway stop"), "Stop navigating"));
 	}
 
 	// ---------------------------------------------------------------- headers
@@ -286,12 +286,12 @@ public final class WaypointText {
 				.withStyle(style -> style
 						.withColor(category.color())
 						.withBold(true)
-						.withClickEvent(new ClickEvent.RunCommand("/waypoints " + category.id()))
+						.withClickEvent(new ClickEvent.RunCommand("/cway " + category.id()))
 						.withHoverEvent(new HoverEvent.ShowText(
 								Component.literal("Show only " + category.displayName().toLowerCase()))));
 	}
 
-	/** One line of {@code /waypoints categories}. */
+	/** One line of {@code /cway categories}. */
 	public static Component categorySummary(Category category, int count) {
 		return categoryTag(category)
 				.append(Component.literal(" " + category.id()).withStyle(ChatFormatting.WHITE))
@@ -303,7 +303,7 @@ public final class WaypointText {
 
 	/**
 	 * {@code « Prev   Page 2/5   Next »}. {@code commandPrefix} is the listing command without the page number,
-	 * e.g. {@code /waypoints page} or {@code /waypoints storage}.
+	 * e.g. {@code /cway page} or {@code /cway storage}.
 	 */
 	public static Component pageFooter(Page<?> page, String commandPrefix) {
 		MutableComponent footer = Component.empty();
@@ -322,7 +322,7 @@ public final class WaypointText {
 		return Component.literal("[" + category.displayName() + "]")
 				.withStyle(style -> style
 						.withColor(category.color())
-						.withClickEvent(new ClickEvent.RunCommand("/waypoints " + category.id()))
+						.withClickEvent(new ClickEvent.RunCommand("/cway " + category.id()))
 						.withHoverEvent(new HoverEvent.ShowText(
 								Component.literal("Click to list " + category.displayName().toLowerCase()))));
 	}
@@ -345,7 +345,7 @@ public final class WaypointText {
 
 	// ---------------------------------------------------------------- pieces
 
-	/** Waypoint name with a hover card; click opens {@code /waypoints info}. */
+	/** Waypoint name with a hover card; click opens {@code /cway info}. */
 	private static MutableComponent name(Waypoint waypoint, Viewer viewer) {
 		return Component.literal(waypoint.name())
 				.withStyle(style -> style
@@ -388,7 +388,7 @@ public final class WaypointText {
 	}
 
 	/**
-	 * {@code [Add to Xaero]}: runs {@code /waypoints xaero <name>}, which makes the server send the
+	 * {@code [Add to Xaero]}: runs {@code /cway xaero <name>}, which makes the server send the
 	 * {@code xaero-waypoint:...} share line as a system message. Xaero's Minimap swaps that line for its own
 	 * "shared a waypoint" message with an [Add] button.
 	 */
