@@ -102,6 +102,8 @@ def copyClientTestMods = tasks.register("copyClientTestMods", Sync) {
 
 tasks.named("runClientGametest") {
 	dependsOn copyClientTestMods
+	// Never run two game clients at once: on a 2-vCPU CI runner, software rendering for both starves world loading.
+	mustRunAfter ":server:runClientGametest"
 }
 
 test {

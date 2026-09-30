@@ -32,9 +32,11 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext context) {
 		// Small view and a frame cap while loading: CI renders in software on 2 vCPUs (see the server's client test).
+		// No menu blur either: it is the costly part of the loading screen in software rendering.
 		context.runOnClient(client -> {
 			client.options.renderDistance().set(2);
 			client.options.simulationDistance().set(5);
+			client.options.menuBackgroundBlurriness().set(0);
 			client.options.framerateLimit().set(10);
 		});
 
@@ -75,7 +77,9 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 		// While the player is away, a waypoint is deleted on the server (by editing its data file).
 		removeFromWaypointFile("Gone While Away");
 
+		context.runOnClient(client -> client.options.framerateLimit().set(10));
 		try (TestSingleplayerContext world = save.open()) {
+			context.runOnClient(client -> client.options.framerateLimit().set(60));
 			world.getClientWorld().waitForChunksRender();
 			context.waitFor(client -> SharedWaypointsSync.isActive());
 			// Rejoin: the full list replaces the Shared set, so both the stale entry and the one deleted while away go.
