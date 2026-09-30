@@ -24,6 +24,7 @@ import org.lwjgl.glfw.GLFW;
 public final class SharedWaypointsClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
 			KeyMapping.Category.register(Identifier.fromNamespaceAndPath("sharedwaypoints", "main"));
+	private static final Identifier OLD_ACTION_CHANNEL = Identifier.fromNamespaceAndPath("sharedwaypoints", "action");
 	private static KeyMapping openMenu;
 
 	@Override
@@ -53,8 +54,11 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 			return;
 		}
 		if (!ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
-			client.player.displayClientMessage(Component.literal("SharedWaypoints isn't installed on this server")
-					.withStyle(ChatFormatting.GRAY), true);
+			// 1.4.x servers speak the first version of the menu protocol ("action" instead of "action2").
+			boolean olderServer = ClientPlayNetworking.getSendable().contains(OLD_ACTION_CHANNEL);
+			client.player.displayClientMessage(Component.literal(olderServer
+					? "This server runs an older SharedWaypoints; the menu needs the same version on both sides"
+					: "SharedWaypoints isn't installed on this server").withStyle(ChatFormatting.GRAY), true);
 			return;
 		}
 		client.setScreen(new WaypointMenuScreen());

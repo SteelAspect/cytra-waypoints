@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.5.0 — 2026-09-30
+
+**New: routes**
+- A **route** is a named list of waypoints to visit in order. Use `/waypoints route go <route>` or **[Go]** and the
+  boss-bar compass takes you from stop to stop. On arrival it shows "Stop 2/5" and moves on to the next stop by
+  itself; finishing shows "Route complete!".
+- `/waypoints route` commands to list, create, add, drop and move stops, rename, describe, delete, skip a stop, and
+  start from any stop. Chat lists have [Go], [Go from here], [↑] and [✕] buttons.
+- Permissions: `sharedwaypoints.route` (everyone) to create routes. Creators and ops (`sharedwaypoints.edit` /
+  `sharedwaypoints.remove`) change and delete them.
+- Deleting a waypoint removes it from every route, and someone following the route moves on to the next stop.
+  Deleting a route keeps its waypoints.
+- Routes show their stop count and length. They're saved in `routes.json` and reloaded with `/waypoints reload`.
+- **Web maps:** routes are drawn as gold lines on BlueMap and squaremap.
+- **Client menu:** a new **Routes** screen with Start / Stop, Skip stop, + Stop (waypoint picker), − Stop, ↑ / ↓,
+  Edit and Delete.
+
+**Changed**
+- The client menu's network channels were renamed for the new data, so the client and the server both need 1.5.0
+  or newer for the menu. With an older server, J now says so instead of "not installed".
+- Text fields in the menu's forms keep keyboard focus when opened.
+
 ## 1.4.1 — 2026-09-30
 
 - **Player guide** ([docs/PLAYER-GUIDE.md](docs/PLAYER-GUIDE.md)): how to install the waypoint menu, what each

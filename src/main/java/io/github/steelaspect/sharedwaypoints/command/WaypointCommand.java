@@ -3,6 +3,7 @@ package io.github.steelaspect.sharedwaypoints.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -16,6 +17,7 @@ import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.util.Page;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import io.github.steelaspect.sharedwaypoints.waypoint.WaypointStore;
 import io.github.steelaspect.sharedwaypoints.xaero.XaeroShareFormat;
@@ -50,6 +52,8 @@ import net.minecraft.server.level.ServerPlayer;
  * Navigation                /waypoints go &lt;name&gt; | stop | tp &lt;name&gt; (op)
  * Personal                  /waypoints favorite &lt;name&gt; | favorites
  * Editing                   /waypoints add &lt;name&gt; &lt;category&gt; [x y z] [dimension] | remove | rename | describe
+ * Routes                    /waypoints route [list] | info | go &lt;route&gt; [stop] | skip | create | add | drop | move
+ *                           | rename | describe | delete
  * Xaero                     /waypoints xaero &lt;name&gt;   (what [Add to Xaero] runs)
  * </pre>
  *
@@ -74,6 +78,22 @@ public final class WaypointCommand {
 			Component.literal("Give coordinates (x y z) when not running this as a player"));
 	private static final SimpleCommandExceptionType NOTHING_REACHABLE = new SimpleCommandExceptionType(
 			Component.literal("No waypoints in this dimension (or through a Nether portal from here)"));
+	private static final DynamicCommandExceptionType UNKNOWN_ROUTE = new DynamicCommandExceptionType(
+			name -> Component.literal("No route named \"" + name + "\""));
+	private static final DynamicCommandExceptionType ROUTE_NAME_TAKEN = new DynamicCommandExceptionType(
+			name -> Component.literal("A route named \"" + name + "\" already exists"));
+	private static final SimpleCommandExceptionType CANNOT_EDIT_ROUTE = new SimpleCommandExceptionType(
+			Component.literal("You can only change routes you created"));
+	private static final SimpleCommandExceptionType CANNOT_DELETE_ROUTE = new SimpleCommandExceptionType(
+			Component.literal("You can only delete routes you created"));
+	private static final SimpleCommandExceptionType ROUTE_FULL = new SimpleCommandExceptionType(
+			Component.literal("A route can have at most " + Route.MAX_STOPS + " stops"));
+	private static final DynamicCommandExceptionType NO_SUCH_STOP = new DynamicCommandExceptionType(
+			count -> Component.literal("Stop numbers go from 1 to " + count));
+	private static final SimpleCommandExceptionType ROUTE_EMPTY = new SimpleCommandExceptionType(
+			Component.literal("That route has no stops yet"));
+	private static final SimpleCommandExceptionType NOT_ON_ROUTE = new SimpleCommandExceptionType(
+			Component.literal("You aren't following a route"));
 	private static final DynamicCommandExceptionType DIMENSION_MISSING = new DynamicCommandExceptionType(
 			dimension -> Component.literal("Dimension " + dimension + " isn't loaded on this server"));
 
@@ -136,6 +156,9 @@ public final class WaypointCommand {
 								.executes(context -> command.toggleFavorite(context.getSource(), string(context, "name")))))
 				.then(Commands.literal("favorites")
 						.executes(context -> command.listFavorites(context.getSource())))
+
+				// ---- routes
+				.then(command.routeTree(anyWaypoint))
 
 				// ---- admin
 				.then(Commands.literal("reload")
@@ -250,7 +273,7 @@ public final class WaypointCommand {
 		mod.reload(source.getServer());
 		List<String> maps = mod.maps().activeMaps();
 		reply(source, WaypointText.success("Reloaded SharedWaypoints: " + mod.waypoints().size() + " waypoints, "
-				+ mod.categories().all().size() + " categories"
+				+ mod.routes().size() + " routes, " + mod.categories().all().size() + " categories"
 				+ (maps.isEmpty() ? "" : ", markers on " + String.join(" and ", maps)) + "."));
 		return 1;
 	}
@@ -485,6 +508,246 @@ public final class WaypointCommand {
 				: WaypointText.success("Updated the description of " + waypoint.name()));
 		warnIfUnsaved(source);
 		return 1;
+	}
+
+	// --------------------------------------------------------------------- routes
+
+	private LiteralArgumentBuilder<CommandSourceStack> routeTree(BiPredicate<CommandSourceStack, Waypoint> anyWaypoint) {
+		BiPredicate<CommandSourceStack, Route> anyRoute = (source, route) -> true;
+		BiPredicate<CommandSourceStack, Route> editable = WaypointPermissions::canEdit;
+		BiPredicate<CommandSourceStack, Route> removable = WaypointPermissions::canRemove;
+		return Commands.literal("route")
+				.executes(context -> listRoutes(context.getSource()))
+				.then(Commands.literal("list")
+						.executes(context -> listRoutes(context.getSource())))
+				.then(Commands.literal("info")
+						.then(routeArgument("route", anyRoute)
+								.executes(context -> routeInfo(context.getSource(), string(context, "route")))))
+				.then(Commands.literal("go")
+						.then(routeArgument("route", anyRoute)
+								.executes(context -> followRoute(context.getSource(), string(context, "route"), 1))
+								.then(Commands.argument("stop", IntegerArgumentType.integer(1, Route.MAX_STOPS))
+										.executes(context -> followRoute(context.getSource(), string(context, "route"),
+												IntegerArgumentType.getInteger(context, "stop"))))))
+				.then(Commands.literal("skip")
+						.executes(context -> skipStop(context.getSource())))
+				.then(Commands.literal("create")
+						.requires(WaypointPermissions.requireRoute())
+						.then(Commands.argument("name", StringArgumentType.string())
+								.executes(context -> createRoute(context.getSource(), string(context, "name")))))
+				.then(Commands.literal("add")
+						.then(routeArgument("route", editable)
+								.then(nameArgument("waypoint", anyWaypoint)
+										.executes(context -> addStop(context.getSource(), string(context, "route"),
+												string(context, "waypoint"))))))
+				.then(Commands.literal("drop")
+						.then(routeArgument("route", editable)
+								.then(Commands.argument("stop", IntegerArgumentType.integer(1, Route.MAX_STOPS))
+										.executes(context -> dropStop(context.getSource(), string(context, "route"),
+												IntegerArgumentType.getInteger(context, "stop"))))))
+				.then(Commands.literal("move")
+						.then(routeArgument("route", editable)
+								.then(Commands.argument("from", IntegerArgumentType.integer(1, Route.MAX_STOPS))
+										.then(Commands.argument("to", IntegerArgumentType.integer(1, Route.MAX_STOPS))
+												.executes(context -> moveStop(context.getSource(), string(context, "route"),
+														IntegerArgumentType.getInteger(context, "from"),
+														IntegerArgumentType.getInteger(context, "to")))))))
+				.then(Commands.literal("rename")
+						.then(routeArgument("old", editable)
+								.then(Commands.argument("new", StringArgumentType.string())
+										.executes(context -> renameRoute(context.getSource(), string(context, "old"),
+												string(context, "new"))))))
+				.then(Commands.literal("describe")
+						.then(routeArgument("route", editable)
+								.executes(context -> describeRoute(context.getSource(), string(context, "route"), ""))
+								.then(Commands.argument("text", StringArgumentType.greedyString())
+										.executes(context -> describeRoute(context.getSource(), string(context, "route"),
+												string(context, "text"))))))
+				.then(Commands.literal("delete")
+						.then(routeArgument("route", removable)
+								.executes(context -> deleteRoute(context.getSource(), string(context, "route")))));
+	}
+
+	private int listRoutes(CommandSourceStack source) {
+		List<Route> routes = mod.routes().all();
+		reply(source, WaypointText.header("Routes (" + routes.size() + ")"));
+		if (routes.isEmpty()) {
+			reply(source, WaypointText.muted("No routes yet. ")
+					.copy().append(Component.literal("[Create one]").withStyle(style -> style
+							.withColor(ChatFormatting.YELLOW)
+							.withClickEvent(new ClickEvent.SuggestCommand("/waypoints route create "))
+							.withHoverEvent(new HoverEvent.ShowText(Component.literal(
+									"/waypoints route create <name>, then /waypoints route add <route> <waypoint>"))))));
+			return 0;
+		}
+		boolean isPlayer = source.getPlayer() != null;
+		routes.forEach(route -> reply(source, WaypointText.routeLine(route, stopsOf(route), isPlayer)));
+		return routes.size();
+	}
+
+	private int routeInfo(CommandSourceStack source, String name) throws CommandSyntaxException {
+		Route route = findRoute(name);
+		for (Component line : WaypointText.routeInfo(route, stopsOf(route), viewer(source),
+				WaypointPermissions.canEdit(source, route), WaypointPermissions.canRemove(source, route))) {
+			reply(source, line);
+		}
+		return 1;
+	}
+
+	private int followRoute(CommandSourceStack source, String name, int stop) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		Route route = findRoute(name);
+		if (route.stops().isEmpty()) {
+			throw ROUTE_EMPTY.create();
+		}
+		if (stop > route.stops().size()) {
+			throw NO_SUCH_STOP.create(route.stops().size());
+		}
+		if (!mod.navigation().startRoute(player, route, stop - 1)) {
+			throw ROUTE_EMPTY.create();
+		}
+		return 1;
+	}
+
+	private int skipStop(CommandSourceStack source) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		if (!mod.navigation().skip(player)) {
+			throw NOT_ON_ROUTE.create();
+		}
+		return 1;
+	}
+
+	private int createRoute(CommandSourceStack source, String rawName) throws CommandSyntaxException {
+		String name = checkedName(rawName);
+		if (mod.routes().contains(name)) {
+			throw ROUTE_NAME_TAKEN.create(name);
+		}
+		ServerPlayer player = source.getPlayer();
+		Route route = new Route(UUID.randomUUID(), name, List.of(), null,
+				player != null ? player.getUUID() : Waypoint.SERVER_UUID,
+				player != null ? player.getGameProfile().name() : source.getTextName(),
+				Instant.now().truncatedTo(ChronoUnit.SECONDS));
+		mod.routes().add(route);
+		reply(source, WaypointText.success("Created route " + name + ". ")
+				.copy().append(Component.literal("[+ Add a stop]").withStyle(style -> style
+						.withColor(ChatFormatting.YELLOW)
+						.withClickEvent(new ClickEvent.SuggestCommand(WaypointText.routeCommand("add", name) + " "))
+						.withHoverEvent(new HoverEvent.ShowText(Component.literal("Add a waypoint as the next stop"))))));
+		warnIfRoutesUnsaved(source);
+		return 1;
+	}
+
+	private int addStop(CommandSourceStack source, String routeName, String waypointName) throws CommandSyntaxException {
+		Route route = editableRoute(source, routeName);
+		Waypoint waypoint = find(waypointName);
+		if (route.stops().size() >= Route.MAX_STOPS) {
+			throw ROUTE_FULL.create();
+		}
+		Route updated = mod.routes().update(route.withStopAdded(waypoint.id()));
+		reply(source, WaypointText.success("Added " + waypoint.name() + " to " + route.name()
+				+ " as stop " + updated.stops().size()));
+		warnIfRoutesUnsaved(source);
+		return updated.stops().size();
+	}
+
+	private int dropStop(CommandSourceStack source, String routeName, int stop) throws CommandSyntaxException {
+		Route route = editableRoute(source, routeName);
+		checkStop(route, stop);
+		String dropped = mod.waypoints().get(route.stops().get(stop - 1)).map(Waypoint::name).orElse("stop " + stop);
+		mod.routes().update(route.withStopRemoved(stop - 1));
+		reply(source, WaypointText.success("Removed " + dropped + " (stop " + stop + ") from " + route.name()));
+		warnIfRoutesUnsaved(source);
+		return 1;
+	}
+
+	private int moveStop(CommandSourceStack source, String routeName, int from, int to) throws CommandSyntaxException {
+		Route route = editableRoute(source, routeName);
+		checkStop(route, from);
+		checkStop(route, to);
+		String moved = mod.waypoints().get(route.stops().get(from - 1)).map(Waypoint::name).orElse("stop " + from);
+		mod.routes().update(route.withStopMoved(from - 1, to - 1));
+		reply(source, WaypointText.success("Moved " + moved + " to stop " + to + " of " + route.name()));
+		warnIfRoutesUnsaved(source);
+		return 1;
+	}
+
+	private int renameRoute(CommandSourceStack source, String oldName, String rawNewName) throws CommandSyntaxException {
+		Route route = editableRoute(source, oldName);
+		String newName = checkedName(rawNewName);
+		if (mod.routes().contains(newName) && !newName.equalsIgnoreCase(route.name())) {
+			throw ROUTE_NAME_TAKEN.create(newName);
+		}
+		mod.routes().update(route.withName(newName));
+		reply(source, WaypointText.success("Renamed route " + route.name() + " to " + newName));
+		warnIfRoutesUnsaved(source);
+		return 1;
+	}
+
+	private int describeRoute(CommandSourceStack source, String name, String text) throws CommandSyntaxException {
+		Route route = editableRoute(source, name);
+		String description = text.trim();
+		Optional<String> problem = Waypoint.validateDescription(description);
+		if (problem.isPresent()) {
+			throw INVALID_TEXT.create(problem.get());
+		}
+		mod.routes().update(route.withDescription(description));
+		reply(source, description.isEmpty()
+				? WaypointText.success("Cleared the description of route " + route.name())
+				: WaypointText.success("Updated the description of route " + route.name()));
+		warnIfRoutesUnsaved(source);
+		return 1;
+	}
+
+	private int deleteRoute(CommandSourceStack source, String name) throws CommandSyntaxException {
+		Route route = findRoute(name);
+		if (!WaypointPermissions.canRemove(source, route)) {
+			throw CANNOT_DELETE_ROUTE.create();
+		}
+		mod.routes().remove(route.id());
+		reply(source, WaypointText.success("Deleted route " + route.name() + " (its waypoints are unchanged)"));
+		warnIfRoutesUnsaved(source);
+		return 1;
+	}
+
+	private Route findRoute(String name) throws CommandSyntaxException {
+		return mod.routes().get(name).orElseThrow(() -> UNKNOWN_ROUTE.create(name));
+	}
+
+	private Route editableRoute(CommandSourceStack source, String name) throws CommandSyntaxException {
+		Route route = findRoute(name);
+		if (!WaypointPermissions.canEdit(source, route)) {
+			throw CANNOT_EDIT_ROUTE.create();
+		}
+		return route;
+	}
+
+	private static void checkStop(Route route, int stop) throws CommandSyntaxException {
+		if (stop < 1 || stop > route.stops().size()) {
+			throw route.stops().isEmpty() ? ROUTE_EMPTY.create() : NO_SUCH_STOP.create(route.stops().size());
+		}
+	}
+
+	/** The route's stops as waypoints (every stored stop exists: deleted waypoints are dropped from routes). */
+	private List<Waypoint> stopsOf(Route route) {
+		return route.stops().stream().map(id -> mod.waypoints().get(id)).flatMap(Optional::stream).toList();
+	}
+
+	private void warnIfRoutesUnsaved(CommandSourceStack source) {
+		if (mod.routes().lastSaveFailed()) {
+			reply(source, WaypointText.warning(
+					"Warning: could not write routes.json, the change is only in memory. See the server log."));
+		}
+	}
+
+	/** A route-name argument that suggests names (quoted when needed) passing {@code filter}. */
+	private RequiredArgumentBuilder<CommandSourceStack, String> routeArgument(String argument,
+			BiPredicate<CommandSourceStack, Route> filter) {
+		return Commands.argument(argument, StringArgumentType.string())
+				.suggests((context, builder) -> SharedSuggestionProvider.suggest(
+						mod.routes().all().stream().filter(route -> filter.test(context.getSource(), route)).toList(),
+						builder,
+						route -> StringArgumentType.escapeIfRequired(route.name()),
+						route -> Component.literal(route.stops().size() + (route.stops().size() == 1 ? " stop" : " stops"))));
 	}
 
 	// -------------------------------------------------------------------- helpers

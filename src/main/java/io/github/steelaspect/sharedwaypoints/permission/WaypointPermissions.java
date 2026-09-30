@@ -1,6 +1,8 @@
 package io.github.steelaspect.sharedwaypoints.permission;
 
+import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
+import java.util.UUID;
 import java.util.function.Predicate;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandSourceStack;
@@ -24,6 +26,8 @@ public final class WaypointPermissions {
 	public static final String EDIT = "sharedwaypoints.edit";
 	/** Teleport to waypoints. Default: op level 2. */
 	public static final String TELEPORT = "sharedwaypoints.teleport";
+	/** Create routes. Default: everyone. Editing and deleting use {@link #EDIT} and {@link #REMOVE} like waypoints. */
+	public static final String ROUTE = "sharedwaypoints.route";
 	/** Reload config.json, waypoints.json and favorites.json without a restart. Default: op level 2. */
 	public static final String RELOAD = "sharedwaypoints.reload";
 
@@ -39,6 +43,10 @@ public final class WaypointPermissions {
 
 	public static Predicate<CommandSourceStack> requireAdd() {
 		return Permissions.require(ADD, true);
+	}
+
+	public static Predicate<CommandSourceStack> requireRoute() {
+		return Permissions.require(ROUTE, true);
 	}
 
 	public static Predicate<CommandSourceStack> requireTeleport() {
@@ -58,6 +66,10 @@ public final class WaypointPermissions {
 		return Permissions.check(source, ADD, true);
 	}
 
+	public static boolean canCreateRoute(CommandSourceStack source) {
+		return Permissions.check(source, ROUTE, true);
+	}
+
 	public static boolean canTeleport(CommandSourceStack source) {
 		return Permissions.check(source, TELEPORT, MODERATE_DEFAULT);
 	}
@@ -72,8 +84,22 @@ public final class WaypointPermissions {
 		return Permissions.check(source, EDIT, MODERATE_DEFAULT) || isCreator(source, waypoint);
 	}
 
+	/** Whether the source may delete this route (has the remove node, or created it). */
+	public static boolean canRemove(CommandSourceStack source, Route route) {
+		return Permissions.check(source, REMOVE, MODERATE_DEFAULT) || isCreator(source, route.creatorUuid());
+	}
+
+	/** Whether the source may change this route's stops, name or description (has the edit node, or created it). */
+	public static boolean canEdit(CommandSourceStack source, Route route) {
+		return Permissions.check(source, EDIT, MODERATE_DEFAULT) || isCreator(source, route.creatorUuid());
+	}
+
 	private static boolean isCreator(CommandSourceStack source, Waypoint waypoint) {
+		return isCreator(source, waypoint.creatorUuid());
+	}
+
+	private static boolean isCreator(CommandSourceStack source, UUID creator) {
 		ServerPlayer player = source.getPlayer();
-		return player != null && player.getUUID().equals(waypoint.creatorUuid());
+		return player != null && player.getUUID().equals(creator);
 	}
 }

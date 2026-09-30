@@ -15,7 +15,8 @@ import net.minecraft.resources.Identifier;
  * @param args   arguments; waypoints are referred to by id (see {@link Action} for each action's arguments)
  */
 public record ActionPayload(Action action, List<String> args) implements CustomPacketPayload {
-	public static final Type<ActionPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "action"));
+	/** Versioned like {@link SyncPayload#TYPE}. */
+	public static final Type<ActionPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "action2"));
 	public static final StreamCodec<FriendlyByteBuf, ActionPayload> CODEC = StreamCodec.of(ActionPayload::write, ActionPayload::read);
 
 	private static final int MAX_ARGS = 8;
@@ -40,7 +41,25 @@ public record ActionPayload(Action action, List<String> args) implements CustomP
 		/** Set the description: waypoint id, text (empty clears it). */
 		DESCRIBE,
 		/** Remove: waypoint id. */
-		REMOVE
+		REMOVE,
+		/** Follow a route: route id, first stop (1-based). */
+		ROUTE_GO,
+		/** Skip to the next stop of the route being followed. No arguments. */
+		ROUTE_SKIP,
+		/** Create a route: name. */
+		ROUTE_CREATE,
+		/** Append a stop: route id, waypoint id. */
+		ROUTE_ADD,
+		/** Remove a stop: route id, stop number (1-based). */
+		ROUTE_DROP,
+		/** Move a stop: route id, from, to (1-based). */
+		ROUTE_MOVE,
+		/** Rename a route: route id, new name. */
+		ROUTE_RENAME,
+		/** Set a route's description: route id, text (empty clears it). */
+		ROUTE_DESCRIBE,
+		/** Delete a route: route id. */
+		ROUTE_DELETE
 	}
 
 	public static ActionPayload of(Action action, String... args) {

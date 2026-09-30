@@ -37,7 +37,6 @@ final class EditWaypointScreen extends Screen {
 		description.setMaxLength(Waypoint.MAX_DESCRIPTION_LENGTH);
 		description.setValue(waypoint.descriptionText().orElse(""));
 		description.setHint(Component.literal("Optional note, e.g. \"bring shulkers\""));
-		setInitialFocus(name);
 		addRenderableWidget(Button.builder(Component.literal("Save"), button -> save())
 				.bounds(left, top + 82, FIELD_WIDTH / 2 - 2, 20).build());
 		addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
@@ -69,6 +68,12 @@ final class EditWaypointScreen extends Screen {
 			return true;
 		}
 		return super.keyPressed(event);
+	}
+
+	/** Always start in the text field (Minecraft would otherwise tab past it after keyboard input). */
+	@Override
+	protected void setInitialFocus() {
+		setInitialFocus(name);
 	}
 
 	@Override
