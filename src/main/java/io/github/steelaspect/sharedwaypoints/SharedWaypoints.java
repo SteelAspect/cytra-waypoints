@@ -1,6 +1,7 @@
 package io.github.steelaspect.sharedwaypoints;
 
 import io.github.steelaspect.sharedwaypoints.command.WaypointCommand;
+import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
@@ -27,13 +28,21 @@ public final class SharedWaypoints implements ModInitializer {
 	public void onInitialize() {
 		context = new ModContext(FabricLoader.getInstance().getConfigDir().resolve(MOD_ID));
 
+		// Optional client menu: payload types must be registered on both sides; only modded clients use them.
+		MenuNetworking.registerPayloads();
+		context.menus().registerReceiver();
+
 		// (Re)load from disk every time a server starts. In singleplayer this runs for each world opened.
 		ServerLifecycleEvents.SERVER_STARTING.register(server -> context.load());
 		// Web maps (BlueMap, squaremap) set up their worlds while the server starts, so hook in afterwards.
-		ServerLifecycleEvents.SERVER_STARTED.register(server -> context.maps().start(server));
+		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+			context.menus().setServer(server);
+			context.maps().start(server);
+		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			context.navigation().clear();
 			context.maps().stop();
+			context.menus().setServer(null);
 		});
 		ServerTickEvents.END_SERVER_TICK.register(server -> context.navigation().tick(server));
 		ServerPlayConnectionEvents.DISCONNECT.register(

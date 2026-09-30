@@ -3,6 +3,7 @@ package io.github.steelaspect.sharedwaypoints;
 import io.github.steelaspect.sharedwaypoints.config.ModConfig;
 import io.github.steelaspect.sharedwaypoints.map.MapIntegrations;
 import io.github.steelaspect.sharedwaypoints.nav.NavigationManager;
+import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
 import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import io.github.steelaspect.sharedwaypoints.waypoint.FavoritesStore;
 import io.github.steelaspect.sharedwaypoints.waypoint.WaypointStore;
@@ -19,6 +20,7 @@ public final class ModContext {
 	private final FavoritesStore favorites;
 	private final NavigationManager navigation;
 	private final MapIntegrations maps;
+	private final MenuNetworking menus;
 	private ModConfig config = new ModConfig();
 	private CategoryRegistry categories = CategoryRegistry.DEFAULT;
 
@@ -28,9 +30,13 @@ public final class ModContext {
 		this.favorites = new FavoritesStore(configDir.resolve("favorites.json"));
 		this.navigation = new NavigationManager(this);
 		this.maps = new MapIntegrations(this);
+		this.menus = new MenuNetworking(this);
 		// Deleted waypoints disappear from favourites; navigation notices on its next tick.
 		waypoints.onRemoved(waypoint -> favorites.forget(waypoint.id()));
 		waypoints.onChanged(maps::refresh);
+		// Players with the client menu see changes live.
+		waypoints.onChanged(menus::pushToAll);
+		navigation.onChange(menus::pushTo);
 	}
 
 	/** (Re)loads every file. Runs when a server starts. Categories load first: waypoints refer to them. */
@@ -45,6 +51,7 @@ public final class ModContext {
 	public void reload(MinecraftServer server) {
 		load();
 		maps.start(server);
+		menus.pushToAll(); // categories may have changed
 	}
 
 	public ModConfig config() {
@@ -69,5 +76,9 @@ public final class ModContext {
 
 	public MapIntegrations maps() {
 		return maps;
+	}
+
+	public MenuNetworking menus() {
+		return menus;
 	}
 }

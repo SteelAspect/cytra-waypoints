@@ -1,0 +1,17 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints-clientgametest",
+	"version": "1.0.0",
+	"name": "SharedWaypoints client GameTests",
+	"description": "Real-client tests for the SharedWaypoints menu. Dev only, not shipped.",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"io.github.steelaspect.sharedwaypoints.clientgametest.MenuClientGameTest"
+		]
+	},
+	"depends": {
+		"sharedwaypoints": "*",
+		"fabric-client-gametest-api-v1": "*"
+	}
+}

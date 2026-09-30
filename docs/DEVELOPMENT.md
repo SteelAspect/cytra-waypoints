@@ -22,11 +22,16 @@ obfuscated 1.21.11.
 ```bash
 ./gradlew build          # compile, unit tests, jar in build/libs/
 ./gradlew runGametest    # start a headless 1.21.11 server and run the end-to-end GameTest
+xvfb-run -a ./gradlew --no-daemon runClientGametest   # real client: opens the menu, saves screenshots
 ```
 
 - **Unit tests** (`src/test`) cover the Xaero share format against `XaeroParserReplica`, a copy of Xaero's Minimap
   26.5.0's parser. They also cover the JSON stores, categories, navigation maths, paging, relative times and web-map markers
   (including HTML escaping of player-written text).
+- **Client GameTest** (`src/clientgametest`) starts a real client in a singleplayer world and opens the menu with
+  the J key. It adds a waypoint through the form, favourites and edits one, checks each change reached the
+  server, and saves screenshots to `build/clientgametest/screenshots/`. It needs a display, so it runs under
+  `xvfb-run` locally and in CI, where the screenshots are uploaded as an artifact.
 - **GameTest** (`src/gametest`) runs every command as two ordinary players and an op on a real server. It checks
   chat output, click events, tab completion, permissions, navigation, favourites and the saved files. It runs in
   Fabric's GameTest mode, which needs no `eula.txt`, and never ends up in the released jar.
@@ -51,10 +56,14 @@ Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
 
 1. Set `mod_version` in `gradle.properties` and add a `## <version>` section to `CHANGELOG.md`.
 2. Bring `main` up to date with `dev` and push.
-3. Either push a tag (`git tag v<version> && git push origin v<version>`), or on GitHub go to
-   **Releases → Draft a new release**, create the tag `v<version>` on the right branch, and publish.
+3. Do one of these:
+   - Push a tag: `git tag v<version> && git push origin v<version>`.
+   - On GitHub, go to **Releases → Draft a new release**, create the tag `v<version>` on the right branch, and
+     publish.
+   - On GitHub, go to **Actions → Release → Run workflow** and enter the tag. Optionally enter a commit; the
+     default is the latest commit of the chosen branch. The workflow creates the tag itself.
 
-The **Release** workflow (`.github/workflows/release.yml`) handles both. It checks that the tag matches
+The **Release** workflow (`.github/workflows/release.yml`) handles all three. It checks that the tag matches
 `mod_version`, builds with `-Prelease=true`, and runs the unit tests and the GameTest. Then it creates the release,
 or updates the one you published, with `sharedwaypoints-<version>.jar` attached. If the release has no notes, it
 fills them in from that version's changelog section. The **Build**
@@ -64,7 +73,7 @@ downloadable artifact.
 ## Code layout
 
 ```
-src/main/java/io/github/steelaspect/sharedwaypoints/
+src/main/java/io/github/steelaspect/sharedwaypoints/        (common: everything the server needs)
   SharedWaypoints.java                 entrypoint: lifecycle, tick and disconnect events, commands
   ModContext.java                      config + waypoints + favourites + navigation for the running server
   command/WaypointCommand.java         the /waypoints Brigadier tree and tab completion
@@ -78,9 +87,14 @@ src/main/java/io/github/steelaspect/sharedwaypoints/
   text/Formats.java                    "3 days ago"
   util/                                Dimensions, Gsons, JsonFiles (atomic writes), Page
   waypoint/                            Category, CategoryRegistry, Waypoint (record = JSON shape), WaypointStore, FavoritesStore
-  xaero/XaeroShareFormat.java          builds xaero-waypoint: lines
+  network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
+                                       MenuNetworking (actions run as the player's /waypoints command)
+  xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
+src/client/java/.../client/            optional client: J keybind, WaypointMenuScreen, AddWaypointScreen,
+                                       EditWaypointScreen, WaypointList, ClientWaypoints (latest snapshot)
 src/test/java/...                      unit tests
 src/gametest/...                       headless-server end-to-end test
+src/clientgametest/...                 real-client test: menu via keybind, add through the form, screenshots
 docs/PROGRESS.txt                      timestamped development log
 ```
 
