@@ -134,3 +134,4 @@
 [2026-09-30 00:41:48 UTC] BUILD PASS: 1.5.0 Routes - unit tests (route store, route length, map lines), server GameTest (commands, following a route, deleting a stop mid-route, menu actions, permissions, squaremap lines, routes.json, reload), real-client test (routes screen, picker, reorder, start; 19 screenshots)
 [2026-09-30 00:45:06 UTC] RELEASED: v1.4.1 (jar attached, latest). PR #5 (1.5.0 routes) CI green (build + client); waiting on go-ahead to merge and release
 [2026-09-30 05:02:42 UTC] RELEASED: v1.5.0 Routes (PR #5 merged as 38917f1; jar attached, marked latest). dev reset to main for the next round
+[2026-09-30 05:10:03 UTC] CLEANUP: history rewritten so every commit is authored by SteelAspect, AI trailers removed from messages, old branch name removed from this log; release tags v1.2.0-v1.5.0 re-pointed to the rewritten commits; v1.0.0/v1.1.0 to be deleted (old history)
