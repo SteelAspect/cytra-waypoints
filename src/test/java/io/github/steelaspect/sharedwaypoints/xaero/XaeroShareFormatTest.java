@@ -84,4 +84,16 @@ class XaeroShareFormatTest {
 			assertEquals(category.color().getChar(), "0123456789abcdef".charAt(index), category.toString());
 		}
 	}
+
+	@ParameterizedTest
+	@ValueSource(strings = {"Main Storage", "Iron-Farm_2", "a*b:c", "Café Ω", "--__**::"})
+	void addCommandIsExactlyWhatXaeroBuildsFromTheShareLine(String name) {
+		String share = XaeroShareFormat.shareMessage(name, -12, 70, 345, 13, "minecraft:the_nether");
+		String add = XaeroShareFormat.addCommand(name, -12, 70, 345, 13, "minecraft:the_nether");
+		assertEquals(XaeroParserReplica.addCommandFor(share), add);
+		XaeroParserReplica.Parsed parsed = XaeroParserReplica.parseAddCommand(add);
+		assertEquals(name, parsed.name());
+		assertEquals(-12, parsed.x());
+		assertEquals("the_nether", parsed.dimensionNode());
+	}
 }

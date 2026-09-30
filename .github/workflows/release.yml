@@ -1,20 +1,30 @@
 name: Release
 
-# Two ways to release version X.Y.Z (mod_version in gradle.properties must match):
+# Three ways to release version X.Y.Z (mod_version in gradle.properties must match):
 #   - push a tag vX.Y.Z               -> this creates the GitHub release with the jar attached
 #   - publish a release on GitHub     -> this builds the jar and attaches it to that release
-# Either way the jar is built from the tagged commit and has passed the unit tests and the GameTest.
+#   - Actions -> Release -> Run workflow with tag vX.Y.Z (and optionally a commit, default: the branch's latest)
+#                                     -> this creates the tag and the release with the jar attached
+# Every way the jar is built from the released commit and has passed the unit tests and the GameTest.
 on:
   push:
     tags: ['v*']
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to create, e.g. v1.4.0 (must match mod_version)'
+        required: true
+      commit:
+        description: 'Commit to release (default: the latest commit of the chosen branch)'
+        required: false
 
 permissions:
   contents: write
 
 env:
-  TAG: ${{ github.event.release.tag_name || github.ref_name }}
+  TAG: ${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
 
 jobs:
   release:
@@ -22,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ env.TAG }}
+          ref: ${{ inputs.commit || (github.event_name == 'workflow_dispatch' && github.sha) || env.TAG }}
 
       - uses: actions/setup-java@v5
         with:
@@ -60,6 +70,9 @@ jobs:
             if [ -z "$(gh release view "$TAG" --json body --jq .body)" ]; then
               gh release edit "$TAG" --notes-file release-notes.md
             fi
+          elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            # Creates the tag on the checked-out commit.
+            gh release create "$TAG" "$jar" --target "$(git rev-parse HEAD)" --title "SharedWaypoints $VERSION" --notes-file release-notes.md
           else
             gh release create "$TAG" "$jar" --title "SharedWaypoints $VERSION" --notes-file release-notes.md --verify-tag
           fi

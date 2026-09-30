@@ -31,18 +31,37 @@ public final class XaeroShareFormat {
 	private XaeroShareFormat() {
 	}
 
+	public static final String ADD_PREFIX = "xaero_waypoint_add:";
+
 	/** The complete share line for a waypoint, ready to send as a system chat message. */
 	public static String shareMessage(Waypoint waypoint) {
-		return SHARE_PREFIX
-				+ encode(waypoint.name()) + ':'
-				+ encode(initials(waypoint.name())) + ':'
-				+ waypoint.x() + ':'
-				+ waypoint.y() + ':'
-				+ waypoint.z() + ':'
-				+ waypoint.category().xaeroColorIndex() + ':'
+		return shareMessage(waypoint.name(), waypoint.x(), waypoint.y(), waypoint.z(),
+				waypoint.category().xaeroColorIndex(), waypoint.dimension());
+	}
+
+	/** Same as {@link #shareMessage(Waypoint)}, from plain fields (the client menu has no {@link Waypoint}). */
+	public static String shareMessage(String name, int x, int y, int z, int colorIndex, String dimensionId) {
+		return SHARE_PREFIX + encode(name) + ':' + encode(initials(name)) + ':'
+				+ tail(x, y, z, colorIndex, dimensionId);
+	}
+
+	/**
+	 * The command Xaero's own [Add] button runs ({@code xaero_waypoint_add:...}, without the slash). Xaero's
+	 * Minimap intercepts it on the client (in {@code ClientPacketListener.sendUnattendedCommand}) and opens its
+	 * "add waypoint" screen, so the client menu can add to Xaero in one click. This is exactly what Xaero builds
+	 * from a share line: name and initials are un-escaped except for {@code :} ({@code ^col^}).
+	 */
+	public static String addCommand(String name, int x, int y, int z, int colorIndex, String dimensionId) {
+		return ADD_PREFIX + name.replace(":", "^col^") + ':' + initials(name).replace(":", "^col^") + ':'
+				+ tail(x, y, z, colorIndex, dimensionId);
+	}
+
+	/** Everything after the name and initials: coordinates, colour, no rotation, yaw 0 and the destination. */
+	private static String tail(int x, int y, int z, int colorIndex, String dimensionId) {
+		return x + ":" + y + ":" + z + ":" + colorIndex + ":"
 				+ "false" + ':' // rotate on teleport
 				+ "0" + ':' // yaw
-				+ destination(waypoint.dimension());
+				+ destination(dimensionId);
 	}
 
 	/** {@code Internal-<dim>-waypoints}, the "add to this dimension of the current server" destination. */

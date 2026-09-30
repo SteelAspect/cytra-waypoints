@@ -54,6 +54,10 @@ public final class WaypointPermissions {
 		return Permissions.check(player, VIEW, true);
 	}
 
+	public static boolean canAdd(CommandSourceStack source) {
+		return Permissions.check(source, ADD, true);
+	}
+
 	public static boolean canTeleport(CommandSourceStack source) {
 		return Permissions.check(source, TELEPORT, MODERATE_DEFAULT);
 	}

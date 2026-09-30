@@ -5,11 +5,14 @@ import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -44,6 +47,7 @@ public final class NavigationManager {
 
 	private final ModContext context;
 	private final Map<UUID, Session> sessions = new HashMap<>();
+	private final List<Consumer<UUID>> changeListeners = new ArrayList<>();
 	private long ticks;
 
 	/** One player's navigation. */
@@ -64,6 +68,15 @@ public final class NavigationManager {
 		this.context = context;
 	}
 
+	/** Called with a player's id whenever their navigation starts or ends (the client menu shows it). */
+	public void onChange(Consumer<UUID> listener) {
+		changeListeners.add(listener);
+	}
+
+	private void changed(UUID playerId) {
+		changeListeners.forEach(listener -> listener.accept(playerId));
+	}
+
 	/** Starts (or switches) navigation for a player. */
 	public void start(ServerPlayer player, Waypoint waypoint) {
 		stop(player.getUUID());
@@ -75,6 +88,8 @@ public final class NavigationManager {
 		player.sendSystemMessage(WaypointText.navigationStarted(waypoint));
 		if (!update(player, session, true)) {
 			stop(player.getUUID());
+		} else {
+			changed(player.getUUID());
 		}
 	}
 
@@ -85,6 +100,7 @@ public final class NavigationManager {
 			return false;
 		}
 		session.bar.removeAllPlayers();
+		changed(playerId);
 		return true;
 	}
 
@@ -113,6 +129,7 @@ public final class NavigationManager {
 			if (player == null || !update(player, entry.getValue(), particles)) {
 				entry.getValue().bar.removeAllPlayers();
 				iterator.remove();
+				changed(entry.getKey());
 			}
 		}
 	}

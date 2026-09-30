@@ -8,6 +8,10 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestion;
 import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
+import io.github.steelaspect.sharedwaypoints.network.ActionPayload;
+import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
+import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
+import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
 import io.github.steelaspect.sharedwaypoints.waypoint.CategoryRegistry;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.io.IOException;
@@ -259,6 +263,53 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(suggestions(dispatcher, alice, "waypoints add X ").contains("shops"), "new category suggested");
 		run(helper, dispatcher, alice, "waypoints categories");
 		helper.assertTrue(alice.out.take().contains("[Shops] shops — 1 waypoint · Xaero colour: Yellow (14)"), "category summary");
+
+		// --- the optional client menu's network handler (driven directly, no real client needed)
+		MenuNetworking menus = mod.menus();
+		SyncPayload aliceView = menus.snapshot(aliceEntity);
+		helper.assertValueEqual(aliceView.categories().stream().map(SyncPayload.CategoryData::id).toList(),
+				List.of("storage", "farms", "bases", "portals", "other", "shops"), "menu categories in config order");
+		SyncPayload.WaypointData sorting = aliceView.waypoints().stream()
+				.filter(data -> data.name().equals("Sorting Room")).findFirst().orElseThrow();
+		helper.assertTrue(sorting.canEdit() && sorting.canRemove(), "creator may edit/remove own waypoint");
+		helper.assertTrue(aliceView.canAdd() && !aliceView.canTeleport(), "ordinary player: can add, no teleport");
+		SyncPayload.WaypointData sortingForBob = menus.snapshot(bobEntity).waypoints().stream()
+				.filter(data -> data.name().equals("Sorting Room")).findFirst().orElseThrow();
+		helper.assertTrue(!sortingForBob.canEdit() && !sortingForBob.canRemove(), "others may not edit/remove it");
+
+		helper.assertTrue(menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.SYNC)) == null, "sync has no reply");
+		ResultPayload added = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.ADD,
+				"Menu \"Spot\" x", "farms", "7", "65", "-8", "minecraft:overworld"));
+		helper.assertTrue(added.success() && added.message().contains("Added waypoint"), "menu add: " + added.message());
+		Waypoint menuSpot = mod.waypoints().get("Menu \"Spot\" x").orElseThrow();
+		helper.assertValueEqual(menuSpot.coordinates(), "7 65 -8", "menu add coordinates");
+		String spotId = menuSpot.id().toString();
+
+		ResultPayload injected = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.RENAME, spotId,
+				"Nice\nwaypoints remove Hub"));
+		helper.assertTrue(injected.success(), "a newline can't start a second command: " + injected.message());
+		helper.assertTrue(mod.waypoints().contains("Sorting Room"), "Sorting Room still exists");
+		helper.assertValueEqual(mod.waypoints().get(menuSpot.id()).orElseThrow().name(), "Nice waypoints remove Hub",
+				"renamed as one plain line");
+
+		menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.FAVORITE, spotId));
+		helper.assertTrue(menus.snapshot(aliceEntity).waypoints().stream()
+				.anyMatch(data -> data.id().equals(menuSpot.id()) && data.favorite()), "menu favourite");
+		menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.DESCRIBE, spotId, "From the menu"));
+		helper.assertValueEqual(mod.waypoints().get(menuSpot.id()).orElseThrow().description(), "From the menu", "menu describe");
+
+		ResultPayload denied = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.REMOVE, spotId));
+		helper.assertTrue(!denied.success() && denied.message().contains("only remove waypoints you created"),
+				"permissions still apply: " + denied.message());
+		ResultPayload teleportDenied = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.TELEPORT, spotId));
+		helper.assertTrue(!teleportDenied.success(), "no teleport for ordinary players via the menu");
+		ResultPayload badCategory = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.ADD,
+				"X", "farms add Y other", "1", "2", "3", "minecraft:overworld"));
+		helper.assertTrue(!badCategory.success(), "category must be a single id");
+		ResultPayload removed = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.REMOVE, spotId));
+		helper.assertTrue(removed.success(), "creator removes via menu: " + removed.message());
+		ResultPayload gone = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.GO, spotId));
+		helper.assertTrue(!gone.success() && gone.message().contains("no longer exists"), "stale id: " + gone.message());
 
 		// Every /waypoints subcommand must be a reserved word, so no category can ever hide one.
 		for (var child : dispatcher.getRoot().getChild("waypoints").getChildren()) {

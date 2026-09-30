@@ -3,7 +3,7 @@
 	"id": "sharedwaypoints",
 	"version": "${version}",
 	"name": "SharedWaypoints",
-	"description": "Server-side shared waypoints: browse them in chat, add them to Xaero's Minimap in one click, and navigate with a live compass. Players don't need to install anything.",
+	"description": "Shared waypoints for your server: browse them in chat, add them to Xaero's Minimap in one click, navigate with a live compass and see them on web maps. Only the server needs it; install it on your client too for an optional waypoint menu (J).",
 	"authors": [
 		"SteelAspect"
 	],
@@ -18,6 +18,9 @@
 	"entrypoints": {
 		"main": [
 			"io.github.steelaspect.sharedwaypoints.SharedWaypoints"
+		],
+		"client": [
+			"io.github.steelaspect.sharedwaypoints.client.SharedWaypointsClient"
 		]
 	},
 	"depends": {
