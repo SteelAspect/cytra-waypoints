@@ -2,7 +2,7 @@
 
 # SharedWaypoints
 
-[![Download 1.5.0](https://img.shields.io/badge/download-1.5.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 2.0.0](https://img.shields.io/badge/download-2.0.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)

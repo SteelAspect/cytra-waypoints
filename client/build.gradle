@@ -1,0 +1,58 @@
+plugins {
+	id 'net.fabricmc.fabric-loom-remap'
+}
+
+// The optional client mod: mirrors the server's shared waypoints into Xaero's Minimap ("Shared" waypoint set).
+base {
+	archivesName = project.ext.isRelease ? "sharedwaypoints-client" : "sharedwaypoints-client-dev"
+}
+
+repositories {
+	mavenCentral()
+	// Xaero's Minimap, only at runtime in the client GameTest (never compiled against or bundled).
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Modrinth"
+				url = "https://api.modrinth.com/maven"
+			}
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	implementation project(path: ':protocol', configuration: 'namedElements')
+	include project(':protocol')
+
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+}
+
+test {
+	useJUnitPlatform()
+}
+
+processResources {
+	def version = project.ext.modVersion
+	inputs.property "version", version
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+jar {
+	from(rootProject.file("LICENSE")) {
+		rename { "${it}_sharedwaypoints-client" }
+	}
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}

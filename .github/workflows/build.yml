@@ -25,11 +25,14 @@ jobs:
       - name: Build, unit tests and headless-server GameTest
         run: ./gradlew build runGametest --stacktrace
 
-      - name: Upload jar
+      - name: Upload jars
         uses: actions/upload-artifact@v4
         with:
           name: sharedwaypoints-${{ github.sha }}
-          path: build/libs/*.jar
+          path: |
+            server/build/libs/sharedwaypoints-server-*.jar
+            client/build/libs/sharedwaypoints-client-*.jar
+            !**/*-sources.jar
           if-no-files-found: error
 
   client:
@@ -58,5 +61,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: client-screenshots-${{ github.sha }}
-          path: build/clientgametest/screenshots/
+          path: |
+            server/build/clientgametest/screenshots/
+            client/build/clientgametest/screenshots/
           if-no-files-found: ignore

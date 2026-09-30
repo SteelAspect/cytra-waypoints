@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0 — unreleased
+
+(in progress on dev)
+
 ## 1.5.0 — 2026-09-30
 
 **New: routes**

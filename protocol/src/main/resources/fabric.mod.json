@@ -1,0 +1,24 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints-protocol",
+	"version": "${version}",
+	"name": "SharedWaypoints Protocol",
+	"description": "The sync messages shared by SharedWaypoints (server) and SharedWaypoints Client. Bundled inside both; not installed on its own.",
+	"authors": [
+		"steelaspect"
+	],
+	"license": "MIT",
+	"environment": "*",
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21.11",
+		"fabric-networking-api-v1": "*"
+	},
+	"custom": {
+		"modmenu": {
+			"badges": [
+				"library"
+			]
+		}
+	}
+}
