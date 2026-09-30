@@ -101,7 +101,7 @@ src/client/java/.../client/            optional client: J keybind, WaypointMenuS
 src/test/java/...                      unit tests
 src/gametest/...                       headless-server end-to-end test
 src/clientgametest/...                 real-client test: menu via keybind, add through the form, screenshots
-docs/PROGRESS.txt                      timestamped development log
+PROGRESS.txt                           timestamped development log (repo root)
 ```
 
 Only vanilla features are used: Brigadier with vanilla argument types, chat click and hover events, boss bars,
