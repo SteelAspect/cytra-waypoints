@@ -190,6 +190,27 @@ jar {
 	}
 }
 
+// The README's download badge and the changelog are written by hand; fail the build if they miss a version bump.
+def checkDocs = tasks.register("checkDocs") {
+	def version = project.version.toString()
+	def readme = file("README.md")
+	def changelog = file("CHANGELOG.md")
+	inputs.property "version", version
+	inputs.files readme, changelog
+	doLast {
+		if (!readme.text.contains("badge/download-${version}-")) {
+			throw new GradleException("README.md: the download badge doesn't say ${version} (mod_version)")
+		}
+		if (!changelog.readLines().any { it == "## ${version}" || it.startsWith("## ${version} ") }) {
+			throw new GradleException("CHANGELOG.md has no '## ${version}' section")
+		}
+	}
+}
+
+tasks.named("check") {
+	dependsOn checkDocs
+}
+
 tasks.withType(JavaCompile).configureEach {
 	it.options.release = 21
 	it.options.encoding = "UTF-8"
