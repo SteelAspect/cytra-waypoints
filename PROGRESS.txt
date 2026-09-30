@@ -159,3 +159,4 @@
 [2026-09-30 19:48] DONE - Esc menu "✦ Waypoints" button, top right: opens the waypoint menu (same as J), tooltip shows the current key, only shown on servers running SharedWaypoints and not on the F3+Esc pause-without-menu screen
 [2026-09-30 19:48] TESTED - real-client menu test on 2 cores: opens the Esc menu, screenshot shows the button top right clear of the vanilla buttons, clicking it opens the waypoint menu; ./gradlew build passes; PASSED
 [2026-09-30 19:49] DONE - Docs for the Esc menu button: README (features, client menu, player install), player guide (step 4 + screenshot docs/images/guide/pause-menu.png), CHANGELOG 2.0.0, DEVELOPMENT.md; docs check and ./gradlew build pass
+[2026-09-30 19:58] STARTED - Move the waypoint menu, J keybind and Esc menu button from the server jar into sharedwaypoints-client, so players only install the client jar (reported: server jar on server + client jar on client showed no button and no keybind)
