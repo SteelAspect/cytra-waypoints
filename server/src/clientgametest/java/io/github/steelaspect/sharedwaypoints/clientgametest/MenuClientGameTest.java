@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
 
@@ -242,6 +243,14 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Iron Farm"));
 			context.waitTicks(3);
 			shot(context, "op-view");
+
+			// No keybind needed: the Esc menu has a "✦ Waypoints" button in the top-right corner.
+			context.setScreen(() -> null);
+			context.setScreen(() -> new PauseScreen(true));
+			context.waitTicks(3);
+			shot(context, "pause-menu");
+			context.clickScreenButton("✦ Waypoints");
+			context.waitForScreen(WaypointMenuScreen.class);
 
 			// The keybind under Options > Controls > Key Binds (modded categories are at the bottom).
 			context.setScreen(() -> new KeyBindsScreen(null, net.minecraft.client.Minecraft.getInstance().options));

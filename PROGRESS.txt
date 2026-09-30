@@ -156,3 +156,5 @@
 [2026-09-30 06:22] TESTED - CI green on PR #6 (head 5c2e18d): build job (build, unit tests, server GameTest) and client job (menu test + Xaero sync test) pass on both the push and pull_request runs; no merge conflicts. Ready for in-game testing and your merge
 [2026-09-30 17:25] BLOCKED - PR #6 stays open by choice until someone tests in-game (checklist in the PR). CI green, no conflicts. Dxvid-Codes (collaborator) can merge from GitHub when happy
 [2026-09-30 19:46] STARTED - "✦ Waypoints" button in the top-right corner of the Esc (pause) menu that opens the waypoint menu, for players who don't want to use the J key
+[2026-09-30 19:48] DONE - Esc menu "✦ Waypoints" button, top right: opens the waypoint menu (same as J), tooltip shows the current key, only shown on servers running SharedWaypoints and not on the F3+Esc pause-without-menu screen
+[2026-09-30 19:48] TESTED - real-client menu test on 2 cores: opens the Esc menu, screenshot shows the button top right clear of the vanilla buttons, clicking it opens the waypoint menu; ./gradlew build passes; PASSED
