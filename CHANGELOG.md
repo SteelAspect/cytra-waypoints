@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.1 — 2026-10-01
+
+Fixes from a review of 2.0.0. Update both jars; a 2.0.0 client jar still works with a 2.0.1 server and the other
+way round.
+
+- **Better sync tip.** Players who have sharedwaypoints-client but no (or an unsupported) Xaero's Minimap were told
+  to install sharedwaypoints-client. They're now told, a few seconds after their first join, to install Xaero's
+  Minimap, with a link. A client mod of a different version is told to update. `/cway sync` says the same.
+  (This needs the 2.0.1 client jar: it now announces itself even without Xaero.)
+- **Big waypoint lists can't disconnect players.** The full list used to go out as one packet, and a list over the
+  protocol's limits (roughly 7,000 waypoints with long names) would disconnect players with the client mod. It's now
+  sent in parts. Texts from a hand-edited `waypoints.json` are clipped to what the protocol allows.
+- **No file write on every join and leave.** Last-seen times were saved by rewriting `waypoints.json` each time a
+  player joined or left. They're now written at most once a minute, and when the server stops.
+- **Losing access stops the sync.** A player whose view permission is taken away while online (e.g. with
+  LuckPerms) no longer gets waypoint updates; their client is told the sync is off.
+- `/cway sync` shows the server's actual Minecraft version instead of a fixed "1.21.11".
+- Docs: without Xaero's Minimap the client jar doesn't "do nothing": the menu still works, only the sync is off.
+
 ## 2.0.0 — 2026-09-30
 
 **The command is now `/cway`** (it was `/waypoints`, which is gone). Every subcommand is the same, e.g.
@@ -15,7 +34,7 @@
   - adds, edits and deletes show up live, and the set is reconciled with the server on every join;
   - players' own waypoints are never touched.
   - Tested with Xaero's Minimap 26.5.0 (Fabric 1.21.11). If Xaero is missing or incompatible, the client mod logs
-    one warning and does nothing.
+    one warning and the sync is off; the waypoint menu still works.
 
 **New on the server (for everyone, no client mod needed)**
 - **Join summary:** "3 new waypoints since you last played", with the usual [Add to Xaero] / [Copy coords] / [Go]

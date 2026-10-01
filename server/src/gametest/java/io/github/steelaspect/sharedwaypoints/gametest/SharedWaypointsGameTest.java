@@ -554,8 +554,10 @@ public class SharedWaypointsGameTest {
 
 		clientModTip(helper, dispatcher, mod, aliceEntity);
 
-		// Joining records the time in waypoints.json.
+		// Joining records the time, and it's written to waypoints.json with the next batch (every minute, and when
+		// the server stops) rather than on every join.
 		mod.joinSummary().onJoin(aliceEntity);
+		mod.waypoints().saveSeenIfChanged();
 		helper.assertTrue(mod.waypoints().lastSeen(aliceEntity.getUUID()).isPresent(), "last seen recorded");
 		try {
 			String json = Files.readString(configDir().resolve("waypoints.json"));
@@ -634,6 +636,26 @@ public class SharedWaypointsGameTest {
 		mod.config().syncToClientMod = true;
 		run(helper, dispatcher, moderator, "cway remove Quiet");
 
+		// Big lists go out in parts: the first as a full sync (it replaces the client's set), the rest as upserts.
+		// The real first part holds 1000; 2 here, so the few test waypoints are enough to split.
+		var parts = mod.sync().fullSync(2);
+		helper.assertTrue(parts.get(0) instanceof FullSyncPayload first && first.waypoints().size() == 2,
+				"first part: a full sync of 2");
+		helper.assertValueEqual(parts.size(), 1 + Math.max(0, mod.waypoints().size() - 2), "one upsert per other waypoint");
+		helper.assertTrue(parts.stream().skip(1).allMatch(part -> part instanceof UpsertPayload), "the rest are upserts");
+		helper.assertValueEqual(mod.sync().fullSync().size(), 1, "a normal-sized list is one packet");
+
+		// Access taken away while online (e.g. with LuckPerms): told sync is off, then nothing more.
+		mod.sync().setViewCheckForTest(player -> !player.getUUID().equals(aliceEntity.getUUID()));
+		toAlice.clear();
+		run(helper, dispatcher, moderator, "cway add Secret other 5 64 5");
+		helper.assertValueEqual(toAlice, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)),
+				"lost access: sync turned off, and the new waypoint isn't sent");
+		helper.assertFalse(mod.sync().isSubscribed(aliceEntity.getUUID()), "lost access: unsubscribed");
+		mod.sync().setViewCheckForTest(null);
+		run(helper, dispatcher, moderator, "cway remove Secret");
+		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toAlice::add);
+
 		// Leaving ends the subscription.
 		mod.sync().forget(aliceEntity.getUUID());
 		toAlice.clear();
@@ -670,8 +692,9 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, alice, "cway sync");
 		String steps = alice.out.take();
 		helper.assertTrue(steps.contains("Automatic Xaero's Minimap sync")
-				&& steps.contains("1. Put sharedwaypoints-client-2.0.0.jar in your .minecraft/mods folder.")
-				&& steps.contains("2. Also install Xaero's Minimap and Fabric API")
+				&& steps.contains("1. Put sharedwaypoints-client-") && steps.contains(".jar in your .minecraft/mods folder.")
+				&& steps.contains("2. Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
+						+ net.minecraft.SharedConstants.getCurrentVersion().name() + ").")
 				&& steps.contains("3. Rejoin.") && steps.contains("[Download]"), steps);
 
 		// No link configured (or not a web link): no button, ask an admin instead.
@@ -681,11 +704,28 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(alice.out.take().contains("Ask a server admin for the file."), "no link: ask an admin");
 		config.clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
 
+		// Client mod but nothing synced a few seconds after the first join: Xaero's Minimap is missing.
+		Component xaeroTip = tips.followUp(aliceEntity).orElseThrow();
+		helper.assertTrue(xaeroTip.getString().startsWith("✦ Your sharedwaypoints-client can't reach Xaero's Minimap. ")
+				&& xaeroTip.getString().endsWith("[Get Xaero's Minimap] [How it works]"), xaeroTip.getString());
+		helper.assertValueEqual(clickOf(xaeroTip, "[Get Xaero's Minimap]"), Optional.of(new ClickEvent.OpenUrl(
+				java.net.URI.create("https://modrinth.com/mod/xaeros-minimap"))), "link to Xaero's Minimap");
+		// Said hello with another protocol version: update the client mod.
+		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), payload -> { });
+		String update = tips.followUp(aliceEntity).orElseThrow().getString();
+		helper.assertTrue(update.startsWith("✦ Your sharedwaypoints-client doesn't match this server, ")
+				&& update.contains("[Download]"), update);
+		run(helper, dispatcher, alice, "cway sync");
+		helper.assertTrue(alice.out.take().contains("doesn't match this server. Update it to sharedwaypoints-client-"),
+				"/cway sync explains the mismatch");
+		mod.sync().forget(aliceEntity.getUUID());
+
 		// With the client mod synced, /cway sync says so instead of the steps.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), payload -> { });
 		run(helper, dispatcher, alice, "cway sync");
 		String synced = alice.out.take();
 		helper.assertTrue(synced.contains("You have it: your Xaero's Minimap is in sync") && !synced.contains("1. Put"), synced);
+		helper.assertTrue(tips.followUp(aliceEntity).isEmpty(), "synced: no follow-up tip");
 		mod.sync().forget(aliceEntity.getUUID());
 
 		config.syncToClientMod = false;

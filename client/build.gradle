@@ -147,7 +147,10 @@ tasks.register("runInstalledClientTest", net.fabricmc.loom.task.prod.ClientProdu
 	description = "Runs the built client jar in a production game, like a player's mods folder."
 	mods.from(tasks.named("remapJar"))
 	mods.from(configurations.installedTestMods)
-	mods.from(configurations.clientTestMods)
+	// -PwithoutXaero: no Xaero's Minimap, to check the menu still works and the player is told to add Xaero.
+	if (!project.hasProperty("withoutXaero")) {
+		mods.from(configurations.clientTestMods)
+	}
 	mods.from(remapProdTestJar)
 	// -PwithServerJar: also the server jar, as players who followed the 1.5.0 instructions will have.
 	if (project.hasProperty("withServerJar")) {

@@ -37,13 +37,15 @@ Versions are pinned in `gradle.properties`. `mod_version` applies to all three p
 xvfb-run -a ./gradlew --no-daemon :server:runClientGametest   # real client: the J menu, saves screenshots
 xvfb-run -a ./gradlew --no-daemon :client:runClientGametest   # real client + Xaero's Minimap 26.5.0: the sync
 xvfb-run -a ./gradlew --no-daemon :client:runInstalledClientTest   # the built client jar, installed like a player would
+xvfb-run -a ./gradlew --no-daemon :client:runInstalledClientTest -PwithoutXaero   # same, without Xaero's Minimap
 ```
 
 - **Install test** (`client/src/prodtest`): a production game (real Fabric Loader, remapped jars) whose mods folder
   has only the built `sharedwaypoints-client` jar, Fabric API and Xaero's Minimap, like a player's. It checks the
   server mod loads from inside the client jar, the J keybind is registered, and the Esc menu's **✦ Waypoints**
   button opens the menu. The dev-run tests above load the mods from source, so they can't catch a jar that's
-  missing something.
+  missing something. With `-PwithoutXaero` it checks the menu still works without Xaero, and that the server
+  tells the player to install Xaero's Minimap.
 
 - **Xaero sync test** (`client/src/clientgametest`): runs the real game with the server mod, the client mod and
   Xaero's Minimap 26.5.0. Xaero is dropped unchanged into the test game's `mods/` folder, because its bundled

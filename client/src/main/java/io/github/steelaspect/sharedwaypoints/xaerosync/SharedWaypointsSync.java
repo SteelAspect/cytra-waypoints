@@ -38,15 +38,15 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 	public void onInitializeClient() {
 		SyncProtocol.register();
 		bridge = XaeroBridge.create();
-		if (bridge.isEmpty()) {
-			return; // already logged; without Xaero there's nothing to sync into, so don't even say hello
-		}
 		String version = FabricLoader.getInstance().getModContainer("sharedwaypoints-client")
 				.map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("?");
 
+		// The receivers below are registered even without Xaero: listening on the sync channel tells the server this
+		// client mod is installed, so it can suggest adding Xaero's Minimap. Only the hello asks for the waypoints,
+		// and it's only sent when Xaero is there to write them into.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			reset();
-			if (ClientPlayNetworking.canSend(HelloPayload.TYPE)) {
+			if (bridge.isPresent() && ClientPlayNetworking.canSend(HelloPayload.TYPE)) {
 				ClientPlayNetworking.send(new HelloPayload(SyncProtocol.VERSION, version));
 			}
 		});

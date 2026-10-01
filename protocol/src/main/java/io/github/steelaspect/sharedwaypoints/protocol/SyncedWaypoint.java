@@ -23,7 +23,7 @@ public record SyncedWaypoint(UUID id, String name, String initials, String categ
 		int colorIndex, int x, int y, int z, String dimension, String description) {
 
 	/** Longest strings accepted when reading, so a broken or hostile server can't make the client allocate much. */
-	static final int MAX_TEXT = 256;
+	public static final int MAX_TEXT = 256;
 
 	void write(FriendlyByteBuf buf) {
 		buf.writeUUID(id);
