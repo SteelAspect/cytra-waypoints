@@ -42,8 +42,8 @@ public final class JoinSummary {
 		if (mod.config().joinSummary) {
 			lines(previous, Viewer.of(player, mod.favorites())).forEach(player::sendSystemMessage);
 		}
-		if (mod.clientModTip().shouldTip(player, previous.isEmpty())) {
-			player.sendSystemMessage(mod.clientModTip().tip());
+		if (previous.isEmpty()) {
+			mod.clientModTip().onFirstVisit(player, player.level().getServer().getTickCount());
 		}
 	}
 

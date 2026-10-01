@@ -172,6 +172,8 @@ class WaypointStoreTest {
 		assertTrue(store.lastSeen(alex).isEmpty(), "never seen");
 		Instant seen = Instant.parse("2026-09-30T08:15:30.250Z");
 		store.markSeen(alex, seen);
+		assertTrue(loaded().lastSeen(alex).isEmpty(), "not written on every join or leave");
+		store.saveSeenIfChanged();
 
 		WaypointStore reloaded = loaded();
 		assertEquals(seen, reloaded.lastSeen(alex).orElseThrow());

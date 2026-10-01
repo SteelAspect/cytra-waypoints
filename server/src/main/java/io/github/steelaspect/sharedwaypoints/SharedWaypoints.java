@@ -19,6 +19,8 @@ import org.slf4j.LoggerFactory;
  * installing it. BlueMap and squaremap are optional: markers are added only when one of them is installed.
  */
 public final class SharedWaypoints implements ModInitializer {
+	/** Last-seen times are written at most once a minute (and when the server stops). */
+	private static final int SAVE_SEEN_EVERY_TICKS = 20 * 60;
 	public static final String MOD_ID = "sharedwaypoints";
 	public static final Logger LOGGER = LoggerFactory.getLogger("SharedWaypoints");
 
@@ -48,12 +50,21 @@ public final class SharedWaypoints implements ModInitializer {
 			context.menus().setServer(null);
 			context.sync().setServer(null);
 		});
-		ServerTickEvents.END_SERVER_TICK.register(server -> context.navigation().tick(server));
+		ServerTickEvents.END_SERVER_TICK.register(server -> {
+			context.navigation().tick(server);
+			context.clientModTip().tick(server);
+			if (server.getTickCount() % SAVE_SEEN_EVERY_TICKS == 0) {
+				context.waypoints().saveSeenIfChanged();
+			}
+		});
+		// Players are disconnected after SERVER_STOPPING, so their last-seen times are written once they're all gone.
+		ServerLifecycleEvents.SERVER_STOPPED.register(server -> context.waypoints().saveSeenIfChanged());
 		// "N new waypoints since you last played" (last-seen times are kept in waypoints.json).
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> context.joinSummary().onJoin(handler.getPlayer()));
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
 			context.navigation().stop(handler.getPlayer().getUUID());
 			context.sync().forget(handler.getPlayer().getUUID());
+			context.clientModTip().forget(handler.getPlayer().getUUID());
 			context.joinSummary().onLeave(handler.getPlayer().getUUID());
 		});
 

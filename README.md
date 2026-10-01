@@ -2,7 +2,7 @@
 
 # SharedWaypoints
 
-[![Download 2.0.0](https://img.shields.io/badge/download-2.0.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 2.0.1](https://img.shields.io/badge/download-2.0.1-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
@@ -316,8 +316,9 @@ fills a waypoint set called **"Shared"** in Xaero:
   name one of your own sets "Shared").
 
 **How players find out:** players without the client mod get one line in chat on their first join, with
-**[Download]** and **[How it works]**. `/cway sync` shows the steps any time, or tells a player the sync is
-already on for them. Turn the tip off with `clientModTip`, and point **[Download]** at your own page with
+**[Download]** and **[How it works]**. Players who have the client mod but no (or an unsupported) Xaero's Minimap
+are told a few seconds later to install it, with a link; a client mod of a different version is told to update.
+`/cway sync` shows the steps any time, or tells a player the sync is already on for them. Turn the tip off with `clientModTip`, and point **[Download]** at your own page with
 `clientModUrl`.
 
 ![The first-join tip](docs/images/guide/sync-tip.png)
@@ -336,7 +337,11 @@ which bundles XaeroLib 1.7.3).
 classes. A future Xaero update may rename them. If that happens, the client mod logs one warning ("isn't
 supported" / "Stopped syncing"), sync switches off, and everything else keeps working, including the chat
 buttons. A client mod update then fixes it. Everything Xaero-specific is in one class, `XaeroBridge`. If Xaero
-isn't installed at all, the client mod logs one line and does nothing.
+isn't installed at all, the client mod logs one line and only the sync is off: the waypoint menu, the J key and
+the Esc menu button still work.
+
+**Big lists:** the full list is sent in parts (1000 waypoints, then the rest one by one), so even servers with
+many thousands of waypoints stay within Minecraft's packet limits.
 
 ### [Add to Xaero] (everyone, no client mod)
 

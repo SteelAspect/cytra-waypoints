@@ -48,6 +48,8 @@ public final class WaypointStore {
 	private final List<Runnable> loadListeners = new ArrayList<>();
 	/** True when the last save failed, so commands can warn that changes are only in memory. */
 	private boolean saveFailed;
+	/** Last-seen times changed but aren't on disk yet. */
+	private boolean seenChanged;
 
 	/**
 	 * @param file       the JSON file
@@ -192,10 +194,20 @@ public final class WaypointStore {
 		return updated;
 	}
 
-	/** Remembers that the player is (or was just) online, and saves. Doesn't count as a waypoint change. */
+	/**
+	 * Remembers that the player is (or was just) online. Doesn't count as a waypoint change, and isn't written right
+	 * away: joins and leaves would otherwise rewrite the whole file each time. {@link #saveSeenIfChanged()} writes it.
+	 */
 	public void markSeen(UUID player, Instant when) {
 		lastSeen.put(player, when);
-		save();
+		seenChanged = true;
+	}
+
+	/** Writes the file if last-seen times changed since the last save (every minute, and when the server stops). */
+	public void saveSeenIfChanged() {
+		if (seenChanged) {
+			save();
+		}
 	}
 
 	// ------------------------------------------------------------ persistence
@@ -250,6 +262,7 @@ public final class WaypointStore {
 		try {
 			JsonFiles.writeAtomically(file, data, Gsons.withCategories(categories.get()));
 			saveFailed = false;
+			seenChanged = false;
 		} catch (IOException e) {
 			saveFailed = true;
 			SharedWaypoints.LOGGER.error("Could not save waypoints to {}", file, e);

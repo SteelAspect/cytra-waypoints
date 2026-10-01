@@ -39,6 +39,28 @@ class SyncStateTest {
 		assertEquals(List.of("Base"), names(state.inDimension(OVERWORLD)));
 	}
 
+	/** Servers from 2.0.1 send big lists as a full sync with the first part and upserts for the rest. */
+	@Test
+	void aListSentInPartsEndsUpLikeOneFullList() {
+		List<SyncedWaypoint> all = List.of(waypoint("Alpha", OVERWORLD), waypoint("Bravo", NETHER),
+				waypoint("Charlie", OVERWORLD), waypoint("Delta", OVERWORLD));
+		Set<String> dimensions = Set.of(OVERWORLD, NETHER);
+
+		SyncState whole = new SyncState();
+		whole.acceptFull(all, dimensions);
+
+		SyncState parts = new SyncState();
+		parts.upsert(waypoint("Stale", OVERWORLD)); // left over from before; the full sync must drop it
+		parts.acceptFull(all.subList(0, 2), dimensions);
+		all.subList(2, all.size()).forEach(parts::upsert);
+
+		for (String dimension : dimensions) {
+			assertEquals(names(whole.inDimension(dimension)), names(parts.inDimension(dimension)), dimension);
+		}
+		assertEquals(dimensions, parts.dirtyDimensions());
+		assertEquals(all.size(), parts.size());
+	}
+
 	@Test
 	void editsAndDeletesOnlyTouchTheirDimensions() {
 		SyncState state = new SyncState();

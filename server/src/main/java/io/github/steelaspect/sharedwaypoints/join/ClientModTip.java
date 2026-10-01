@@ -4,39 +4,103 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.protocol.WelcomePayload;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.ChatFormatting;
+import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Tells players how to get the automatic Xaero's Minimap sync: a short tip on their first join (only for players
- * who don't have sharedwaypoints-client yet) and the full steps in {@code /cway sync}.
+ * Tells players how to get the automatic Xaero's Minimap sync, once, on their first join, and any time with
+ * {@code /cway sync}:
+ * <ul>
+ * <li>without sharedwaypoints-client: install it ({@link #tip()}, right away);</li>
+ * <li>with it, but nothing synced a few seconds later: Xaero's Minimap is missing or a version the client mod can't
+ *     use ({@link #xaeroTip()}), or the client mod is a different version ({@link #updateTip()}).</li>
+ * </ul>
  */
 public final class ClientModTip {
+	/** How long the client gets to say hello before the follow-up tip (5 seconds). */
+	static final int FOLLOW_UP_TICKS = 100;
+	private static final URI XAERO_PAGE = URI.create("https://modrinth.com/mod/xaeros-minimap");
+
+	/** The Xaero's Minimap version the client mod was tested with (see the README). */
+	static final String TESTED_XAERO = "26.5.0";
+
 	private final ModContext mod;
+	/** Players with the client mod on their first visit, and the server tick at which to check on them. */
+	private final Map<UUID, Integer> followUps = new HashMap<>();
 
 	public ClientModTip(ModContext mod) {
 		this.mod = mod;
 	}
 
 	/**
-	 * Whether this player's game runs sharedwaypoints-client with Xaero's Minimap: only then does it listen on the
-	 * sync channel, which Fabric tells the server about before the player joins.
+	 * Whether this player's game runs sharedwaypoints-client (2.0.1 or newer, or 2.0.0 with Xaero's Minimap): it
+	 * listens on the sync channel, which Fabric tells the server about before the player joins.
 	 */
 	public static boolean hasClientMod(ServerPlayer player) {
 		return player.connection != null && ServerPlayNetworking.canSend(player, WelcomePayload.TYPE);
 	}
 
-	/** The join tip is for first visits of players without the client mod, on servers that sync. */
+	/** The install tip is for first visits of players without the client mod, on servers that sync. */
 	public boolean shouldTip(ServerPlayer player, boolean firstVisit) {
-		return firstVisit && mod.config().clientModTip && mod.config().syncToClientMod && !hasClientMod(player);
+		return firstVisit && enabled() && !hasClientMod(player);
+	}
+
+	/** A player's first visit: tip them now, or check on them in a few seconds if they have the client mod. */
+	public void onFirstVisit(ServerPlayer player, int serverTick) {
+		if (shouldTip(player, true)) {
+			player.sendSystemMessage(tip());
+		} else if (enabled() && hasClientMod(player)) {
+			followUps.put(player.getUUID(), serverTick + FOLLOW_UP_TICKS);
+		}
+	}
+
+	/** Called every server tick: sends the follow-up tips that are due. */
+	public void tick(MinecraftServer server) {
+		if (followUps.isEmpty()) {
+			return;
+		}
+		int now = server.getTickCount();
+		var due = followUps.entrySet().iterator();
+		while (due.hasNext()) {
+			var entry = due.next();
+			if (now >= entry.getValue()) {
+				due.remove();
+				ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+				if (player != null) {
+					followUp(player).ifPresent(player::sendSystemMessage);
+				}
+			}
+		}
+	}
+
+	/** The player left before their follow-up. */
+	public void forget(UUID player) {
+		followUps.remove(player);
+	}
+
+	/** For a player with the client mod: nothing if they're synced, otherwise what's in the way. */
+	public Optional<Component> followUp(ServerPlayer player) {
+		if (!enabled() || mod.sync().isSubscribed(player.getUUID())) {
+			return Optional.empty();
+		}
+		return Optional.of(mod.sync().hasSaidHello(player.getUUID()) ? updateTip() : xaeroTip());
+	}
+
+	private boolean enabled() {
+		return mod.config().clientModTip && mod.config().syncToClientMod;
 	}
 
 	/** The join tip: one line with [Download] and [How it works]. */
@@ -45,10 +109,40 @@ public final class ClientModTip {
 				.withStyle(ChatFormatting.GOLD)
 				.append(Component.literal("Install the sharedwaypoints-client mod. ").withStyle(ChatFormatting.GRAY));
 		downloadButton().ifPresent(button -> line.append(button).append(" "));
-		return line.append(Component.literal("[How it works]").withStyle(style -> style
+		return line.append(howItWorksButton());
+	}
+
+	private static Component howItWorksButton() {
+		return Component.literal("[How it works]").withStyle(style -> style
 				.withColor(ChatFormatting.YELLOW)
 				.withClickEvent(new ClickEvent.RunCommand("/cway sync"))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show the steps (/cway sync)")))));
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show the steps (/cway sync)"))));
+	}
+
+	private static Component xaeroButton() {
+		return Component.literal("[Get Xaero's Minimap]").withStyle(style -> style
+				.withColor(ChatFormatting.AQUA)
+				.withClickEvent(new ClickEvent.OpenUrl(XAERO_PAGE))
+				.withHoverEvent(new HoverEvent.ShowText(Component.literal(XAERO_PAGE.toString()))));
+	}
+
+	/** The client mod is there but Xaero's Minimap isn't (or isn't a version it can use). */
+	public Component xaeroTip() {
+		return Component.literal("✦ Your sharedwaypoints-client can't reach Xaero's Minimap. ")
+				.withStyle(ChatFormatting.GOLD)
+				.append(Component.literal("Install Xaero's Minimap (tested with " + TESTED_XAERO + ") to get these waypoints "
+						+ "in it automatically. ").withStyle(ChatFormatting.GRAY))
+				.append(xaeroButton()).append(" ").append(howItWorksButton());
+	}
+
+	/** The client mod speaks a different sync protocol than this server. */
+	public Component updateTip() {
+		MutableComponent line = Component.literal("✦ Your sharedwaypoints-client doesn't match this server, ")
+				.withStyle(ChatFormatting.GOLD)
+				.append(Component.literal("so Xaero's Minimap isn't synced. Update it to " + jarName() + ". ")
+						.withStyle(ChatFormatting.GRAY));
+		downloadButton().ifPresent(button -> line.append(button).append(" "));
+		return line.append(howItWorksButton());
 	}
 
 	/** {@code /cway sync}: whether it's on for you, and how to set it up. */
@@ -68,15 +162,19 @@ public final class ClientModTip {
 							.withStyle(ChatFormatting.GRAY)));
 			return lines;
 		}
-		if (player != null && hasClientMod(player)) {
+		if (player != null && mod.sync().hasSaidHello(player.getUUID())) {
 			lines.add(Component.literal("Your sharedwaypoints-client doesn't match this server. Update it to "
 					+ jarName() + ".").withStyle(ChatFormatting.YELLOW));
+		} else if (player != null && hasClientMod(player)) {
+			lines.add(Component.literal("You have sharedwaypoints-client, but it can't reach Xaero's Minimap: install "
+					+ "Xaero's Minimap (tested with " + TESTED_XAERO + ").").withStyle(ChatFormatting.YELLOW));
 		}
 		lines.add(Component.literal("The server's shared waypoints can appear in Xaero's Minimap by themselves, in their "
 				+ "own \"Shared\" waypoint set, and stay up to date. Your own waypoints are never touched.")
 				.withStyle(ChatFormatting.GRAY));
 		lines.add(step(1, "Put " + jarName() + " in your .minecraft/mods folder."));
-		lines.add(step(2, "Also install Xaero's Minimap and Fabric API (Fabric, Minecraft 1.21.11)."));
+		lines.add(step(2, "Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
+				+ SharedConstants.getCurrentVersion().name() + ")."));
 		lines.add(step(3, "Rejoin. The waypoints appear in Xaero's \"Shared\" set. You also get the waypoint menu (J)."));
 		lines.add(downloadButton().<Component>map(button -> Component.empty().append(button))
 				.orElse(Component.literal("Ask a server admin for the file.").withStyle(ChatFormatting.GRAY)));
