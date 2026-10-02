@@ -139,7 +139,12 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(categories.contains("[Portals] portals — 1 waypoint · Xaero colour: Purple (13)"), categories);
 		run(helper, dispatcher, alice, "cway info Hub");
 		String hubInfo = alice.out.take();
-		helper.assertTrue(hubInfo.contains("Overworld side: 80 70 -160"), "portal conversion in info:\n" + hubInfo);
+		// X and Z scaled by 8; Y is the reader's own height (Hub's Y 70 is a Nether height, meaningless up here).
+		helper.assertTrue(hubInfo.contains("Overworld side: 80 " + aliceEntity.getBlockY() + " -160"),
+				"portal conversion in info, at the reader's Y:\n" + hubInfo);
+		run(helper, dispatcher, moderator, "cway info Hub");
+		String consoleInfo = moderator.out.take();
+		helper.assertTrue(consoleInfo.contains("Overworld side: 80 ~ -160"), "no position (console): Y is ~\n" + consoleInfo);
 		helper.assertTrue(hubInfo.contains("via Nether portal"), "distance through the portal:\n" + hubInfo);
 		helper.assertTrue(!hubInfo.contains("[Teleport]"), "no teleport button for ordinary players");
 		helper.assertValueEqual(run(helper, dispatcher, alice, "cway xaero \"Main Storage\""), 1, "xaero share");

@@ -243,7 +243,7 @@ public final class NavigationManager {
 		session.bar.setColor(barColor(waypoint.category()));
 
 		String here = Dimensions.id(player.level().dimension());
-		Optional<NavMath.Target> projected = NavMath.project(waypoint, here);
+		Optional<NavMath.Target> projected = NavMath.project(waypoint, here, player.getBlockY());
 		if (projected.isEmpty()) {
 			session.measuredIn = null;
 			session.bar.setProgress(0f);

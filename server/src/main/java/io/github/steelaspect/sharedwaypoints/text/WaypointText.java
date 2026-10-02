@@ -98,9 +98,11 @@ public final class WaypointText {
 				.withStyle(style -> style
 						.withColor(ChatFormatting.WHITE)
 						.withHoverEvent(new HoverEvent.ShowText(Component.literal(waypoint.dimension()))))));
-		NavMath.portalEquivalent(waypoint).ifPresent(other -> {
+		// The other side at the reader's own height ("~" for the console: copied into /tp it means "stay level").
+		Integer readerY = viewer.position() == null ? null : (int) Math.floor(viewer.position().y);
+		NavMath.portalEquivalent(waypoint, readerY == null ? 0 : readerY).ifPresent(other -> {
 			String label = waypoint.dimension().equals(Dimensions.OVERWORLD) ? "Nether side" : "Overworld side";
-			String coordinates = other.x() + " " + other.y() + " " + other.z();
+			String coordinates = other.x() + " " + (readerY == null ? "~" : String.valueOf(readerY)) + " " + other.z();
 			lines.add(field(label, Component.literal(coordinates).withStyle(ChatFormatting.LIGHT_PURPLE)
 					.append(" ").append(copyCoordsButton(coordinates))));
 		});

@@ -2,7 +2,7 @@
 
 # SharedWaypoints
 
-[![Download 2.0.1](https://img.shields.io/badge/download-2.0.1-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 2.0.2](https://img.shields.io/badge/download-2.0.2-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
@@ -60,7 +60,7 @@ Players without the client mod see exactly what they always did: chat lists with
 - **Beacon:** a particle column only you can see marks the destination. You get an **Arrived!** title and a sound
   when you reach it.
 - **Overworld ↔ Nether aware:** the compass points you to the matching portal spot (÷8 / ×8), and the details
-  view shows the portal-side coordinates.
+  view shows the portal-side coordinates. The portal spot's Y is always your own Y, never the other dimension's.
 - **Near and nearest:** `/cway near` lists what's around you, closest first. `/cway nearest [category]`
   finds the closest one.
 - **Teleport** for ops: a **[Teleport]** button and `/cway tp`.

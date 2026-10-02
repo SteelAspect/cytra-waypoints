@@ -61,7 +61,8 @@ distance.
 - **By category / By name / By distance:** click to change the sort order.
 - **+ Add:** add a new waypoint.
 
-**Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates, its
+**Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates (at your own
+height), its
 description, and who added it and when.
 
 **Bottom right:** **Routes** opens the [routes screen](#routes), and **Done** closes the menu.

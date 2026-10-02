@@ -26,7 +26,7 @@ public final class NavMath {
 	 * @param y         target block Y
 	 * @param z         target block Z
 	 * @param viaPortal true when the waypoint is in the other one of Overworld / Nether and this is the matching
-	 *                  portal spot (coordinates scaled by 8)
+	 *                  portal spot (X and Z scaled by 8, Y the viewer's own height)
 	 */
 	public record Target(int x, int y, int z, boolean viaPortal) {
 		/** Horizontal distance from a position to the centre of the target block. */
@@ -37,32 +37,36 @@ public final class NavMath {
 		}
 	}
 
-	/** The target in {@code viewerDimension}, or empty if the waypoint can't be reached from there. */
-	public static Optional<Target> project(Waypoint waypoint, String viewerDimension) {
+	/**
+	 * The target in {@code viewerDimension} for a viewer at height {@code viewerY}, or empty if the waypoint can't be
+	 * reached from there. A portal spot takes the viewer's height: the waypoint's own Y belongs to the other
+	 * dimension (an Overworld base at Y 200 is above the Nether roof, a Nether hub at Y 30 is underground here).
+	 */
+	public static Optional<Target> project(Waypoint waypoint, String viewerDimension, int viewerY) {
 		String dimension = waypoint.dimension();
 		if (dimension.equals(viewerDimension)) {
 			return Optional.of(new Target(waypoint.x(), waypoint.y(), waypoint.z(), false));
 		}
 		if (dimension.equals(Dimensions.OVERWORLD) && viewerDimension.equals(Dimensions.NETHER)) {
-			return Optional.of(new Target(Math.floorDiv(waypoint.x(), NETHER_SCALE), waypoint.y(),
+			return Optional.of(new Target(Math.floorDiv(waypoint.x(), NETHER_SCALE), viewerY,
 					Math.floorDiv(waypoint.z(), NETHER_SCALE), true));
 		}
 		if (dimension.equals(Dimensions.NETHER) && viewerDimension.equals(Dimensions.OVERWORLD)) {
-			return Optional.of(new Target(waypoint.x() * NETHER_SCALE, waypoint.y(), waypoint.z() * NETHER_SCALE, true));
+			return Optional.of(new Target(waypoint.x() * NETHER_SCALE, viewerY, waypoint.z() * NETHER_SCALE, true));
 		}
 		return Optional.empty();
 	}
 
 	/**
-	 * Coordinates of the matching spot on the other side of a Nether portal: Overworld / 8 or Nether * 8.
-	 * Empty for any other dimension.
+	 * The matching spot on the other side of a Nether portal (Overworld / 8 or Nether * 8), at height {@code y}
+	 * (the viewer's). Empty for any other dimension.
 	 */
-	public static Optional<Target> portalEquivalent(Waypoint waypoint) {
+	public static Optional<Target> portalEquivalent(Waypoint waypoint, int y) {
 		if (waypoint.dimension().equals(Dimensions.OVERWORLD)) {
-			return project(waypoint, Dimensions.NETHER);
+			return project(waypoint, Dimensions.NETHER, y);
 		}
 		if (waypoint.dimension().equals(Dimensions.NETHER)) {
-			return project(waypoint, Dimensions.OVERWORLD);
+			return project(waypoint, Dimensions.OVERWORLD, y);
 		}
 		return Optional.empty();
 	}
@@ -93,7 +97,7 @@ public final class NavMath {
 		double total = 0;
 		for (int i = 0; i + 1 < stops.size(); i++) {
 			Waypoint from = stops.get(i);
-			total += project(stops.get(i + 1), from.dimension())
+			total += project(stops.get(i + 1), from.dimension(), from.y())
 					.map(target -> target.horizontalDistance(from.x() + 0.5, from.z() + 0.5))
 					.orElse(0.0);
 		}

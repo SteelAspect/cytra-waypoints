@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.2 — 2026-10-02
+
+- **Portal spots use your height.** For a Nether waypoint seen from the Overworld (or the other way round), the
+  matching portal spot kept the waypoint's own Y, so it could be underground or in the sky (an Overworld base at
+  Y 200 is above the Nether roof). It's now always your current Y: in the compass bar, the ⟳ hover in chat,
+  `/cway info` and the menu. The console sees `~` (as in `/tp`, "stay level").
+
 ## 2.0.1 — 2026-10-01
 
 Fixes from a review of 2.0.0. Update both jars; a 2.0.0 client jar still works with a 2.0.1 server and the other
