@@ -10,6 +10,7 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import io.github.steelaspect.sharedwaypoints.network.ActionPayload;
 import io.github.steelaspect.sharedwaypoints.network.MenuNetworking;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
 import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
 import io.github.steelaspect.sharedwaypoints.protocol.DeletePayload;
@@ -328,6 +329,7 @@ public class SharedWaypointsGameTest {
 		clientModSync(helper, dispatcher, mod, aliceEntity, bobEntity, alice, moderator);
 		joinSummary(helper, dispatcher, mod, aliceEntity, moderator);
 		portalGuide(helper, server, dispatcher, mod, aliceEntity);
+		projectStatus(helper, dispatcher, mod, aliceEntity, bobEntity, alice, bob, moderator);
 
 		// Every /cway subcommand must be a reserved word, so no category can ever hide one.
 		for (var child : dispatcher.getRoot().getChild("cway").getChildren()) {
@@ -516,6 +518,122 @@ public class SharedWaypointsGameTest {
 		for (String name : List.of("R1", "R3", "R4")) {
 			run(helper, dispatcher, moderator, "cway remove " + name);
 		}
+	}
+
+	// -------------------------------------------------------- project status
+
+	/** Planned / WIP / Done / Broken with a note: commands, chat, Xaero symbol, map label, menu and join summary. */
+	private static void projectStatus(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
+			ModContext mod, ServerPlayer aliceEntity, ServerPlayer bobEntity, Source alice, Source bob, Source moderator) {
+		run(helper, dispatcher, alice, "cway add \"Gold Farm\" farms 50 64 50");
+		run(helper, dispatcher, alice, "cway add Base bases 10 64 10");
+		alice.out.take();
+		helper.assertValueEqual(run(helper, dispatcher, bob, "cway projects"), 0, "no projects yet");
+		helper.assertTrue(bob.out.take().contains("No waypoint has a status yet"), "empty project list explains how");
+
+		// Anyone may set a status (sharedwaypoints.status defaults to everyone), not only the creator.
+		helper.assertTrue(suggestions(dispatcher, bob, "cway status ").contains("\"Gold Farm\""), "status suggests names");
+		helper.assertTrue(suggestions(dispatcher, bob, "cway status Base ").containsAll(
+				List.of("broken", "wip", "planned", "done", "clear")), "status suggests the states");
+		run(helper, dispatcher, bob, "cway status \"Gold Farm\" broken out of bonemeal");
+		String bobName = bobEntity.getGameProfile().name();
+		helper.assertTrue(bob.out.take().contains("Marked Gold Farm as Broken [⚠ Broken]"), "set reply");
+		ProjectStatus broken = mod.waypoints().get("Gold Farm").orElseThrow().status();
+		helper.assertTrue(broken != null && broken.state() == ProjectStatus.State.BROKEN
+				&& "out of bonemeal".equals(broken.note()) && broken.setByName().equals(bobName)
+				&& broken.setByUuid().equals(bobEntity.getUUID()), "status stored: " + broken);
+		helper.assertTrue(readSavedWaypoints(helper).asList().stream().map(element -> element.getAsJsonObject())
+				.anyMatch(entry -> entry.get("name").getAsString().equals("Gold Farm") && entry.has("status")
+						&& entry.getAsJsonObject("status").get("state").getAsString().equals("broken")),
+				"status saved in waypoints.json");
+
+		// Listing lines carry a clickable tag.
+		run(helper, dispatcher, alice, "cway farms");
+		Component farmLine = alice.out.messages.stream().filter(line -> line.getString().contains("Gold Farm"))
+				.findFirst().orElseThrow();
+		helper.assertTrue(farmLine.getString().contains("Gold Farm [⚠ Broken] — 50 64 50"), farmLine.getString());
+		helper.assertValueEqual(clickOf(farmLine, "[⚠ Broken]"),
+				Optional.of(new ClickEvent.RunCommand("/cway projects broken")), "tag lists everything broken");
+		alice.out.take();
+
+		run(helper, dispatcher, alice, "cway info \"Gold Farm\"");
+		String info = alice.out.text();
+		helper.assertTrue(info.contains("Status: [⚠ Broken] out of bonemeal (" + bobName + ", just now)"), info);
+		Component infoButtons = alice.out.messages.get(alice.out.messages.size() - 1);
+		helper.assertValueEqual(clickOf(infoButtons, "[Status]"),
+				Optional.of(new ClickEvent.RunCommand("/cway status \"Gold Farm\"")), "info has a [Status] button");
+		alice.out.take();
+
+		run(helper, dispatcher, alice, "cway status \"Gold Farm\"");
+		String shown = alice.out.text();
+		helper.assertTrue(shown.contains("Gold Farm: [⚠ Broken] out of bonemeal (" + bobName + ", just now)"), shown);
+		helper.assertTrue(shown.contains("Set: [⚠ Broken] [⚒ WIP] [✎ Planned] [✔ Done] [Clear]"), shown);
+		helper.assertValueEqual(clickOf(alice.out.messages.get(1), "[⚒ WIP]"),
+				Optional.of(new ClickEvent.SuggestCommand("/cway status \"Gold Farm\" wip ")), "buttons fill in the command");
+		alice.out.take();
+
+		run(helper, dispatcher, alice, "cway status Base done");
+		alice.out.take();
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway projects"), 2, "two projects");
+		String projects = alice.out.take();
+		helper.assertTrue(projects.contains("=== Projects (2) ===")
+				&& projects.contains("Show: [⚠ Broken 1] [⚒ WIP 0] [✎ Planned 0] [✔ Done 1]"), projects);
+		helper.assertTrue(projects.indexOf("Gold Farm") < projects.indexOf("Base"), "broken first: " + projects);
+		helper.assertTrue(projects.contains("[Farms] Gold Farm [⚠ Broken] out of bonemeal · " + bobName + ", just now [Go]"),
+				projects);
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway projects broken"), 1, "filter by status");
+		helper.assertValueEqual(run(helper, dispatcher, alice, "cway projects planned"), 0, "nothing planned");
+		alice.out.take();
+		expectError(helper, dispatcher, alice, "cway projects fixed", "Unknown status \"fixed\"");
+		helper.assertValueEqual(run(helper, dispatcher, bob, "cway search bonemeal"), 1, "search finds status notes");
+		bob.out.take();
+		expectError(helper, dispatcher, alice, "cway status Base wip " + "x".repeat(ProjectStatus.MAX_NOTE_LENGTH + 1),
+				"Note is too long");
+
+		// Xaero: a broken build gets "!" as its symbol; web maps show the status next to the name.
+		Waypoint farm = mod.waypoints().get("Gold Farm").orElseThrow();
+		helper.assertValueEqual(io.github.steelaspect.sharedwaypoints.sync.SyncService.toSynced(farm).initials(), "!",
+				"broken -> ! in Xaero");
+		helper.assertValueEqual(io.github.steelaspect.sharedwaypoints.sync.SyncService.toSynced(
+				mod.waypoints().get("Base").orElseThrow()).initials(), "B", "other statuses keep their initials");
+		helper.assertValueEqual(io.github.steelaspect.sharedwaypoints.map.MapMarker.of(farm).label(),
+				"Gold Farm (⚠ Broken)", "map label");
+
+		// Menu: the status and the right to change it are in the snapshot, and STATUS runs /cway status.
+		MenuNetworking menus = mod.menus();
+		SyncPayload.WaypointData data = menus.snapshot(aliceEntity).waypoints().stream()
+				.filter(entry -> entry.id().equals(farm.id())).findFirst().orElseThrow();
+		helper.assertTrue(data.canSetStatus() && data.status() != null && data.status().state().equals("broken")
+				&& "out of bonemeal".equals(data.status().note()) && data.status().setByName().equals(bobName),
+				"menu snapshot: " + data);
+		String farmId = farm.id().toString();
+		ResultPayload wip = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.STATUS, farmId, "wip",
+				"fixing it\nnow"));
+		helper.assertTrue(wip.success() && wip.message().startsWith("Marked Gold Farm as WIP"), "menu status: " + wip.message());
+		ProjectStatus fixing = mod.waypoints().get(farm.id()).orElseThrow().status();
+		helper.assertTrue(fixing.state() == ProjectStatus.State.WIP && "fixing it now".equals(fixing.note()),
+				"menu note is one plain line: " + fixing);
+		ResultPayload bad = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.STATUS, farmId,
+				"wip remove Base", ""));
+		helper.assertTrue(!bad.success() && mod.waypoints().contains("Base"), "state must be a known id: " + bad.message());
+		ResultPayload cleared = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.STATUS, farmId, "clear", "x"));
+		helper.assertTrue(cleared.success() && mod.waypoints().get(farm.id()).orElseThrow().status() == null,
+				"menu clear: " + cleared.message());
+
+		// Returning players hear about broken builds, and which are theirs.
+		run(helper, dispatcher, bob, "cway status \"Gold Farm\" broken");
+		bob.out.take();
+		var viewer = io.github.steelaspect.sharedwaypoints.text.Viewer.of(aliceEntity, mod.favorites());
+		List<Component> join = mod.joinSummary().lines(Optional.of(java.time.Instant.now().plusSeconds(3600)), viewer);
+		helper.assertTrue(!join.isEmpty() && join.get(join.size() - 1).getString()
+				.equals("⚠ 1 build is marked Broken (1 of yours). [Show]"), "join summary: " + join);
+
+		run(helper, dispatcher, alice, "cway status \"Gold Farm\" clear");
+		helper.assertTrue(alice.out.take().contains("Cleared the status of Gold Farm"), "clear");
+		helper.assertTrue(mod.waypoints().get("Gold Farm").orElseThrow().status() == null, "cleared");
+		run(helper, dispatcher, moderator, "cway remove \"Gold Farm\"");
+		run(helper, dispatcher, moderator, "cway remove Base");
+		moderator.out.take();
 	}
 
 	// ---------------------------------------------------------- join summary

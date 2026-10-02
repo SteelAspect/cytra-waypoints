@@ -4,6 +4,7 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.permission.WaypointPermissions;
 import io.github.steelaspect.sharedwaypoints.text.Viewer;
 import io.github.steelaspect.sharedwaypoints.text.WaypointText;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -70,6 +71,7 @@ public final class JoinSummary {
 		}
 		List<Waypoint> fresh = mod.waypoints().addedSince(previous.get());
 		if (fresh.isEmpty()) {
+			brokenLine(viewer).ifPresent(lines::add);
 			return lines;
 		}
 		lines.add(Component.literal("✦ " + fresh.size() + (fresh.size() == 1 ? " new waypoint" : " new waypoints")
@@ -78,7 +80,25 @@ public final class JoinSummary {
 		if (fresh.size() > MAX_LINES) {
 			lines.add(WaypointText.muted("…and " + (fresh.size() - MAX_LINES) + " more. ").copy().append(showAllButton()));
 		}
+		brokenLine(viewer).ifPresent(lines::add);
 		return lines;
+	}
+
+	/** "⚠ 2 builds are marked Broken (1 of yours). [Show]", for returning players when anything is broken. */
+	private Optional<Component> brokenLine(Viewer viewer) {
+		List<Waypoint> broken = mod.waypoints().withStatus(ProjectStatus.State.BROKEN);
+		if (broken.isEmpty()) {
+			return Optional.empty();
+		}
+		long yours = viewer.playerId() == null ? 0
+				: broken.stream().filter(waypoint -> waypoint.creatorUuid().equals(viewer.playerId())).count();
+		return Optional.of(Component.literal("⚠ " + broken.size() + (broken.size() == 1 ? " build is" : " builds are")
+						+ " marked Broken" + (yours > 0 ? " (" + yours + " of yours)" : "") + ". ")
+				.withStyle(ChatFormatting.RED)
+				.append(Component.literal("[Show]").withStyle(style -> style
+						.withColor(ChatFormatting.YELLOW)
+						.withClickEvent(new ClickEvent.RunCommand("/cway projects broken"))
+						.withHoverEvent(new HoverEvent.ShowText(Component.literal("List the broken builds"))))));
 	}
 
 	private static Component showAllButton() {

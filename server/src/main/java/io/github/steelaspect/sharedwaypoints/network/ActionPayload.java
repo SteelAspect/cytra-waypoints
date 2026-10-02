@@ -16,7 +16,7 @@ import net.minecraft.resources.Identifier;
  */
 public record ActionPayload(Action action, List<String> args) implements CustomPacketPayload {
 	/** Versioned like {@link SyncPayload#TYPE}. */
-	public static final Type<ActionPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "action2"));
+	public static final Type<ActionPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "action3"));
 	public static final StreamCodec<FriendlyByteBuf, ActionPayload> CODEC = StreamCodec.of(ActionPayload::write, ActionPayload::read);
 
 	private static final int MAX_ARGS = 8;
@@ -59,7 +59,9 @@ public record ActionPayload(Action action, List<String> args) implements CustomP
 		/** Set a route's description: route id, text (empty clears it). */
 		ROUTE_DESCRIBE,
 		/** Delete a route: route id. */
-		ROUTE_DELETE
+		ROUTE_DELETE,
+		/** Set the project status: waypoint id, state id ({@code planned}, {@code wip}, {@code done}, {@code broken} or {@code clear}), note (may be empty). */
+		STATUS
 	}
 
 	public static ActionPayload of(Action action, String... args) {

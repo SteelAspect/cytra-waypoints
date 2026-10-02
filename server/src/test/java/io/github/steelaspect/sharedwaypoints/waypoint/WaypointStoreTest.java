@@ -201,4 +201,73 @@ class WaypointStoreTest {
 		assertEquals(List.of("Newest", "Same second"), names);
 		assertTrue(store.addedSince(Instant.parse("2026-09-30T11:00:00Z")).isEmpty());
 	}
+
+	@Test
+	void statusIsSavedLoadedAndListed() throws IOException {
+		WaypointStore store = loaded();
+		Waypoint farm = waypoint("Gold Farm", TestCategories.FARMS);
+		Waypoint base = waypoint("Base", TestCategories.BASES);
+		Waypoint storage = waypoint("Storage", TestCategories.STORAGE);
+		store.add(farm);
+		store.add(base);
+		store.add(storage);
+		assertTrue(store.withStatus(null).isEmpty());
+		assertFalse(Files.readString(file()).contains("\"status\""), "no status, no key in the file");
+
+		ProjectStatus broken = new ProjectStatus(ProjectStatus.State.BROKEN, "out of bonemeal", STEVE, "Steve", WHEN);
+		store.update(farm.withStatus(broken));
+		store.update(base.withStatus(new ProjectStatus(ProjectStatus.State.DONE, null, STEVE, "Steve", WHEN)));
+		store.update(storage.withStatus(new ProjectStatus(ProjectStatus.State.BROKEN, null, STEVE, "Steve",
+				WHEN.plusSeconds(60))));
+
+		JsonObject entry = JsonParser.parseString(Files.readString(file())).getAsJsonObject()
+				.getAsJsonArray("waypoints").asList().stream().map(element -> element.getAsJsonObject())
+				.filter(object -> object.get("name").getAsString().equals("Gold Farm")).findFirst().orElseThrow();
+		JsonObject status = entry.getAsJsonObject("status");
+		assertEquals("broken", status.get("state").getAsString());
+		assertEquals("out of bonemeal", status.get("note").getAsString());
+		assertEquals("Steve", status.get("setByName").getAsString());
+		assertEquals("2026-09-29T12:00:00Z", status.get("setAt").getAsString());
+
+		WaypointStore reloaded = loaded();
+		assertEquals(broken, reloaded.get("Gold Farm").orElseThrow().status());
+		// Broken first, the most recently changed one first within a status.
+		assertEquals(List.of("Storage", "Gold Farm", "Base"),
+				reloaded.withStatus(null).stream().map(Waypoint::name).toList());
+		assertEquals(List.of("Storage", "Gold Farm"),
+				reloaded.withStatus(ProjectStatus.State.BROKEN).stream().map(Waypoint::name).toList());
+		assertEquals(2, reloaded.countsByStatus().get(ProjectStatus.State.BROKEN));
+		assertEquals(0, reloaded.countsByStatus().get(ProjectStatus.State.WIP));
+		assertEquals(List.of("Gold Farm"), reloaded.search("bonemeal").stream().map(Waypoint::name).toList());
+
+		reloaded.update(reloaded.get("Gold Farm").orElseThrow().withStatus(null));
+		assertEquals(null, loaded().get("Gold Farm").orElseThrow().status());
+	}
+
+	@Test
+	void renamesAndDescriptionsKeepTheStatus() {
+		ProjectStatus wip = new ProjectStatus(ProjectStatus.State.WIP, null, STEVE, "Steve", WHEN);
+		Waypoint farm = waypoint("Farm", TestCategories.FARMS).withStatus(wip);
+		assertEquals(wip, farm.withName("Big Farm").withDescription("note").status());
+	}
+
+	@Test
+	void unknownOrIncompleteStatusesFromAHandEditAreTidied() throws IOException {
+		Files.createDirectories(file().getParent());
+		Files.writeString(file(), """
+				{"version": 2, "waypoints": [
+				  {"name": "Typo", "category": "farms", "x": 0, "y": 64, "z": 0, "dimension": "minecraft:overworld",
+				   "status": {"state": "brokn"}},
+				  {"name": "Bare", "category": "farms", "x": 0, "y": 64, "z": 0, "dimension": "minecraft:overworld",
+				   "status": {"state": "wip", "note": "  "}}
+				]}
+				""", StandardCharsets.UTF_8);
+		WaypointStore store = loaded();
+		assertEquals(null, store.get("Typo").orElseThrow().status(), "unknown state is dropped");
+		ProjectStatus bare = store.get("Bare").orElseThrow().status();
+		assertEquals(ProjectStatus.State.WIP, bare.state());
+		assertEquals(null, bare.note());
+		assertEquals("Unknown", bare.setByName());
+		assertEquals(Waypoint.SERVER_UUID, bare.setByUuid());
+	}
 }

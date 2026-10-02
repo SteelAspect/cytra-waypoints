@@ -106,14 +106,25 @@ public final class WaypointStore {
 				.toList();
 	}
 
-	/** Case-insensitive match on name, description or creator. */
+	/** Case-insensitive match on name, description, creator or status note. */
 	public List<Waypoint> search(String query) {
 		String needle = query.trim().toLowerCase(Locale.ROOT);
 		return byName.values().stream()
 				.filter(waypoint -> contains(waypoint.name(), needle)
 						|| contains(waypoint.description(), needle)
-						|| contains(waypoint.creatorName(), needle))
+						|| contains(waypoint.creatorName(), needle)
+						|| waypoint.statusInfo().map(status -> contains(status.note(), needle)).orElse(false))
 				.sorted(DISPLAY_ORDER)
+				.toList();
+	}
+
+	/** Waypoints with this status, or with any status when {@code state} is null; most recently changed first. */
+	public List<Waypoint> withStatus(ProjectStatus.State state) {
+		return byName.values().stream()
+				.filter(waypoint -> waypoint.status() != null && (state == null || waypoint.status().state() == state))
+				.sorted(Comparator.comparing((Waypoint waypoint) -> waypoint.status().state())
+						.thenComparing(waypoint -> waypoint.status().setAt(), Comparator.reverseOrder())
+						.thenComparing(Waypoint::name, String.CASE_INSENSITIVE_ORDER))
 				.toList();
 	}
 
@@ -123,6 +134,20 @@ public final class WaypointStore {
 		categories.get().ids().forEach(id -> counts.put(id, 0));
 		for (Waypoint waypoint : byName.values()) {
 			counts.merge(waypoint.category().id(), 1, Integer::sum);
+		}
+		return counts;
+	}
+
+	/** Number of waypoints with each status, in {@link ProjectStatus.State} order (0 for unused ones). */
+	public Map<ProjectStatus.State, Integer> countsByStatus() {
+		Map<ProjectStatus.State, Integer> counts = new java.util.EnumMap<>(ProjectStatus.State.class);
+		for (ProjectStatus.State state : ProjectStatus.State.values()) {
+			counts.put(state, 0);
+		}
+		for (Waypoint waypoint : byName.values()) {
+			if (waypoint.status() != null) {
+				counts.merge(waypoint.status().state(), 1, Integer::sum);
+			}
 		}
 		return counts;
 	}
@@ -308,7 +333,20 @@ public final class WaypointStore {
 				raw.description() == null || raw.description().isBlank() ? null : raw.description().trim(),
 				raw.creatorUuid() != null ? raw.creatorUuid() : Waypoint.SERVER_UUID,
 				raw.creatorName() != null ? raw.creatorName() : "Unknown",
-				raw.created() != null ? raw.created() : Instant.EPOCH);
+				raw.created() != null ? raw.created() : Instant.EPOCH,
+				sanitize(raw.status()));
+	}
+
+	/** A usable status, or null: unknown states (a typo in a hand edit) and blank notes are dropped. */
+	private static ProjectStatus sanitize(ProjectStatus raw) {
+		if (raw == null || raw.state() == null) {
+			return null;
+		}
+		String note = raw.note() == null || raw.note().isBlank() ? null : raw.note().trim();
+		return new ProjectStatus(raw.state(), note,
+				raw.setByUuid() != null ? raw.setByUuid() : Waypoint.SERVER_UUID,
+				raw.setByName() != null ? raw.setByName() : "Unknown",
+				raw.setAt() != null ? raw.setAt() : Instant.EPOCH);
 	}
 
 	/** Root object of the JSON file. */

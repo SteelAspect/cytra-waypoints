@@ -5,6 +5,7 @@ import io.github.steelaspect.sharedwaypoints.nav.NavMath;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.util.Page;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.time.Instant;
@@ -12,6 +13,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.ClickEvent;
@@ -50,6 +52,9 @@ public final class WaypointText {
 		if (viewer.isFavorite(waypoint)) {
 			line.append(Component.literal(" " + STAR).withStyle(ChatFormatting.GOLD));
 		}
+		if (waypoint.status() != null) {
+			line.append(" ").append(statusTag(waypoint));
+		}
 		line.append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
 				.append(Component.literal(waypoint.coordinates()).withStyle(ChatFormatting.GRAY))
 				.append(Component.literal(" (" + Dimensions.shortName(waypoint.dimension()) + ")")
@@ -84,6 +89,11 @@ public final class WaypointText {
 
 	/** Multi-line details for {@code /cway info}. */
 	public static List<Component> info(Waypoint waypoint, Viewer viewer, boolean canEdit) {
+		return info(waypoint, viewer, canEdit, false);
+	}
+
+	/** Multi-line details for {@code /cway info}; {@code canSetStatus} adds a [Status] button. */
+	public static List<Component> info(Waypoint waypoint, Viewer viewer, boolean canEdit, boolean canSetStatus) {
 		List<Component> lines = new ArrayList<>();
 		lines.add(Component.literal("=== ").withStyle(ChatFormatting.YELLOW)
 				.append(Component.literal(waypoint.name()).withStyle(waypoint.category().color(), ChatFormatting.BOLD))
@@ -92,6 +102,11 @@ public final class WaypointText {
 		waypoint.descriptionText().ifPresent(description ->
 				lines.add(Component.literal("  “" + description + "”").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC)));
 		lines.add(field("Category", categoryTag(waypoint.category())));
+		waypoint.statusInfo().ifPresent(status -> lines.add(field("Status", statusTag(waypoint)
+				.append(status.noteText().map(note -> Component.literal(" " + note).withStyle(ChatFormatting.WHITE))
+						.orElse(Component.empty()))
+				.append(Component.literal(" (" + status.setByName() + ", " + Formats.relativeAge(status.setAt(), Instant.now())
+						+ ")").withStyle(ChatFormatting.DARK_GRAY)))));
 		lines.add(field("Coordinates", Component.literal(waypoint.coordinates()).withStyle(ChatFormatting.WHITE)
 				.append(" ").append(copyCoordsButton(waypoint.coordinates()))));
 		lines.add(field("Dimension", Component.literal(Dimensions.shortName(waypoint.dimension()))
@@ -134,8 +149,116 @@ public final class WaypointText {
 					new ClickEvent.SuggestCommand(command("describe", waypoint.name()) + " "),
 					"Write a short note for this waypoint"));
 		}
+		if (canSetStatus) {
+			buttons.append(" ").append(button("[Status]", ChatFormatting.AQUA,
+					new ClickEvent.RunCommand(command("status", waypoint.name())),
+					"Mark it planned, WIP, done or broken"));
+		}
 		lines.add(buttons);
 		return lines;
+	}
+
+	// ---------------------------------------------------------------- projects
+
+	/**
+	 * Coloured {@code [⚠ Broken]} tag; the hover shows the note and who set it, clicking lists everything with that
+	 * status. Empty for a waypoint without a status.
+	 */
+	public static MutableComponent statusTag(Waypoint waypoint) {
+		ProjectStatus status = waypoint.status();
+		if (status == null) {
+			return Component.empty();
+		}
+		MutableComponent hover = Component.literal(status.state().symbol() + " " + status.state().displayName())
+				.withStyle(status.state().color(), ChatFormatting.BOLD);
+		status.noteText().ifPresent(note -> hover.append(
+				Component.literal("\n“" + note + "”").withStyle(ChatFormatting.WHITE, ChatFormatting.ITALIC)));
+		hover.append(Component.literal("\nSet by " + status.setByName() + " · "
+				+ Formats.relativeAge(status.setAt(), Instant.now())).withStyle(ChatFormatting.DARK_GRAY))
+				.append(Component.literal("\nClick to list everything " + status.state().displayName())
+						.withStyle(ChatFormatting.YELLOW));
+		return Component.literal("[" + status.state().symbol() + " " + status.state().displayName() + "]")
+				.withStyle(style -> style
+						.withColor(status.state().color())
+						.withClickEvent(new ClickEvent.RunCommand("/cway projects " + status.state().id()))
+						.withHoverEvent(new HoverEvent.ShowText(hover)));
+	}
+
+	/** {@code /cway status <name>}: "Gold Farm: [⚠ Broken] out of bonemeal (Dxvid, 2 h ago)" or "has no status". */
+	public static Component statusLine(Waypoint waypoint) {
+		MutableComponent line = Component.literal(waypoint.name()).withStyle(waypoint.category().color())
+				.append(Component.literal(": ").withStyle(ChatFormatting.GRAY));
+		ProjectStatus status = waypoint.status();
+		if (status == null) {
+			return line.append(Component.literal("no status").withStyle(ChatFormatting.GRAY));
+		}
+		line.append(statusTag(waypoint));
+		status.noteText().ifPresent(note -> line.append(Component.literal(" " + note).withStyle(ChatFormatting.WHITE)));
+		return line.append(Component.literal(" (" + status.setByName() + ", "
+				+ Formats.relativeAge(status.setAt(), Instant.now()) + ")").withStyle(ChatFormatting.DARK_GRAY));
+	}
+
+	/**
+	 * {@code [✎ Planned] [⚒ WIP] [✔ Done] [⚠ Broken] [Clear]}. Each one puts the command in the chat box, so a note
+	 * can be added before pressing Enter.
+	 */
+	public static Component statusButtons(Waypoint waypoint) {
+		MutableComponent buttons = Component.literal("  Set: ").withStyle(ChatFormatting.GRAY);
+		for (ProjectStatus.State state : ProjectStatus.State.values()) {
+			buttons.append(button("[" + state.symbol() + " " + state.displayName() + "]", state.color(),
+					new ClickEvent.SuggestCommand(command("status", waypoint.name()) + " " + state.id() + " "),
+					"Mark it " + state.displayName() + ". Type an optional note, then press Enter.")).append(" ");
+		}
+		if (waypoint.status() != null) {
+			buttons.append(button("[Clear]", ChatFormatting.DARK_GRAY,
+					new ClickEvent.RunCommand(command("status", waypoint.name()) + " clear"), "Remove the status"));
+		}
+		return buttons;
+	}
+
+	/** One line of {@code /cway projects}: the status first, then the usual listing line. */
+	public static MutableComponent projectLine(Waypoint waypoint, Viewer viewer) {
+		ProjectStatus status = waypoint.status();
+		MutableComponent line = categoryTag(waypoint.category()).append(" ").append(name(waypoint, viewer));
+		if (viewer.isFavorite(waypoint)) {
+			line.append(Component.literal(" " + STAR).withStyle(ChatFormatting.GOLD));
+		}
+		line.append(" ").append(statusTag(waypoint));
+		if (status != null) {
+			status.noteText().ifPresent(note -> line.append(Component.literal(" " + note).withStyle(ChatFormatting.WHITE)));
+			line.append(Component.literal(" · " + status.setByName() + ", " + Formats.relativeAge(status.setAt(), Instant.now()))
+					.withStyle(ChatFormatting.DARK_GRAY));
+		}
+		if (viewer.isPlayer()) {
+			line.append(" ").append(goButton(waypoint));
+		}
+		return line;
+	}
+
+	/** {@code Show: [⚠ Broken 2] [⚒ WIP 1] [✎ Planned 0] [✔ Done 5]} above the full project list. */
+	public static Component statusFilters(Map<ProjectStatus.State, Integer> counts) {
+		MutableComponent filters = Component.literal("Show: ").withStyle(ChatFormatting.GRAY);
+		for (ProjectStatus.State state : ProjectStatus.State.values()) {
+			int count = counts.getOrDefault(state, 0);
+			filters.append(button("[" + state.symbol() + " " + state.displayName() + " " + count + "]",
+					count > 0 ? state.color() : ChatFormatting.DARK_GRAY,
+					new ClickEvent.RunCommand("/cway projects " + state.id()),
+					"Only " + state.displayName().toLowerCase(java.util.Locale.ROOT) + " projects")).append(" ");
+		}
+		return filters;
+	}
+
+	/** Sent to a waypoint's creator when someone else changes its status. */
+	public static Component statusChanged(Waypoint waypoint, Viewer viewer) {
+		ProjectStatus status = waypoint.status();
+		return Component.literal("✦ ").withStyle(ChatFormatting.GOLD)
+				.append(Component.literal(status.setByName()).withStyle(ChatFormatting.YELLOW))
+				.append(Component.literal(" marked your waypoint ").withStyle(ChatFormatting.GRAY))
+				.append(name(waypoint, viewer))
+				.append(" ")
+				.append(statusTag(waypoint))
+				.append(status.noteText().map(note -> Component.literal(" " + note).withStyle(ChatFormatting.WHITE))
+						.orElse(Component.empty()));
 	}
 
 	/** Pushed to everyone online when a waypoint is added. */
@@ -365,6 +488,8 @@ public final class WaypointText {
 		card.append(Component.literal("\n" + waypoint.category().displayName() + " · "
 				+ Dimensions.shortName(waypoint.dimension()) + " · " + waypoint.coordinates()).withStyle(ChatFormatting.GRAY));
 		distanceText(waypoint, viewer).ifPresent(distance -> card.append("\n").append(distance));
+		waypoint.statusInfo().ifPresent(status -> card.append(
+				Component.literal("\n" + status.summary()).withStyle(status.state().color())));
 		waypoint.descriptionText().ifPresent(description -> card.append(
 				Component.literal("\n“" + description + "”").withStyle(ChatFormatting.WHITE, ChatFormatting.ITALIC)));
 		card.append(Component.literal("\nAdded by " + waypoint.creatorName() + " · "

@@ -6,6 +6,7 @@ import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
 import io.github.steelaspect.sharedwaypoints.text.Formats;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import io.github.steelaspect.sharedwaypoints.xaero.XaeroShareFormat;
 import java.time.Instant;
@@ -34,6 +35,10 @@ public final class WaypointMenuScreen extends Screen {
 	private static final int TOP = 44;
 	private static final String ALL = "\u0000all";
 	private static final String FAVORITES = "\u0000favorites";
+	/** Any waypoint with a project status. */
+	private static final String PROJECTS = "\u0000projects";
+	/** Prefix of the one-status filters, followed by the state id. */
+	private static final String STATUS_PREFIX = "\u0000status:";
 
 	/** Sorting options. */
 	private enum Sort {
@@ -60,6 +65,7 @@ public final class WaypointMenuScreen extends Screen {
 	private Button editButton;
 	private Button teleportButton;
 	private Button removeButton;
+	private Button statusButton;
 	private List<String> filterIds = List.of();
 	/** Whether the current layout has the Teleport button (it changes the last row). */
 	private boolean builtWithTeleport;
@@ -94,8 +100,7 @@ public final class WaypointMenuScreen extends Screen {
 		});
 		addRenderableWidget(searchBox);
 
-		filterIds = new ArrayList<>(List.of(ALL, FAVORITES));
-		ClientWaypoints.categories().forEach(category -> filterIds.add(category.id()));
+		filterIds = filterValues();
 		if (!filterIds.contains(filter)) {
 			filter = ALL;
 		}
@@ -126,13 +131,13 @@ public final class WaypointMenuScreen extends Screen {
 		list = addRenderableWidget(new WaypointList(minecraft, this::onSelect, waypoint -> go()));
 		list.updateSizeAndPosition(listRight - MARGIN, bottom - TOP, MARGIN, TOP);
 
-		// --- action buttons: three rows at the bottom of the details panel (the last row has a third
-		// button, Teleport, for players allowed to teleport)
+		// --- action buttons: four rows at the bottom of the details panel (the third row has a third
+		// button, Teleport, for players allowed to teleport; the last row is Status)
 		int half = (panelWidth - 4) / 2;
 		int third = (panelWidth - 8) / 3;
 		boolean teleport = ClientWaypoints.canTeleport();
 		builtWithTeleport = teleport;
-		buttonsTop = bottom - 3 * 22 + 2;
+		buttonsTop = bottom - 4 * 22 + 2;
 		goButton = actionButton("▶ Go", panelLeft, 0, half, "Start the on-screen compass", this::go);
 		xaeroButton = actionButton("Add to Xaero", panelLeft + half + 4, 0, half, "", this::addToXaero);
 		copyButton = actionButton("Copy coords", panelLeft, 1, half, "Copy \"X Y Z\" to the clipboard", this::copyCoordinates);
@@ -143,6 +148,7 @@ public final class WaypointMenuScreen extends Screen {
 		removeButton = actionButton("Remove", panelLeft + lastWidth + 4, 2, lastWidth, "Remove it for everyone", this::remove);
 		teleportButton = actionButton("Teleport", panelLeft + 2 * (lastWidth + 4), 2, lastWidth, "Teleport there", this::teleport);
 		teleportButton.visible = teleport;
+		statusButton = actionButton("Status…", panelLeft, 3, panelWidth, "", this::status);
 
 		addRenderableWidget(Button.builder(Component.literal("Routes"), button -> minecraft.setScreen(new RoutesScreen(this)))
 				.bounds(width - MARGIN - 80 - 4 - 80, height - 26, 80, 20)
@@ -164,12 +170,30 @@ public final class WaypointMenuScreen extends Screen {
 		return button;
 	}
 
+	/** All, Favourites, Projects, each status, then the categories. */
+	private static List<String> filterValues() {
+		List<String> ids = new ArrayList<>(List.of(ALL, FAVORITES, PROJECTS));
+		for (ProjectStatus.State state : ProjectStatus.State.values()) {
+			ids.add(STATUS_PREFIX + state.id());
+		}
+		ClientWaypoints.categories().forEach(category -> ids.add(category.id()));
+		return ids;
+	}
+
 	private static Component filterLabel(String id) {
 		if (ALL.equals(id)) {
 			return Component.literal("All");
 		}
 		if (FAVORITES.equals(id)) {
 			return Component.literal("★ Favourites");
+		}
+		if (PROJECTS.equals(id)) {
+			return Component.literal("Projects");
+		}
+		if (id.startsWith(STATUS_PREFIX)) {
+			return ProjectStatus.State.byId(id.substring(STATUS_PREFIX.length()))
+					.<Component>map(state -> Component.literal(state.symbol() + " " + state.displayName()).withStyle(state.color()))
+					.orElse(Component.literal(id));
 		}
 		Category category = ClientWaypoints.category(id);
 		return Component.literal(category.displayName()).withStyle(category.color());
@@ -179,8 +203,7 @@ public final class WaypointMenuScreen extends Screen {
 
 	/** A new snapshot or action result arrived from the server. */
 	private void onServerUpdate() {
-		List<String> ids = new ArrayList<>(List.of(ALL, FAVORITES));
-		ClientWaypoints.categories().forEach(category -> ids.add(category.id()));
+		List<String> ids = filterValues();
 		if (!ids.equals(filterIds) || ClientWaypoints.canTeleport() != builtWithTeleport) {
 			// Categories or the player's rights changed: the filter values or the button row must be rebuilt.
 			rebuildWidgets();
@@ -199,7 +222,10 @@ public final class WaypointMenuScreen extends Screen {
 				.filter(waypoint -> switch (filter) {
 					case ALL -> true;
 					case FAVORITES -> isFavorite(waypoint);
-					default -> waypoint.category().id().equals(filter);
+					case PROJECTS -> waypoint.status() != null;
+					default -> filter.startsWith(STATUS_PREFIX)
+							? waypoint.status() != null && waypoint.status().state().id().equals(filter.substring(STATUS_PREFIX.length()))
+							: waypoint.category().id().equals(filter);
 				})
 				.sorted(comparator())
 				.toList();
@@ -214,7 +240,10 @@ public final class WaypointMenuScreen extends Screen {
 		return waypoint.name().toLowerCase(Locale.ROOT).contains(needle)
 				|| waypoint.creatorName().toLowerCase(Locale.ROOT).contains(needle)
 				|| waypoint.category().displayName().toLowerCase(Locale.ROOT).contains(needle)
-				|| waypoint.descriptionText().map(text -> text.toLowerCase(Locale.ROOT).contains(needle)).orElse(false);
+				|| waypoint.descriptionText().map(text -> text.toLowerCase(Locale.ROOT).contains(needle)).orElse(false)
+				|| waypoint.statusInfo().map(status -> status.state().displayName().toLowerCase(Locale.ROOT).contains(needle)
+						|| status.noteText().map(note -> note.toLowerCase(Locale.ROOT).contains(needle)).orElse(false))
+						.orElse(false);
 	}
 
 	private static Comparator<Waypoint> comparator() {
@@ -265,6 +294,12 @@ public final class WaypointMenuScreen extends Screen {
 		removeButton.setTooltip(Tooltip.create(Component.literal(removeButton.active
 				? "Remove it for everyone" : "Only its creator or an op can remove it")));
 		teleportButton.active = any;
+		statusButton.active = data.map(d -> d.canSetStatus()).orElse(false);
+		statusButton.setMessage(Component.literal(selected.flatMap(Waypoint::statusInfo)
+				.map(status -> "Status: " + status.state().symbol() + " " + status.state().displayName())
+				.orElse("Set status…")));
+		statusButton.setTooltip(Tooltip.create(Component.literal(statusButton.active
+				? "Mark it planned, WIP, done or broken, with a note" : "You can't change this waypoint's status")));
 	}
 
 	private Optional<Waypoint> selected() {
@@ -325,6 +360,10 @@ public final class WaypointMenuScreen extends Screen {
 	private void teleport() {
 		act(Action.TELEPORT);
 		onClose();
+	}
+
+	private void status() {
+		selected().ifPresent(waypoint -> minecraft.setScreen(new StatusScreen(this, waypoint)));
 	}
 
 	private void edit() {
@@ -424,6 +463,18 @@ public final class WaypointMenuScreen extends Screen {
 		}
 		if (waypoint.id().equals(ClientWaypoints.navigatingTo())) {
 			graphics.drawString(font, "▶ Navigating here", x, y, Colors.GREEN);
+			y += 11;
+		}
+		if (waypoint.status() != null) {
+			ProjectStatus status = waypoint.status();
+			int color = 0xFF000000 | status.state().rgb();
+			var lines = font.split(Component.literal(status.summary()), maxWidth);
+			for (int i = 0; i < lines.size() && i < 2; i++) {
+				graphics.drawString(font, lines.get(i), x, y, color);
+				y += 10;
+			}
+			graphics.drawString(font, font.plainSubstrByWidth("set by " + status.setByName() + " · "
+					+ Formats.relativeAge(status.setAt(), Instant.now()), maxWidth), x, y, Colors.DARK_GRAY);
 			y += 11;
 		}
 		// The creator line sits at the bottom of the text area; the description fills the space above it.

@@ -18,6 +18,7 @@ import java.util.UUID;
  * @param creatorUuid UUID of the player who added it (all zeros for the console / command blocks)
  * @param creatorName name of the creator at the time it was added
  * @param created     when it was added (stored as ISO-8601 UTC)
+ * @param status      where the build stands (planned, WIP, done, broken), or null for none
  */
 public record Waypoint(
 		UUID id,
@@ -30,7 +31,8 @@ public record Waypoint(
 		String description,
 		UUID creatorUuid,
 		String creatorName,
-		Instant created) {
+		Instant created,
+		ProjectStatus status) {
 
 	/** Xaero's Minimap rejects shared waypoint names longer than 32 characters. */
 	public static final int MAX_NAME_LENGTH = 32;
@@ -39,14 +41,29 @@ public record Waypoint(
 	/** Creator UUID used for waypoints added by the console or a command block. */
 	public static final UUID SERVER_UUID = new UUID(0L, 0L);
 
+	/** A waypoint without a status. */
+	public Waypoint(UUID id, String name, Category category, int x, int y, int z, String dimension, String description,
+			UUID creatorUuid, String creatorName, Instant created) {
+		this(id, name, category, x, y, z, dimension, description, creatorUuid, creatorName, created, null);
+	}
+
 	public Waypoint withName(String newName) {
-		return new Waypoint(id, newName, category, x, y, z, dimension, description, creatorUuid, creatorName, created);
+		return new Waypoint(id, newName, category, x, y, z, dimension, description, creatorUuid, creatorName, created, status);
+	}
+
+	/** Copy with a new status; {@code null} clears it. */
+	public Waypoint withStatus(ProjectStatus newStatus) {
+		return new Waypoint(id, name, category, x, y, z, dimension, description, creatorUuid, creatorName, created, newStatus);
+	}
+
+	public Optional<ProjectStatus> statusInfo() {
+		return Optional.ofNullable(status);
 	}
 
 	/** Copy with a new description; {@code null} or blank clears it. */
 	public Waypoint withDescription(String newDescription) {
 		String cleaned = newDescription == null || newDescription.isBlank() ? null : newDescription.trim();
-		return new Waypoint(id, name, category, x, y, z, dimension, cleaned, creatorUuid, creatorName, created);
+		return new Waypoint(id, name, category, x, y, z, dimension, cleaned, creatorUuid, creatorName, created, status);
 	}
 
 	public Optional<String> descriptionText() {

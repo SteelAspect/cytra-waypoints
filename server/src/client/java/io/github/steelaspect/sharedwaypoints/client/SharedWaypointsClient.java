@@ -29,7 +29,10 @@ import org.lwjgl.glfw.GLFW;
 public final class SharedWaypointsClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
 			KeyMapping.Category.register(Identifier.fromNamespaceAndPath("sharedwaypoints", "main"));
-	private static final Identifier OLD_ACTION_CHANNEL = Identifier.fromNamespaceAndPath("sharedwaypoints", "action");
+	/** Action channels of older menu protocol versions (1.4.x, then 1.5.0 to 2.1.x). */
+	private static final java.util.Set<Identifier> OLD_ACTION_CHANNELS = java.util.Set.of(
+			Identifier.fromNamespaceAndPath("sharedwaypoints", "action"),
+			Identifier.fromNamespaceAndPath("sharedwaypoints", "action2"));
 	private static final int PAUSE_BUTTON_WIDTH = 80;
 	private static final int PAUSE_BUTTON_MARGIN = 5;
 	private static KeyMapping openMenu;
@@ -77,8 +80,8 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 			return;
 		}
 		if (!ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
-			// 1.4.x servers speak the first version of the menu protocol ("action" instead of "action2").
-			boolean olderServer = ClientPlayNetworking.getSendable().contains(OLD_ACTION_CHANNEL);
+			// Older servers speak an older version of the menu protocol ("action" or "action2" instead of "action3").
+			boolean olderServer = ClientPlayNetworking.getSendable().stream().anyMatch(OLD_ACTION_CHANNELS::contains);
 			client.player.displayClientMessage(Component.literal(olderServer
 					? "This server runs an older SharedWaypoints; the menu needs the same version on both sides"
 					: "SharedWaypoints isn't installed on this server").withStyle(ChatFormatting.GRAY), true);

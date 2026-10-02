@@ -26,10 +26,10 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 		implements CustomPacketPayload {
 
 	/**
-	 * The channel names carry the menu protocol version ({@code sync2} since routes were added in 1.5.0), so a
+	 * The channel names carry the menu protocol version ({@code sync3} since project status in 2.2.0), so a
 	 * client and server with different versions never try to read each other's data: the menu just isn't offered.
 	 */
-	public static final Type<SyncPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "sync2"));
+	public static final Type<SyncPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "sync3"));
 	public static final StreamCodec<FriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of(SyncPayload::write, SyncPayload::read);
 	/** Largest payload accepted (a few thousand waypoints fit easily). */
 	public static final int MAX_SIZE = 4 * 1024 * 1024;
@@ -44,10 +44,16 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 	 * @param canEdit   may rename / describe it
 	 * @param canRemove may remove it
 	 * @param favorite  is one of this player's favourites
+	 * @param status    its project status, or null
+	 * @param canSetStatus may set or clear the status
 	 */
 	public record WaypointData(UUID id, String name, String categoryId, int x, int y, int z, String dimension,
 			String description, String creatorName, long createdEpochSecond, boolean canEdit, boolean canRemove,
-			boolean favorite) {
+			boolean favorite, StatusData status, boolean canSetStatus) {
+	}
+
+	/** A project status: state id ({@code broken}, {@code wip}, ...), optional note, who set it and when. */
+	public record StatusData(String state, String note, String setByName, long setAtEpochSecond) {
 	}
 
 	/**
@@ -89,7 +95,14 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 			buf.writeNullable(waypoint.description(), FriendlyByteBuf::writeUtf);
 			buf.writeUtf(waypoint.creatorName());
 			buf.writeVarLong(waypoint.createdEpochSecond());
-			buf.writeByte((waypoint.canEdit() ? 1 : 0) | (waypoint.canRemove() ? 2 : 0) | (waypoint.favorite() ? 4 : 0));
+			buf.writeByte((waypoint.canEdit() ? 1 : 0) | (waypoint.canRemove() ? 2 : 0) | (waypoint.favorite() ? 4 : 0)
+					| (waypoint.canSetStatus() ? 8 : 0));
+			buf.writeNullable(waypoint.status(), (out, status) -> {
+				out.writeUtf(status.state());
+				out.writeNullable(status.note(), FriendlyByteBuf::writeUtf);
+				out.writeUtf(status.setByName());
+				out.writeVarLong(status.setAtEpochSecond());
+			});
 		}
 		buf.writeBoolean(payload.canAdd);
 		buf.writeBoolean(payload.canTeleport);
@@ -131,8 +144,10 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 			String creator = buf.readUtf();
 			long created = buf.readVarLong();
 			byte flags = buf.readByte();
+			StatusData status = buf.readNullable(in -> new StatusData(in.readUtf(),
+					in.readNullable(FriendlyByteBuf::readUtf), in.readUtf(), in.readVarLong()));
 			waypoints.add(new WaypointData(id, name, categoryId, x, y, z, dimension, description, creator, created,
-					(flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0));
+					(flags & 1) != 0, (flags & 2) != 0, (flags & 4) != 0, status, (flags & 8) != 0));
 		}
 		boolean canAdd = buf.readBoolean();
 		boolean canTeleport = buf.readBoolean();

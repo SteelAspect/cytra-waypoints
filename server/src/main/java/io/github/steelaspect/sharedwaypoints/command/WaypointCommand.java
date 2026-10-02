@@ -18,6 +18,7 @@ import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.util.Page;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import io.github.steelaspect.sharedwaypoints.waypoint.WaypointStore;
@@ -53,6 +54,7 @@ import net.minecraft.server.level.ServerPlayer;
  * Navigation                /cway go &lt;name&gt; | stop | tp &lt;name&gt; (op)
  * Personal                  /cway favorite &lt;name&gt; | favorites
  * Editing                   /cway add &lt;name&gt; &lt;category&gt; [x y z] [dimension] | remove | rename | describe
+ * Projects                  /cway status &lt;name&gt; [planned|wip|done|broken [note] | clear] | projects [status]
  * Routes                    /cway route [list] | info | go &lt;route&gt; [stop] | skip | create | add | drop | move
  *                           | rename | describe | delete
  * Xaero                     /cway xaero &lt;name&gt;   (what [Add to Xaero] runs)
@@ -75,6 +77,8 @@ public final class WaypointCommand {
 			Component.literal("You can only remove waypoints you created"));
 	private static final SimpleCommandExceptionType CANNOT_EDIT = new SimpleCommandExceptionType(
 			Component.literal("You can only edit waypoints you created"));
+	private static final SimpleCommandExceptionType CANNOT_SET_STATUS = new SimpleCommandExceptionType(
+			Component.literal("You can only set the status of waypoints you created"));
 	private static final SimpleCommandExceptionType NEEDS_POSITION = new SimpleCommandExceptionType(
 			Component.literal("Give coordinates (x y z) when not running this as a player"));
 	private static final SimpleCommandExceptionType NOTHING_REACHABLE = new SimpleCommandExceptionType(
@@ -215,6 +219,15 @@ public final class WaypointCommand {
 										.executes(context -> command.describe(context.getSource(),
 												string(context, "name"), string(context, "text"))))))
 
+				// ---- projects
+				.then(command.statusTree())
+				.then(Commands.literal("projects")
+						.executes(context -> command.listProjects(context.getSource(), null))
+						.then(Commands.argument("status", StringArgumentType.word())
+								.suggests((context, builder) -> SharedSuggestionProvider.suggest(
+										java.util.Arrays.stream(ProjectStatus.State.values()).map(ProjectStatus.State::id), builder))
+								.executes(context -> command.listProjects(context.getSource(), command.state(context)))))
+
 				// Brigadier always prefers a matching literal (add, info, ...) over this argument,
 				// so a category name can never shadow a subcommand.
 				.then(Commands.argument("category", StringArgumentType.word())
@@ -310,7 +323,8 @@ public final class WaypointCommand {
 	private int info(CommandSourceStack source, String name) throws CommandSyntaxException {
 		Waypoint waypoint = find(name);
 		boolean canEdit = WaypointPermissions.canEdit(source, waypoint);
-		for (Component line : WaypointText.info(waypoint, viewer(source), canEdit)) {
+		boolean canSetStatus = WaypointPermissions.canSetStatus(source, waypoint);
+		for (Component line : WaypointText.info(waypoint, viewer(source), canEdit, canSetStatus)) {
 			reply(source, line);
 		}
 		return 1;
@@ -520,6 +534,101 @@ public final class WaypointCommand {
 				: WaypointText.success("Updated the description of " + waypoint.name()));
 		warnIfUnsaved(source);
 		return 1;
+	}
+
+	// ------------------------------------------------------------------- projects
+
+	/** {@code /cway status <name> [planned|wip|done|broken [note] | clear]}. */
+	private LiteralArgumentBuilder<CommandSourceStack> statusTree() {
+		RequiredArgumentBuilder<CommandSourceStack, String> name = nameArgument("name", WaypointPermissions::canSetStatus)
+				.executes(context -> showStatus(context.getSource(), string(context, "name")));
+		for (ProjectStatus.State state : ProjectStatus.State.values()) {
+			name.then(Commands.literal(state.id())
+					.executes(context -> setStatus(context.getSource(), string(context, "name"), state, ""))
+					.then(Commands.argument("note", StringArgumentType.greedyString())
+							.executes(context -> setStatus(context.getSource(), string(context, "name"), state,
+									string(context, "note")))));
+		}
+		name.then(Commands.literal("clear")
+				.executes(context -> setStatus(context.getSource(), string(context, "name"), null, "")));
+		return Commands.literal("status").then(name);
+	}
+
+	/** {@code /cway status <name>}: the current status and buttons to change it. */
+	private int showStatus(CommandSourceStack source, String name) throws CommandSyntaxException {
+		Waypoint waypoint = find(name);
+		reply(source, WaypointText.statusLine(waypoint));
+		if (WaypointPermissions.canSetStatus(source, waypoint)) {
+			reply(source, WaypointText.statusButtons(waypoint));
+		}
+		return 1;
+	}
+
+	private int setStatus(CommandSourceStack source, String name, ProjectStatus.State state, String rawNote)
+			throws CommandSyntaxException {
+		Waypoint waypoint = find(name);
+		if (!WaypointPermissions.canSetStatus(source, waypoint)) {
+			throw CANNOT_SET_STATUS.create();
+		}
+		if (state == null) {
+			mod.waypoints().update(waypoint.withStatus(null));
+			reply(source, WaypointText.success("Cleared the status of " + waypoint.name()));
+			warnIfUnsaved(source);
+			return 1;
+		}
+		String note = rawNote.trim();
+		Optional<String> problem = ProjectStatus.validateNote(note);
+		if (problem.isPresent()) {
+			throw INVALID_TEXT.create(problem.get());
+		}
+		ServerPlayer player = source.getPlayer();
+		ProjectStatus status = new ProjectStatus(state, note.isEmpty() ? null : note,
+				player != null ? player.getUUID() : Waypoint.SERVER_UUID,
+				player != null ? player.getGameProfile().name() : source.getTextName(),
+				Instant.now().truncatedTo(ChronoUnit.SECONDS));
+		Waypoint updated = mod.waypoints().update(waypoint.withStatus(status));
+		reply(source, WaypointText.success("Marked " + waypoint.name() + " as " + state.displayName())
+				.copy().append(" ").append(WaypointText.statusTag(updated)));
+		warnIfUnsaved(source);
+		tellCreator(source, updated);
+		return 1;
+	}
+
+	/** Lets the creator know (if they're online and didn't do it themselves) that someone changed their build's status. */
+	private void tellCreator(CommandSourceStack source, Waypoint waypoint) {
+		ServerPlayer creator = source.getServer().getPlayerList().getPlayer(waypoint.creatorUuid());
+		if (creator != null && creator != source.getPlayer() && WaypointPermissions.canView(creator)) {
+			creator.sendSystemMessage(WaypointText.statusChanged(waypoint, Viewer.of(creator, mod.favorites())));
+		}
+	}
+
+	/** {@code /cway projects [status]}: every waypoint with a status (or one status), most recently changed first. */
+	private int listProjects(CommandSourceStack source, ProjectStatus.State state) {
+		List<Waypoint> projects = mod.waypoints().withStatus(state);
+		reply(source, WaypointText.header((state == null ? "Projects" : state.displayName() + " projects")
+				+ " (" + projects.size() + ")"));
+		if (projects.isEmpty()) {
+			reply(source, WaypointText.muted(state == null
+					? "No waypoint has a status yet. Set one with /cway status <name> <planned|wip|done|broken>."
+					: "Nothing is marked " + state.displayName() + "."));
+			return 0;
+		}
+		if (state == null) {
+			reply(source, WaypointText.statusFilters(mod.waypoints().countsByStatus()));
+		}
+		Viewer viewer = viewer(source);
+		projects.stream().limit(MAX_SEARCH_RESULTS).forEach(waypoint -> reply(source, WaypointText.projectLine(waypoint, viewer)));
+		if (projects.size() > MAX_SEARCH_RESULTS) {
+			reply(source, WaypointText.muted("…and " + (projects.size() - MAX_SEARCH_RESULTS)
+					+ " more. Filter with /cway projects <status>."));
+		}
+		return projects.size();
+	}
+
+	private ProjectStatus.State state(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+		String id = string(context, "status");
+		return ProjectStatus.State.byId(id).orElseThrow(() -> new SimpleCommandExceptionType(Component.literal(
+				"Unknown status \"" + id + "\". Use one of: planned, wip, done, broken")).create());
 	}
 
 	// --------------------------------------------------------------------- routes

@@ -24,6 +24,11 @@ public final class WaypointPermissions {
 	public static final String REMOVE = "sharedwaypoints.remove";
 	/** Rename or describe any waypoint. Default: op level 2. Creators can always edit their own. */
 	public static final String EDIT = "sharedwaypoints.edit";
+	/**
+	 * Set or clear a waypoint's project status (planned / WIP / done / broken). Default: everyone, so whoever finds a
+	 * broken farm can say so. Creators can always set their own.
+	 */
+	public static final String STATUS = "sharedwaypoints.status";
 	/** Teleport to waypoints. Default: op level 2. */
 	public static final String TELEPORT = "sharedwaypoints.teleport";
 	/** Create routes. Default: everyone. Editing and deleting use {@link #EDIT} and {@link #REMOVE} like waypoints. */
@@ -82,6 +87,11 @@ public final class WaypointPermissions {
 	/** Whether the source may rename or describe this waypoint (has the node, or created it). */
 	public static boolean canEdit(CommandSourceStack source, Waypoint waypoint) {
 		return Permissions.check(source, EDIT, MODERATE_DEFAULT) || isCreator(source, waypoint);
+	}
+
+	/** Whether the source may set this waypoint's status (has the node, may edit it, or created it). */
+	public static boolean canSetStatus(CommandSourceStack source, Waypoint waypoint) {
+		return Permissions.check(source, STATUS, true) || canEdit(source, waypoint);
 	}
 
 	/** Whether the source may delete this route (has the remove node, or created it). */
