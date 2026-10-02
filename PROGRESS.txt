@@ -190,3 +190,4 @@
 [2026-10-02 18:42] DONE - Release v2.1.0 published (server + client jars): https://github.com/SteelAspect/sharedwaypoints/releases/tag/v2.1.0. PR #9 (2.2.0, dev -> main) opened; CI green
 [2026-10-02 20:52] DONE - 2.2.0 merged (PR #9 -> main 662b5fe, user's request); release v2.2.0 started; dev fast-forwarded to main
 [2026-10-02 20:54] DONE - Release v2.2.0 published (server + client jars): https://github.com/SteelAspect/sharedwaypoints/releases/tag/v2.2.0
+[2026-10-02 23:25] STARTED - 2.3.0 one jar (user chose: merge into one mod, build now; Xaero must stay optional on the server): Xaero sync code moves into the main mod (client-only entrypoint, Xaero only 'suggests'), one released jar sharedwaypoints-<version>.jar for server and players, 'breaks' the old sharedwaypoints-client so Fabric says to remove it; the old client Gradle project becomes test-only (clienttest)
