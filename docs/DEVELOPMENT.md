@@ -176,9 +176,9 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
 - Routes store waypoint ids. Deleting a waypoint drops it from every route (`RouteStore.forgetWaypoint`).
   Navigation keeps the id of the stop it's heading to. It re-finds that stop's position whenever the route changes,
   so dropped, moved or deleted stops never make it skip one.
-- The menu's channels carry a protocol version (`sync2`, `action2`, `result2` since 1.5.0). A client and server
-  from different protocol versions never exchange data they can't read. The client sees the old `action` channel
-  and tells the player the server is older. Change the suffix whenever a payload's layout changes.
+- The menu's channels carry a protocol version (`sync3`, `action3`, `result3` since 2.2.0, which added project
+  status; `sync2` etc. from 1.5.0). A client and server from different protocol versions never exchange data they
+  can't read. The client sees an old `action` / `action2` channel and tells the player the server is older. Change the suffix whenever a payload's layout changes.
 - The waypoint Y is the block the player stands in. Distances in lists are horizontal; arrival also counts height.
 - Chat replies are sent even when `sendCommandFeedback` is off, because for /cway the reply is the result.
 - In singleplayer, every world shares the same `config/sharedwaypoints/` list.

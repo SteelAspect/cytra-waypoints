@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.2.0 — 2026-10-02
+
+- **Project status.** Mark a waypoint **Planned**, **WIP**, **Done** or **Broken**, with an optional note ("out of
+  bonemeal") and who set it when.
+  - Chat: `/cway status <name>` shows it with buttons, `/cway status <name> broken out of bonemeal` sets it,
+    `/cway status <name> clear` removes it. `/cway projects` lists everything with a status (broken first) with
+    filter buttons; `/cway projects broken` only the broken ones. A coloured **[⚠ Broken]** tag shows in every list,
+    hover card and `/cway info` (which gets a **[Status]** button). Search also finds status notes.
+  - Menu: **Set status…** opens a small screen (note + one button per status); the status shows in the details and
+    as a symbol in the list; new filters **Projects**, **⚠ Broken**, **⚒ WIP**, **✎ Planned**, **✔ Done**.
+  - When someone else changes your waypoint's status, you're told (if online). Returning players see
+    "⚠ 2 builds are marked Broken (1 of yours) [Show]" when they join.
+  - Xaero's Minimap sync: a broken build's waypoint gets **!** as its symbol. BlueMap / squaremap: the status is in
+    the marker's label and popup.
+  - New permission `sharedwaypoints.status`, default everyone. Creators can always set their own.
+  - Stored as an optional `status` object in `waypoints.json`; older files load unchanged.
+- **Update both jars.** The menu's data changed, so its channels are now `sync3` / `action3` / `result3`. With a 2.1 game
+  on a 2.2 server (or the other way round) the menu isn't offered; chat commands and the Xaero sync keep
+  working, and players with an older client jar are told to update.
+
 ## 2.1.0 — 2026-10-02
 
 - **Portal guide: `/cway portal`.** Look at a Nether portal and run it: chat shows the portal's size and where its

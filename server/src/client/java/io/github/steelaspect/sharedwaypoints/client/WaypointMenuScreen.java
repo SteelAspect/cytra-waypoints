@@ -389,7 +389,8 @@ public final class WaypointMenuScreen extends Screen {
 		filter = switch (filterId) {
 			case "all" -> ALL;
 			case "favorites" -> FAVORITES;
-			default -> filterId;
+			case "projects" -> PROJECTS;
+			default -> filterId.startsWith("status:") ? STATUS_PREFIX + filterId.substring("status:".length()) : filterId;
 		};
 		sort = Sort.valueOf(sortName.toUpperCase(Locale.ROOT));
 		rebuildWidgets();
