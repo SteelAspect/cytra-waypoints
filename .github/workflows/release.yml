@@ -5,7 +5,8 @@ name: Release
 #   - publish a release on GitHub     -> this builds the jars and attaches them to that release
 #   - Actions -> Release -> Run workflow with tag vX.Y.Z (and optionally a commit, default: the branch's latest)
 #                                     -> this creates the tag and the release with the jars attached
-# Every way the jars are built from the released commit and have passed the unit tests and the GameTest.
+# Every way the jar is built from the released commit and has passed the unit tests, the GameTest and the
+# dedicated-server install test.
 on:
   push:
     tags: ['v*']
@@ -50,8 +51,8 @@ jobs:
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
-      - name: Build, unit tests and headless-server GameTest
-        run: ./gradlew build runGametest -Prelease=true --stacktrace
+      - name: Build, unit tests, headless-server GameTest and the dedicated-server install test
+        run: ./gradlew build runGametest :tests:runInstalledServerTest -Prelease=true --stacktrace
 
       - name: Release notes from CHANGELOG.md
         run: |
@@ -63,8 +64,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Two jars: the server mod (what server owners install) and the optional client mod.
-          jars="server/build/libs/sharedwaypoints-server-$VERSION.jar client/build/libs/sharedwaypoints-client-$VERSION.jar"
+          # One jar, for the server and for players.
+          jars="server/build/libs/sharedwaypoints-$VERSION.jar"
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" $jars --clobber
             # A release written by hand with no notes gets the changelog section.

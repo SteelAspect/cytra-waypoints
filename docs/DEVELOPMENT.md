@@ -19,35 +19,44 @@ obfuscated 1.21.11.
 
 ## Projects
 
-One Gradle build, three projects:
+One Gradle build, three projects, one released jar:
 
 | Project | Jar | What it is |
 |---|---|---|
-| `server/` | `sharedwaypoints-server-<v>.jar` (mod id `sharedwaypoints`) | The mod server owners install: commands, chat, menu (its `client` source set), routes, web maps, join summary, sync sender. |
-| `client/` | `sharedwaypoints-client-<v>.jar` (mod id `sharedwaypoints-client`) | The one optional jar players install. It receives the sync and writes Xaero's "Shared" set (all Xaero code is in `XaeroBridge`), and it bundles the server mod jar-in-jar, which brings the menu, the J key and the Esc menu button. |
-| `protocol/` | bundled in both (mod id `sharedwaypoints-protocol`) | The sync payloads and `SyncProtocol.VERSION`. Jar-in-jar in both mods, so a player with both installed loads one copy. |
+| `server/` | `sharedwaypoints-<v>.jar` (mod id `sharedwaypoints`) | The mod, for the server and players. `src/main` is common (commands, chat, routes, web maps, join summary, sync sender). `src/client` only runs on players' games: the menu, the J key, the Esc menu button and the Xaero sync (`xaerosync`, all Xaero code in `XaeroBridge`, found by reflection, so Xaero is never required). |
+| `protocol/` | bundled in the mod (mod id `sharedwaypoints-protocol`) | The sync payloads and `SyncProtocol.VERSION`. |
+| `tests/` | none | Tests only: the Xaero sync with the real Xaero's Minimap, and the built jar installed like a player's and a server's mods folder. |
 
-Versions are pinned in `gradle.properties`. `mod_version` applies to all three projects.
+Until 2.2 there were two jars (`sharedwaypoints-server` and `sharedwaypoints-client`, which bundled the server mod).
+The mod `breaks` `sharedwaypoints-client`, so Fabric tells a player who still has the old client jar next to the new
+one to remove it (both contain the same classes). An old client jar on its own still works with a 2.3 server: the
+sync protocol and menu channels didn't change.
+
+Versions are pinned in `gradle.properties`. `mod_version` applies to all projects.
 
 ## Building and testing
 
 ```bash
-./gradlew build                     # compile everything, unit tests, both jars
+./gradlew build                     # compile everything, unit tests, the jar
 ./gradlew runGametest               # headless 1.21.11 server: the end-to-end GameTest (server project)
 xvfb-run -a ./gradlew --no-daemon :server:runClientGametest   # real client: the J menu, saves screenshots
-xvfb-run -a ./gradlew --no-daemon :client:runClientGametest   # real client + Xaero's Minimap 26.5.0: the sync
-xvfb-run -a ./gradlew --no-daemon :client:runInstalledClientTest   # the built client jar, installed like a player would
-xvfb-run -a ./gradlew --no-daemon :client:runInstalledClientTest -PwithoutXaero   # same, without Xaero's Minimap
+xvfb-run -a ./gradlew --no-daemon :tests:runClientGametest   # real client + Xaero's Minimap 26.5.0: the sync
+xvfb-run -a ./gradlew --no-daemon :tests:runInstalledClientTest   # the built jar, installed like a player would
+xvfb-run -a ./gradlew --no-daemon :tests:runInstalledClientTest -PwithoutXaero   # same, without Xaero's Minimap
+./gradlew :tests:runInstalledServerTest   # the built jar on a production dedicated server (no Xaero, no display)
 ```
 
-- **Install test** (`client/src/prodtest`): a production game (real Fabric Loader, remapped jars) whose mods folder
-  has only the built `sharedwaypoints-client` jar, Fabric API and Xaero's Minimap, like a player's. It checks the
-  server mod loads from inside the client jar, the J keybind is registered, and the Esc menu's **✦ Waypoints**
-  button opens the menu. The dev-run tests above load the mods from source, so they can't catch a jar that's
+- **Install test** (`tests/src/prodtest`): a production game (real Fabric Loader, remapped jars) whose mods folder
+  has only the built `sharedwaypoints` jar, Fabric API and Xaero's Minimap, like a player's. It checks the jar has
+  the Xaero sync entrypoint and the sync starts, the J keybind is registered, and the Esc menu's **✦ Waypoints**
+  button opens the menu. The dev-run tests above load the mod from source, so they can't catch a jar that's
   missing something. With `-PwithoutXaero` it checks the menu still works without Xaero, and that the server
   tells the player to install Xaero's Minimap.
+- **Server install test** (`tests/src/servertest`): a production dedicated server whose mods folder has only the
+  built jar and Fabric API. A small test mod checks SharedWaypoints loaded without Xaero's Minimap and `/cway` is
+  registered, then stops the server. No display needed; CI and the release workflow run it.
 
-- **Xaero sync test** (`client/src/clientgametest`): runs the real game with the server mod, the client mod and
+- **Xaero sync test** (`tests/src/clientgametest`): runs the real game with SharedWaypoints and
   Xaero's Minimap 26.5.0. Xaero is dropped unchanged into the test game's `mods/` folder, because its bundled
   XaeroLib only loads that way. The test checks that:
   - adds reach Xaero's "Shared" set in the right dimension;
@@ -74,13 +83,13 @@ xvfb-run -a ./gradlew --no-daemon :client:runInstalledClientTest -PwithoutXaero 
 
 ## Branches and jar names
 
-| Branch | Purpose | Jars | Version in-game |
+| Branch | Purpose | Jar | Version in-game |
 |---|---|---|---|
-| `main` | releases | `sharedwaypoints-server-<version>.jar`, `sharedwaypoints-client-<version>.jar` | `<version>` |
-| `dev` and others | testing | `sharedwaypoints-server-dev-<version>.jar`, `sharedwaypoints-client-dev-<version>.jar` | `<version>+dev` |
+| `main` | releases | `sharedwaypoints-<version>.jar` | `<version>` |
+| `dev` and others | testing | `sharedwaypoints-dev-<version>.jar` | `<version>+dev` |
 
 The branch is read from git (or `GITHUB_REF_NAME` in CI). Force either with `-Prelease=true` / `-Prelease=false`.
-The jars are in `server/build/libs/` and `client/build/libs/`. `build/devlibs/` only holds development jars that
+The jar is in `server/build/libs/`. `build/devlibs/` only holds development jars that
 still use Mojang names; they won't load in a normal game.
 
 Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
@@ -98,8 +107,8 @@ Work happens on `dev`. When it's ready, `main` is fast-forwarded to it.
      default is the latest commit of the chosen branch. The workflow creates the tag itself.
 
 The **Release** workflow (`.github/workflows/release.yml`) handles all three. It checks that the tag matches
-`mod_version`, builds with `-Prelease=true`, and runs the unit tests and the GameTest. Then it creates the release,
-or updates the one you published, with both jars attached. If the release has no notes, it
+`mod_version`, builds with `-Prelease=true`, and runs the unit tests, the GameTest and the dedicated-server install
+test. Then it creates the release, or updates the one you published, with the jar attached. If the release has no notes, it
 fills them in from that version's changelog section. The **Build**
 workflow runs the same checks on every push to `main`/`dev` and on pull requests, and keeps the jar as a
 downloadable artifact.
@@ -126,22 +135,24 @@ server/src/main/java/io/github/steelaspect/sharedwaypoints/ (common: everything 
   network/                             optional client menu protocol: SyncPayload, ActionPayload, ResultPayload,
                                        MenuNetworking (actions run as the player's /cway command)
   xaero/XaeroShareFormat.java          builds xaero-waypoint: lines and Xaero's add command
-  sync/SyncService.java                client-mod sync: handshake, full list, live upserts and deletes
+  sync/SyncService.java                Xaero sync, server side: handshake, full list, live upserts and deletes
   join/JoinSummary.java                "N new waypoints since you last played"
 protocol/src/main/java/.../protocol/   SyncProtocol (version, registration) and the five payloads
-client/src/main/java/.../xaerosync/    SharedWaypointsSync (entrypoint), SyncState, XaeroBridge (all Xaero code)
-server/src/client/java/.../client/     optional client: J keybind, WaypointMenuScreen, AddWaypointScreen,
+server/src/client/java/.../xaerosync/  players' games only: SharedWaypointsSync (entrypoint), SyncState, XaeroBridge (all Xaero code)
+server/src/client/java/.../client/     players' games only: J keybind, WaypointMenuScreen, AddWaypointScreen,
                                        EditWaypointScreen, WaypointList, RoutesScreen, RouteLists, EditRouteScreen,
                                        WaypointPickerScreen, ClientWaypoints (latest snapshot)
-*/src/test/java/...                    unit tests (server, protocol codecs, client sync state)
+*/src/test/java/...                    unit tests (server, protocol codecs, Xaero sync state)
 server/src/gametest/...                headless-server end-to-end test
 server/src/clientgametest/...          real-client test: menu via keybind and the Esc menu button, add through the form, screenshots
-client/src/clientgametest/...          real-client test with Xaero's Minimap: the "Shared" set follows the server
+tests/src/clientgametest/...           real-client test with Xaero's Minimap: the "Shared" set follows the server
+tests/src/prodtest/...                 the built jar in a production game (with and without Xaero's Minimap)
+tests/src/servertest/...               the built jar on a production dedicated server
 PROGRESS.txt                           timestamped development log (repo root)
 ```
 
 Only vanilla features are used: Brigadier with vanilla argument types, chat click and hover events, boss bars,
-particles, titles and sounds. That's why clients don't need the mod.
+particles, titles and sounds. That's why players don't need the mod.
 
 ## Xaero's Minimap format
 
@@ -183,11 +194,11 @@ This was checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11 by decompilin
 - Chat replies are sent even when `sendCommandFeedback` is off, because for /cway the reply is the result.
 - In singleplayer, every world shares the same `config/sharedwaypoints/` list.
 
-## Xaero's Minimap auto-sync (sharedwaypoints-client)
+## Xaero's Minimap auto-sync (`xaerosync`, players' games only)
 
 Checked against **Xaero's Minimap 26.5.0 for Fabric 1.21.11** (`xaerominimap-fabric-1.21.11-26.5.0.jar`, Modrinth
 version `VNYP3B0c`), by decompiling it. Xaero has no public API for adding waypoints. Its
-`ThirdPartyWaypoints` is in-memory only and doesn't show up as a set in the waypoint screen, so the client mod uses
+`ThirdPartyWaypoints` is in-memory only and doesn't show up as a set in the waypoint screen, so the mod uses
 Xaero's own world and set classes, all through reflection in one class, `XaeroBridge`:
 
 | Step | Xaero call |

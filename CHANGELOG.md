@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.3.0 — 2026-10-02
+
+- **One jar for everything.** There's now a single `sharedwaypoints-<version>.jar` for the server and for players,
+  instead of `sharedwaypoints-server` and `sharedwaypoints-client`.
+  - On the server it does exactly what the server jar did. Xaero's Minimap is never needed there: the Xaero code
+    only runs on players' games, and only if they have Xaero.
+  - On a player's game it gives the waypoint menu (J, or ✦ Waypoints in the Esc menu) and, with Xaero's Minimap,
+    the automatic "Shared" set, like the client jar did.
+  - Players without it still need nothing: chat, [Add to Xaero], the compass and the portal guide work as before.
+- **Updating from 2.2:** replace the server jar and the players' client jar with the new jar. If a player keeps the
+  old `sharedwaypoints-client` jar next to the new one, Fabric says to remove it. Players who haven't updated yet
+  keep the menu and the Xaero sync with a 2.3 server (nothing in the protocol changed).
+- The first-join tip and `/cway sync` now say "Install SharedWaypoints on your game too, the same jar as the
+  server", and name the new jar.
+- New install test: the built jar on a real dedicated server with only Fabric API (no Xaero's Minimap), run in CI
+  and before every release.
+
 ## 2.2.0 — 2026-10-02
 
 - **Project status.** Mark a waypoint **Planned**, **WIP**, **Done** or **Broken**, with an optional note ("out of
