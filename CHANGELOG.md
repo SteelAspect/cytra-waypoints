@@ -1,7 +1,12 @@
 # Changelog
 
-## 2.0.2 — 2026-10-02
+## 2.1.0 — 2026-10-02
 
+- **Portal guide: `/cway portal`.** Look at a Nether portal and run it: chat shows the portal's size and where its
+  twin goes on the other side (÷8 / ×8). Go through, and the matching spot is outlined for you with particles
+  (same size and facing as your portal, at your height) and a compass bar points to it. It ends by itself when a
+  portal is built there, with `/cway portal stop`, or after 30 minutes. It doesn't check which portal vanilla would
+  link to, so chunk-loader portals close together are fine. Works for every player, no client mod needed.
 - **Portal spots use your height.** For a Nether waypoint seen from the Overworld (or the other way round), the
   matching portal spot kept the waypoint's own Y, so it could be underground or in the sky (an Overworld base at
   Y 200 is above the Nether roof). It's now always your current Y: in the compass bar, the ⟳ hover in chat,

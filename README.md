@@ -2,7 +2,7 @@
 
 # SharedWaypoints
 
-[![Download 2.0.2](https://img.shields.io/badge/download-2.0.2-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 2.1.0](https://img.shields.io/badge/download-2.1.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
@@ -61,6 +61,10 @@ Players without the client mod see exactly what they always did: chat lists with
   when you reach it.
 - **Overworld ↔ Nether aware:** the compass points you to the matching portal spot (÷8 / ×8), and the details
   view shows the portal-side coordinates. The portal spot's Y is always your own Y, never the other dimension's.
+- **Portal guide:** look at a Nether portal and run `/cway portal`. Go through, and the matching spot on the other
+  side (÷8 / ×8, same size and facing, at your height) is outlined for you with particles, with a compass bar
+  pointing to it, until you build a portal there. It doesn't care which portal vanilla would link to, so
+  chunk-loader portals close together are fine.
 - **Near and nearest:** `/cway near` lists what's around you, closest first. `/cway nearest [category]`
   finds the closest one.
 - **Teleport** for ops: a **[Teleport]** button and `/cway tp`.
@@ -173,6 +177,8 @@ The mod also works in singleplayer and LAN worlds.
 | `/cway reload` | Reload `config.json`, waypoints and favourites from disk (ops) |
 | `/cway xaero <name>` | Send the Xaero share message (what **[Add to Xaero]** runs) |
 | `/cway sync` | How to get the automatic Xaero's Minimap sync, or whether you already have it |
+| `/cway portal` | Look at a Nether portal: its matching spot on the other side is highlighted for you (30 min, or until built) |
+| `/cway portal stop` | Stop the portal guide |
 
 - Put names with spaces in quotes: `/cway add "Main Storage" storage`. Names are 1–32 characters (Xaero's limit)
   and unique regardless of case.

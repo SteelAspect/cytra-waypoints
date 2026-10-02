@@ -46,6 +46,7 @@ public final class SharedWaypoints implements ModInitializer {
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
 			context.navigation().clear();
+			context.portalGuide().clear();
 			context.maps().stop();
 			context.menus().setServer(null);
 			context.sync().setServer(null);
@@ -53,6 +54,7 @@ public final class SharedWaypoints implements ModInitializer {
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			context.navigation().tick(server);
 			context.clientModTip().tick(server);
+			context.portalGuide().tick(server);
 			if (server.getTickCount() % SAVE_SEEN_EVERY_TICKS == 0) {
 				context.waypoints().saveSeenIfChanged();
 			}
@@ -65,6 +67,7 @@ public final class SharedWaypoints implements ModInitializer {
 			context.navigation().stop(handler.getPlayer().getUUID());
 			context.sync().forget(handler.getPlayer().getUUID());
 			context.clientModTip().forget(handler.getPlayer().getUUID());
+			context.portalGuide().forget(handler.getPlayer().getUUID());
 			context.joinSummary().onLeave(handler.getPlayer().getUUID());
 		});
 

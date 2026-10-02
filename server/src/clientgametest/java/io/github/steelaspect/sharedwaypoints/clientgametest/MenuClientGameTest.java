@@ -277,6 +277,56 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			shot(context, "pause-menu");
 			context.clickScreenButton("✦ Waypoints");
 			context.waitForScreen(WaypointMenuScreen.class);
+			context.setScreen(() -> null);
+
+			// Portal guide: look at a 2 × 3 portal, /cway portal, and the matching spot is highlighted in the Nether.
+			world.getServer().runOnServer(server -> {
+				var overworld = server.overworld();
+				var portal = net.minecraft.world.level.block.Blocks.NETHER_PORTAL.defaultBlockState()
+						.setValue(net.minecraft.world.level.block.NetherPortalBlock.AXIS, net.minecraft.core.Direction.Axis.X);
+				for (int x = 1040; x <= 1041; x++) {
+					for (int y = 100; y <= 102; y++) {
+						overworld.setBlock(new net.minecraft.core.BlockPos(x, y, -312), portal, 18); // no frame needed
+					}
+				}
+				// Something to stand on in front of it.
+				for (int x = 1038; x <= 1044; x++) {
+					for (int z = -311; z <= -306; z++) {
+						overworld.setBlock(new net.minecraft.core.BlockPos(x, 99, z),
+								net.minecraft.world.level.block.Blocks.STONE.defaultBlockState(), 18);
+					}
+				}
+				// An open cave on the Nether side, so the screenshot shows the highlight rather than netherrack.
+				var nether = server.getLevel(net.minecraft.world.level.Level.NETHER);
+				for (int x = 122; x <= 140; x++) {
+					for (int z = -46; z <= -26; z++) {
+						for (int y = 69; y <= 80; y++) {
+							nether.setBlock(new net.minecraft.core.BlockPos(x, y, z), y == 69
+									? net.minecraft.world.level.block.Blocks.NETHERRACK.defaultBlockState()
+									: net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
+						}
+					}
+				}
+			});
+			// Stand 3 blocks south of the portal, facing north at it, and run the command like a player.
+			world.getServer().runCommand("tp @a 1041.0 100 -309 180 5");
+			context.waitTicks(10);
+			context.runOnClient(client -> client.player.connection.sendCommand("cway portal"));
+			context.waitFor(client -> chatText(client).contains("Portal at 1040 100 -312 (2 wide × 3 tall, facing north–south)"));
+			world.getServer().runCommand("execute in minecraft:the_nether run tp @a 131.0 70 -34 180 8");
+			context.waitFor(client -> client.level != null
+					&& client.level.dimension() == net.minecraft.world.level.Level.NETHER, 400);
+			world.getClientWorld().waitForChunksRender();
+			context.runOnClient(client -> {
+				client.gui.getChat().clearMessages(false); // a clean view of the highlight
+				client.getToastManager().clear();
+			});
+			context.waitTicks(30); // a few particle refreshes
+			shot(context, "portal-guide");
+			world.getServer().runCommand("execute in minecraft:overworld run tp @a 0 -60 0");
+			context.waitFor(client -> client.level != null
+					&& client.level.dimension() == net.minecraft.world.level.Level.OVERWORLD, 400);
+			world.getClientWorld().waitForChunksRender();
 
 			// The keybind under Options > Controls > Key Binds (modded categories are at the bottom).
 			context.setScreen(() -> new KeyBindsScreen(null, net.minecraft.client.Minecraft.getInstance().options));

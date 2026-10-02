@@ -12,6 +12,7 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.permission.WaypointPermissions;
+import io.github.steelaspect.sharedwaypoints.portal.PortalGuide;
 import io.github.steelaspect.sharedwaypoints.text.Viewer;
 import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
@@ -97,6 +98,9 @@ public final class WaypointCommand {
 	private static final DynamicCommandExceptionType DIMENSION_MISSING = new DynamicCommandExceptionType(
 			dimension -> Component.literal("Dimension " + dimension + " isn't loaded on this server"));
 
+	private static final SimpleCommandExceptionType NO_PORTAL = new SimpleCommandExceptionType(Component.literal(
+			"Look at a Nether portal (the purple part) within " + (int) PortalGuide.LOOK_RANGE + " blocks"));
+
 	private final ModContext mod;
 
 	private WaypointCommand(ModContext mod) {
@@ -171,6 +175,12 @@ public final class WaypointCommand {
 								.executes(context -> command.shareToXaero(context.getSource(), string(context, "name")))))
 				.then(Commands.literal("sync")
 						.executes(context -> command.syncHelp(context.getSource())))
+
+				// ---- portals: look at one, and its matching spot on the other side is highlighted
+				.then(Commands.literal("portal")
+						.executes(context -> command.portalGuide(context.getSource()))
+						.then(Commands.literal("stop")
+								.executes(context -> command.stopPortalGuide(context.getSource()))))
 
 				// ---- editing
 				.then(Commands.literal("add")
@@ -750,6 +760,24 @@ public final class WaypointCommand {
 						builder,
 						route -> StringArgumentType.escapeIfRequired(route.name()),
 						route -> Component.literal(route.stops().size() + (route.stops().size() == 1 ? " stop" : " stops"))));
+	}
+
+	/** {@code /cway portal}: highlight the matching spot for the portal you're looking at. */
+	private int portalGuide(CommandSourceStack source) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		BlockPos portal = PortalGuide.lookedAt(player).orElseThrow(() -> NO_PORTAL.create());
+		Optional<String> problem = mod.portalGuide().start(player, portal, source.getServer().getTickCount());
+		if (problem.isPresent()) {
+			throw new SimpleCommandExceptionType(Component.literal(problem.get())).create();
+		}
+		return 1;
+	}
+
+	private int stopPortalGuide(CommandSourceStack source) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		reply(source, Component.literal(mod.portalGuide().stop(player.getUUID())
+				? "Portal guide stopped." : "You don't have a portal guide running.").withStyle(ChatFormatting.GRAY));
+		return 1;
 	}
 
 	/** How to get the automatic Xaero's Minimap sync, and whether it's on for you. */
