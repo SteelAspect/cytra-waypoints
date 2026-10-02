@@ -2,8 +2,8 @@ plugins {
 	id 'net.fabricmc.fabric-loom-remap'
 }
 
-// The sync messages spoken by sharedwaypoints-server and sharedwaypoints-client. Never installed on its own:
-// both mods bundle it (jar-in-jar), and Fabric loads a single copy when both are present.
+// The sync messages between the server and players' games. Never installed on its own:
+// the mod bundles it (jar-in-jar). Kept separate so the message format lives in one small place.
 base {
 	archivesName = "sharedwaypoints-protocol"
 }

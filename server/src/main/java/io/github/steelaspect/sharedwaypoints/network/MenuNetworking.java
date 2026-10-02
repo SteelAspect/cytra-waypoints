@@ -31,7 +31,7 @@ import net.minecraft.server.level.ServerPlayer;
  * <p>Players with the mod on their client get a {@link SyncPayload} when they open the menu and after every change.
  * Buttons arrive as {@link ActionPayload}s, which are turned into the matching /cway command and run as the
  * player, so permissions and validation are exactly the same as typing the command. The command's reply goes back
- * as a {@link ResultPayload}. Players without the client mod never receive anything from here.
+ * as a {@link ResultPayload}. Players without the mod on their game never receive anything from here.
  */
 public final class MenuNetworking {
 	private static final Pattern CATEGORY_ID = Pattern.compile("[a-z0-9_-]{1,24}");

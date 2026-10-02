@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints-servertest",
+	"version": "1.0.0",
+	"name": "SharedWaypoints server install test",
+	"environment": "server",
+	"entrypoints": {
+		"main": [
+			"io.github.steelaspect.sharedwaypoints.servertest.InstalledServerJarTest"
+		]
+	},
+	"depends": {
+		"sharedwaypoints": "*"
+	}
+}

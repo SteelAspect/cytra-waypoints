@@ -3,16 +3,17 @@ package io.github.steelaspect.sharedwaypoints.protocol;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 
 /**
- * The sync protocol between sharedwaypoints-server and the optional sharedwaypoints-client.
+ * The sync protocol between the SharedWaypoints server and players' games running SharedWaypoints (or the old
+ * sharedwaypoints-client jar, 2.2 and earlier).
  *
  * <ol>
- *   <li>On join the client mod sends {@link HelloPayload} with its {@link #VERSION}.</li>
+ *   <li>On join a game with the mod sends {@link HelloPayload} with its {@link #VERSION}.</li>
  *   <li>The server answers {@link WelcomePayload} with its version. If they match and sync is enabled, it sends
  *       the full list ({@link FullSyncPayload}) and from then on every add or edit ({@link UpsertPayload}) and
  *       delete ({@link DeletePayload}).</li>
  * </ol>
  *
- * <p>Players without the client mod never send a hello, so the server never sends them any of this. Every payload
+ * <p>Players without the mod never send a hello, so the server never sends them any of this. Every payload
  * carries the protocol version, and a client ignores payloads from another version.
  */
 public final class SyncProtocol {

@@ -19,8 +19,8 @@ import net.minecraft.server.level.ServerPlayer;
 
 /**
  * "3 new waypoints since you last played", shown on join with the usual [Add to Xaero] / [Copy coords] / [Go]
- * buttons, for everyone (no client mod needed). Last-seen times are kept per player in {@code waypoints.json}.
- * On a player's first visit it also shows the {@link ClientModTip} to players without the client mod.
+ * buttons, for everyone (nothing needed on their game). Last-seen times are kept per player in {@code waypoints.json}.
+ * On a player's first visit it also shows the {@link ClientModTip} to players without the mod on their game.
  */
 public final class JoinSummary {
 	/** Longer summaries end with a button to the full list instead. */

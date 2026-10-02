@@ -5,7 +5,8 @@ plugins {
 def modVersion = project.ext.modVersion
 
 base {
-	archivesName = project.ext.isRelease ? "sharedwaypoints-server" : "sharedwaypoints-server-dev"
+	// One jar for the server and players.
+	archivesName = project.ext.isRelease ? "sharedwaypoints" : "sharedwaypoints-dev"
 }
 
 repositories {
@@ -40,7 +41,8 @@ sourceSets {
 }
 
 loom {
-	// src/main is common (everything the server needs); src/client is the optional menu, only loaded on clients.
+	// src/main is common (everything the server needs); src/client is the menu and the Xaero's Minimap sync, only
+	// loaded on players' games.
 	splitEnvironmentSourceSets()
 
 	mods {
@@ -142,14 +144,21 @@ dependencies {
 	// The GameTest server also runs squaremap 1.3.12, to check the web-map layer for real (see copyGametestMods).
 	gametestServerMods "maven.modrinth:squaremap:${project.squaremap_modrinth_version}"
 
-	// The sync messages, shared with the client mod. Bundled (jar-in-jar); Fabric loads one copy even when a
-	// player has both jars installed.
+	// The sync messages. Bundled (jar-in-jar).
 	implementation project(path: ':protocol', configuration: 'namedElements')
 	include project(':protocol')
 
 	// JUnit 5 running inside Fabric Loader, so tests can use Minecraft classes.
 	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
 	testImplementation "org.junit.jupiter:junit-jupiter-params:5.10.0"
+}
+
+sourceSets {
+	// Unit tests also cover the client-only code (the Xaero sync's state and Xaero lookups).
+	test {
+		compileClasspath += client.compileClasspath + client.output
+		runtimeClasspath += client.runtimeClasspath + client.output
+	}
 }
 
 test {

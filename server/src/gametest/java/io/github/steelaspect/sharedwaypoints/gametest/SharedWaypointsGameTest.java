@@ -701,7 +701,7 @@ public class SharedWaypointsGameTest {
 	// ------------------------------------------------------ client-mod sync
 
 	/**
-	 * The sharedwaypoints-client handshake and live updates, with a recording "connection" per player instead of a
+	 * The Xaero sync handshake and live updates, with a recording "connection" per player instead of a
 	 * real client.
 	 */
 	private static void clientModSync(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
@@ -709,7 +709,7 @@ public class SharedWaypointsGameTest {
 		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toAlice = new ArrayList<>();
 		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toBob = new ArrayList<>();
 
-		// Alice has the client mod: welcome, then the full list.
+		// Alice has the mod on her game: welcome, then the full list.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toAlice::add);
 		helper.assertValueEqual(toAlice.get(0), new WelcomePayload(SyncProtocol.VERSION, true), "welcome, sync on");
 		FullSyncPayload full = (FullSyncPayload) toAlice.get(1);
@@ -721,7 +721,7 @@ public class SharedWaypointsGameTest {
 		helper.assertValueEqual(sorting.dimension(), "minecraft:overworld", "dimension");
 		helper.assertTrue(mod.sync().isSubscribed(aliceEntity.getUUID()), "alice subscribed");
 
-		// Bob's client mod speaks another protocol version: told so, never subscribed.
+		// Bob's mod speaks another protocol version: told so, never subscribed.
 		mod.sync().onHello(bobEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), toBob::add);
 		helper.assertValueEqual(toBob, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "version mismatch");
 		helper.assertTrue(!mod.sync().isSubscribed(bobEntity.getUUID()), "bob not subscribed");
@@ -840,8 +840,8 @@ public class SharedWaypointsGameTest {
 			ModContext mod, ServerPlayer aliceEntity) {
 		var tips = mod.clientModTip();
 		var config = mod.config();
-		// alice is a mock player without the client mod: tipped on her first visit only.
-		helper.assertTrue(tips.shouldTip(aliceEntity, true), "first visit without the client mod gets the tip");
+		// alice is a mock player without the mod on her game: tipped on her first visit only.
+		helper.assertTrue(tips.shouldTip(aliceEntity, true), "first visit without the mod gets the tip");
 		helper.assertFalse(tips.shouldTip(aliceEntity, false), "no tip on later visits");
 		config.clientModTip = false;
 		helper.assertFalse(tips.shouldTip(aliceEntity, true), "clientModTip off: no tip");
@@ -852,7 +852,8 @@ public class SharedWaypointsGameTest {
 
 		Component tip = tips.tip();
 		helper.assertTrue(tip.getString().startsWith("✦ Want these waypoints in Xaero's Minimap automatically? "
-				+ "Install the sharedwaypoints-client mod. [Download] [How it works]"), tip.getString());
+				+ "Install SharedWaypoints on your game too, the same jar as the server. [Download] [How it works]"),
+				tip.getString());
 		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/cway sync")),
 				"How it works runs /cway sync");
 		helper.assertValueEqual(clickOf(tip, "[Download]"), Optional.of(new ClickEvent.OpenUrl(
@@ -862,7 +863,9 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, alice, "cway sync");
 		String steps = alice.out.take();
 		helper.assertTrue(steps.contains("Automatic Xaero's Minimap sync")
-				&& steps.contains("1. Put sharedwaypoints-client-") && steps.contains(".jar in your .minecraft/mods folder.")
+				&& steps.contains("1. Put sharedwaypoints-") && !steps.contains("sharedwaypoints-client-")
+				&& steps.contains(".jar (the same jar as the server) in your .minecraft/mods folder.")
+				&& steps.contains("It replaces the old sharedwaypoints-client jar.")
 				&& steps.contains("2. Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
 						+ net.minecraft.SharedConstants.getCurrentVersion().name() + ").")
 				&& steps.contains("3. Rejoin.") && steps.contains("[Download]"), steps);
@@ -874,23 +877,23 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(alice.out.take().contains("Ask a server admin for the file."), "no link: ask an admin");
 		config.clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
 
-		// Client mod but nothing synced a few seconds after the first join: Xaero's Minimap is missing.
+		// The mod on their game but nothing synced a few seconds after the first join: Xaero's Minimap is missing.
 		Component xaeroTip = tips.followUp(aliceEntity).orElseThrow();
-		helper.assertTrue(xaeroTip.getString().startsWith("✦ Your sharedwaypoints-client can't reach Xaero's Minimap. ")
+		helper.assertTrue(xaeroTip.getString().startsWith("✦ Your SharedWaypoints can't reach Xaero's Minimap. ")
 				&& xaeroTip.getString().endsWith("[Get Xaero's Minimap] [How it works]"), xaeroTip.getString());
 		helper.assertValueEqual(clickOf(xaeroTip, "[Get Xaero's Minimap]"), Optional.of(new ClickEvent.OpenUrl(
 				java.net.URI.create("https://modrinth.com/mod/xaeros-minimap"))), "link to Xaero's Minimap");
-		// Said hello with another protocol version: update the client mod.
+		// Said hello with another protocol version: update the mod on their game.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), payload -> { });
 		String update = tips.followUp(aliceEntity).orElseThrow().getString();
-		helper.assertTrue(update.startsWith("✦ Your sharedwaypoints-client doesn't match this server, ")
+		helper.assertTrue(update.startsWith("✦ Your SharedWaypoints doesn't match this server, ")
 				&& update.contains("[Download]"), update);
 		run(helper, dispatcher, alice, "cway sync");
-		helper.assertTrue(alice.out.take().contains("doesn't match this server. Update it to sharedwaypoints-client-"),
+		helper.assertTrue(alice.out.take().contains("doesn't match this server. Update it to sharedwaypoints-2."),
 				"/cway sync explains the mismatch");
 		mod.sync().forget(aliceEntity.getUUID());
 
-		// With the client mod synced, /cway sync says so instead of the steps.
+		// With the mod synced, /cway sync says so instead of the steps.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), payload -> { });
 		run(helper, dispatcher, alice, "cway sync");
 		String synced = alice.out.take();

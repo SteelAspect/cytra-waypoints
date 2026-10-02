@@ -25,13 +25,15 @@ jobs:
       - name: Build, unit tests and headless-server GameTest
         run: ./gradlew build runGametest --stacktrace
 
-      - name: Upload jars
+      - name: Install test on a dedicated server (the built jar + Fabric API, no Xaero's Minimap)
+        run: ./gradlew :tests:runInstalledServerTest --stacktrace
+
+      - name: Upload the jar
         uses: actions/upload-artifact@v4
         with:
           name: sharedwaypoints-${{ github.sha }}
           path: |
-            server/build/libs/sharedwaypoints-server-*.jar
-            client/build/libs/sharedwaypoints-client-*.jar
+            server/build/libs/sharedwaypoints-*.jar
             !**/*-sources.jar
           if-no-files-found: error
 
@@ -56,15 +58,15 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon runClientGametest --stacktrace
 
-      - name: Install test (built client jar + Fabric API + Xaero, like a player's mods folder)
+      - name: Install test (the built jar + Fabric API + Xaero, like a player's mods folder)
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
-        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon :client:runInstalledClientTest --stacktrace
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon :tests:runInstalledClientTest --stacktrace
 
       - name: Install test without Xaero's Minimap (menu still works, player is told to add Xaero)
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
-        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon :client:runInstalledClientTest -PwithoutXaero --stacktrace
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew --no-daemon :tests:runInstalledClientTest -PwithoutXaero --stacktrace
 
       - name: Upload screenshots
         if: always()
@@ -73,6 +75,6 @@ jobs:
           name: client-screenshots-${{ github.sha }}
           path: |
             server/build/clientgametest/screenshots/
-            client/build/clientgametest/screenshots/
-            client/build/installedtest/screenshots/
+            tests/build/clientgametest/screenshots/
+            tests/build/installedtest/screenshots/
           if-no-files-found: ignore

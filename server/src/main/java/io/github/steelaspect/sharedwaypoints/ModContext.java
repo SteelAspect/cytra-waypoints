@@ -54,7 +54,7 @@ public final class ModContext {
 		waypoints.onChanged(menus::pushToAll);
 		routes.onChanged(menus::pushToAll);
 		navigation.onChange(menus::pushTo);
-		// Players with the sharedwaypoints-client mod get every change in their Xaero's Minimap.
+		// Players with SharedWaypoints on their game get every change in their Xaero's Minimap.
 		waypoints.onSaved(sync::onSaved);
 		waypoints.onRemoved(sync::onRemoved);
 		waypoints.onLoaded(sync::onLoaded);

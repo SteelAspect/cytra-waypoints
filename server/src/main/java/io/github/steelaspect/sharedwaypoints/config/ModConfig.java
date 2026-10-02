@@ -20,12 +20,12 @@ public final class ModConfig {
 	/** On join, tell players which waypoints were added since they last played (with the usual buttons). */
 	public boolean joinSummary = true;
 	/**
-	 * Keep players who have the optional sharedwaypoints-client mod in sync: their Xaero's Minimap gets the shared
-	 * waypoints in its own "Shared" set. Players without the client mod are never affected.
+	 * Keep players who have SharedWaypoints on their game (and Xaero's Minimap) in sync: their Xaero's Minimap gets the shared
+	 * waypoints in its own "Shared" set. Players without the mod are never affected.
 	 */
 	public boolean syncToClientMod = true;
 	/**
-	 * On their first join, tell players who don't have sharedwaypoints-client how to get the Xaero sync
+	 * On their first join, tell players who don't have SharedWaypoints on their game how to get the Xaero sync
 	 * (once per player). {@code /cway sync} shows the steps any time.
 	 */
 	public boolean clientModTip = true;

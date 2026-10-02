@@ -2,11 +2,11 @@
 
 # SharedWaypoints
 
-[![Download 2.2.0](https://img.shields.io/badge/download-2.2.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 2.3.0](https://img.shields.io/badge/download-2.3.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
-![Server-side](https://img.shields.io/badge/side-server%2C%20client%20optional-blue)
+![One jar](https://img.shields.io/badge/one%20jar-server%20%2B%20optional%20client-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A shared waypoint list for your Fabric server.** Players browse waypoints in chat, add them to
@@ -14,20 +14,26 @@
 and see everything on your **BlueMap or squaremap** web map.
 
 Only the server needs the mod. Players join with a vanilla client or with Xaero's Minimap, with nothing extra to
-install. Players who want more install one optional jar, **sharedwaypoints-client**, and get:
+install. Players who want more put **the same jar** in their own mods folder, and get:
 
 - **Waypoint menu:** press **J**, or click **✦ Waypoints** in the top-right corner of the Esc menu.
 - **Automatic Xaero sync:** with Xaero's Minimap installed, every shared waypoint appears in it by itself, in its
   own **"Shared"** waypoint set. It stays up to date as waypoints are added, edited and removed.
 
-## The two jars
+## One jar
 
-| Jar | Who installs it | What it does |
+Since 2.3.0 there is one jar, `sharedwaypoints-<version>.jar`, for the server and for players:
+
+| Where | Needed? | What it does there |
 |---|---|---|
-| `sharedwaypoints-server-<version>.jar` | **Server owners** (required). | Everything: `/cway`, chat buttons, [Add to Xaero], compass, routes, web maps, join summary, and syncing to players who have the client mod. |
-| `sharedwaypoints-client-<version>.jar` | **Players, optional.** The only jar a player needs. | The waypoint menu (**J** or **✦ Waypoints** in the Esc menu), and, with Xaero's Minimap installed, keeps Xaero in sync with the server's shared waypoints in a "Shared" waypoint set. Your own waypoints are never touched. It works without Xaero too (menu only). |
+| **Server** | Required. | Everything: `/cway`, chat buttons, [Add to Xaero], compass, routes, web maps, join summary, and syncing to players who have the mod. Xaero's Minimap is **not** needed on the server. |
+| **Player's game** | Optional. | The waypoint menu (**J** or **✦ Waypoints** in the Esc menu), and, with Xaero's Minimap installed, keeps Xaero in sync with the server's shared waypoints in a "Shared" waypoint set. Your own waypoints are never touched. It works without Xaero too (menu only). |
 
-Players without the client mod see exactly what they always did: chat lists with **[Add to Xaero]** buttons.
+Players without the mod see exactly what they always did: chat lists with **[Add to Xaero]** buttons.
+
+Coming from 2.2 or older: replace `sharedwaypoints-server-*.jar` on the server and `sharedwaypoints-client-*.jar`
+on players' games with the new jar. Don't keep the old client jar next to it: Fabric will say to remove it. An old
+client jar on its own still works with a 2.3 server until players update.
 
 ```
 === Shared Waypoints (3) ===
@@ -51,7 +57,7 @@ Players without the client mod see exactly what they always did: chat lists with
 - **Search** by name, description or creator, and give waypoints short **descriptions**.
 - **Announcements:** everyone online sees new waypoints as they're added, buttons included.
 - **"3 new waypoints since you last played"** when you join, with the same buttons, so nobody misses new places.
-- **Automatic Xaero's Minimap sync** for players with the optional client mod (see [Xaero's Minimap](#xaeros-minimap)).
+- **Automatic Xaero's Minimap sync** for players who also have the mod (see [Xaero's Minimap](#xaeros-minimap)).
 - **★ Favourites** per player, marked in every list.
 - **Project status:** mark a build **Planned**, **WIP**, **Done** or **Broken**, with a short note ("out of
   bonemeal"). `/cway projects broken` shows what needs fixing. The status shows in every list, in the menu, on the
@@ -82,8 +88,8 @@ Players without the client mod see exactly what they always did: chat lists with
 - Routes show their stop count and total length (Nether legs counted in the Nether), and appear as gold lines on
   web maps.
 
-**Optional client menu**
-- Install `sharedwaypoints-client` and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
+**Optional menu (the same jar on your game)**
+- Put the SharedWaypoints jar in your own mods folder and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
   runs SharedWaypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
 - Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
@@ -92,7 +98,7 @@ Players without the client mod see exactly what they always did: chat lists with
 - A **Routes** screen lists every route and its stops. It has Start / Stop, Skip stop, **+ Stop** (pick a
   waypoint), **− Stop**, **↑ / ↓** to reorder, Edit and Delete.
 - The server still decides everything, so permissions are the same as in chat. The menu updates live when
-  anyone changes a waypoint. Players without the client mod keep using chat as before.
+  anyone changes a waypoint. Players without the mod keep using chat as before.
 - The **[player guide](docs/PLAYER-GUIDE.md)** explains how to install the menu, what every button does, and how
   to use routes.
 - The menu needs a matching mod version on both sides: 1.5.0 or newer on the client and on the server. If one side is
@@ -119,21 +125,20 @@ Players without the client mod see exactly what they always did: chat lists with
 
 ## Download and install
 
-Both jars are on the **[latest release](https://github.com/SteelAspect/sharedwaypoints/releases/latest)**.
+The jar is on the **[latest release](https://github.com/SteelAspect/sharedwaypoints/releases/latest)**.
 
 **Server owners**
-1. Put `sharedwaypoints-server-<version>.jar` in your server's `mods/` folder, together with
-   [Fabric API](https://modrinth.com/mod/fabric-api).
+1. Put `sharedwaypoints-<version>.jar` in your server's `mods/` folder, together with
+   [Fabric API](https://modrinth.com/mod/fabric-api). Nothing else: Xaero's Minimap is never needed on the server.
 2. Start the server. Players don't need to install anything.
 
 **Players (optional)**
-- Put `sharedwaypoints-client-<version>.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your
-  `.minecraft/mods/` folder. That's the only SharedWaypoints jar a player needs.
+- Put the same `sharedwaypoints-<version>.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your
+  `.minecraft/mods/` folder.
 - **The menu:** press **J**, or open the Esc menu and click **✦ Waypoints** (top right).
 - **Automatic Xaero sync:** also have [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) installed. The
   shared waypoints appear in Xaero's **"Shared"** set when you join.
-- You don't need the server jar on your game. (It still works there, e.g. for singleplayer.)
-  The [player guide](docs/PLAYER-GUIDE.md) has step-by-step instructions you can share.
+- The [player guide](docs/PLAYER-GUIDE.md) has step-by-step instructions you can share.
 
 The menu works on servers running SharedWaypoints 1.5.0 or newer; the Xaero sync needs 2.0.0 or newer.
 
@@ -143,7 +148,7 @@ The menu works on servers running SharedWaypoints 1.5.0 or newer; the Xaero sync
 | Fabric Loader | 0.19.5 or newer |
 | Fabric API | any 1.21.11 build |
 | Java | 21 |
-| Xaero's Minimap (client mod only) | 26.5.0 for Fabric 1.21.11 (tested) |
+| Xaero's Minimap (players' games only, optional) | 26.5.0 for Fabric 1.21.11 (tested) |
 
 The mod also works in singleplayer and LAN worlds.
 
@@ -239,8 +244,8 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 |---|---|
 | `announceNewWaypoints` | Live broadcast: tell everyone online when a waypoint is added, with [Add to Xaero] |
 | `joinSummary` | On join, list the waypoints added since the player last played |
-| `syncToClientMod` | Keep players who have sharedwaypoints-client in sync (their Xaero's Minimap). Off: they get chat buttons like everyone else |
-| `clientModTip` | On their first join, tell players without sharedwaypoints-client how to get the Xaero sync (once per player) |
+| `syncToClientMod` | Keep players who have the mod on their game in sync (their Xaero's Minimap). Off: they get chat buttons like everyone else |
+| `clientModTip` | On their first join, tell players without the mod on their game how to get the Xaero sync (once per player) |
 | `clientModUrl` | Where **[Download]** in that tip and in `/cway sync` points, e.g. your Discord or website. Empty: no link, players are told to ask an admin |
 | `navigationParticles` | Show the particle beacon while navigating |
 | `arrivalRadius` | Distance in blocks that counts as "arrived" (1–64) |
@@ -327,9 +332,9 @@ Waypoints are stored in `config/sharedwaypoints/waypoints.json` and saved after 
 
 There are two ways shared waypoints get into Xaero's Minimap.
 
-### Automatic sync (optional client mod)
+### Automatic sync (the mod on your game too)
 
-With **sharedwaypoints-client** installed (next to Xaero's Minimap), joining a server that runs SharedWaypoints 2.0+
+With **SharedWaypoints** on your game (next to Xaero's Minimap), joining a server that runs SharedWaypoints 2.0+
 fills a waypoint set called **"Shared"** in Xaero:
 
 - every shared waypoint, in the right dimension, with its category colour and Xaero initials;
@@ -339,9 +344,9 @@ fills a waypoint set called **"Shared"** in Xaero:
 - your own waypoints and sets are never read or changed. Only the "Shared" set belongs to the mod (so don't
   name one of your own sets "Shared").
 
-**How players find out:** players without the client mod get one line in chat on their first join, with
-**[Download]** and **[How it works]**. Players who have the client mod but no (or an unsupported) Xaero's Minimap
-are told a few seconds later to install it, with a link; a client mod of a different version is told to update.
+**How players find out:** players without the mod get one line in chat on their first join, with
+**[Download]** and **[How it works]**. Players who have the mod but no (or an unsupported) Xaero's Minimap
+are told a few seconds later to install it, with a link; a mod of a different version is told to update.
 `/cway sync` shows the steps any time, or tells a player the sync is already on for them. Turn the tip off with `clientModTip`, and point **[Download]** at your own page with
 `clientModUrl`.
 
@@ -357,17 +362,17 @@ set are overwritten; change waypoints with `/cway` instead.
 **Tested version:** Xaero's Minimap **26.5.0 for Fabric 1.21.11** (`xaerominimap-fabric-1.21.11-26.5.0.jar`,
 which bundles XaeroLib 1.7.3).
 
-**Known limitation:** Xaero has no official API for adding waypoints, so the client mod uses Xaero's internal
-classes. A future Xaero update may rename them. If that happens, the client mod logs one warning ("isn't
-supported" / "Stopped syncing"), sync switches off, and everything else keeps working, including the chat
-buttons. A client mod update then fixes it. Everything Xaero-specific is in one class, `XaeroBridge`. If Xaero
-isn't installed at all, the client mod logs one line and only the sync is off: the waypoint menu, the J key and
-the Esc menu button still work.
+**Known limitation:** Xaero has no official API for adding waypoints, so the mod uses Xaero's internal
+classes on players' games. A future Xaero update may rename them. If that happens, the mod logs one warning
+("isn't supported" / "Stopped syncing"), sync switches off, and everything else keeps working, including the chat
+buttons. A mod update then fixes it. Everything Xaero-specific is in one class, `XaeroBridge`. If Xaero
+isn't installed at all, the mod logs one line and only the sync is off: the waypoint menu, the J key and
+the Esc menu button still work. The server never looks for Xaero.
 
 **Big lists:** the full list is sent in parts (1000 waypoints, then the rest one by one), so even servers with
 many thousands of waypoints stay within Minecraft's packet limits.
 
-### [Add to Xaero] (everyone, no client mod)
+### [Add to Xaero] (everyone, nothing extra needed)
 
 **[Add to Xaero]** makes the server send Xaero's standard waypoint-share message:
 
@@ -394,8 +399,8 @@ with `"webMapMarkers": false`. Tested against BlueMap 5.16 and squaremap 1.3.12 
 ./gradlew build
 ```
 
-This builds both jars: `server/build/libs/sharedwaypoints-server-<version>.jar` and
-`client/build/libs/sharedwaypoints-client-<version>.jar`. On any branch other than `main` they're named `…-dev-…`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
+This builds the jar: `server/build/libs/sharedwaypoints-<version>.jar` (one jar for the server and players). On any
+branch other than `main` it's named `sharedwaypoints-dev-<version>.jar`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
 how the code is organised. The [changelog](CHANGELOG.md) lists what changed in each version.
 
 ## License
