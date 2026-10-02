@@ -22,35 +22,37 @@ class NavMathTest {
 	@Test
 	void sameDimensionIsDirect() {
 		assertEquals(Optional.of(new NavMath.Target(100, 64, -20, false)),
-				NavMath.project(at("minecraft:overworld", 100, 64, -20), "minecraft:overworld"));
+				NavMath.project(at("minecraft:overworld", 100, 64, -20), "minecraft:overworld", 90));
 	}
 
 	@Test
 	void overworldWaypointSeenFromTheNetherIsDividedByEight() {
 		// floorDiv, so -20 / 8 -> -3 (the block that actually contains the spot), like vanilla portal maths.
-		assertEquals(Optional.of(new NavMath.Target(12, 64, -3, true)),
-				NavMath.project(at("minecraft:overworld", 100, 64, -20), "minecraft:the_nether"));
+		// Y is the viewer's: the Overworld Y (here 200, above the Nether roof) means nothing in the Nether.
+		assertEquals(Optional.of(new NavMath.Target(12, 70, -3, true)),
+				NavMath.project(at("minecraft:overworld", 100, 200, -20), "minecraft:the_nether", 70));
 	}
 
 	@Test
 	void netherWaypointSeenFromTheOverworldIsMultipliedByEight() {
-		assertEquals(Optional.of(new NavMath.Target(80, 70, -160, true)),
-				NavMath.project(at("minecraft:the_nether", 10, 70, -20), "minecraft:overworld"));
+		// A Nether hub at Y 30 would be underground in the Overworld: the player's own Y is used instead.
+		assertEquals(Optional.of(new NavMath.Target(80, 72, -160, true)),
+				NavMath.project(at("minecraft:the_nether", 10, 30, -20), "minecraft:overworld", 72));
 	}
 
 	@Test
 	void theEndAndModdedDimensionsAreNotProjected() {
-		assertTrue(NavMath.project(at("minecraft:the_end", 0, 60, 0), "minecraft:overworld").isEmpty());
-		assertTrue(NavMath.project(at("minecraft:overworld", 0, 60, 0), "mymod:mining").isEmpty());
-		assertTrue(NavMath.portalEquivalent(at("minecraft:the_end", 0, 60, 0)).isEmpty());
+		assertTrue(NavMath.project(at("minecraft:the_end", 0, 60, 0), "minecraft:overworld", 64).isEmpty());
+		assertTrue(NavMath.project(at("minecraft:overworld", 0, 60, 0), "mymod:mining", 64).isEmpty());
+		assertTrue(NavMath.portalEquivalent(at("minecraft:the_end", 0, 60, 0), 64).isEmpty());
 	}
 
 	@Test
 	void portalEquivalentGoesBothWays() {
-		assertEquals(new NavMath.Target(12, 64, -3, true),
-				NavMath.portalEquivalent(at("minecraft:overworld", 100, 64, -20)).orElseThrow());
-		assertEquals(new NavMath.Target(80, 70, -160, true),
-				NavMath.portalEquivalent(at("minecraft:the_nether", 10, 70, -20)).orElseThrow());
+		assertEquals(new NavMath.Target(12, 55, -3, true),
+				NavMath.portalEquivalent(at("minecraft:overworld", 100, 64, -20), 55).orElseThrow());
+		assertEquals(new NavMath.Target(80, 55, -160, true),
+				NavMath.portalEquivalent(at("minecraft:the_nether", 10, 70, -20), 55).orElseThrow());
 	}
 
 	@ParameterizedTest(name = "yaw {0}, target ({1}, {2}) -> {3}")

@@ -49,7 +49,7 @@ public record Viewer(UUID playerId, String dimension, Vec3 position, Set<UUID> f
 
 	/** Where to head for the waypoint from here (possibly via a Nether portal), if it's reachable. */
 	public Optional<NavMath.Target> target(Waypoint waypoint) {
-		return position == null ? Optional.empty() : NavMath.project(waypoint, dimension);
+		return position == null ? Optional.empty() : NavMath.project(waypoint, dimension, (int) Math.floor(position.y));
 	}
 
 	/** Horizontal distance to the waypoint (or its portal spot), if the viewer has a position. */

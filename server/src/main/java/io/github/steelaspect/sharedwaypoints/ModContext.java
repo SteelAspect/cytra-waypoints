@@ -2,6 +2,7 @@ package io.github.steelaspect.sharedwaypoints;
 
 import io.github.steelaspect.sharedwaypoints.config.ModConfig;
 import io.github.steelaspect.sharedwaypoints.join.ClientModTip;
+import io.github.steelaspect.sharedwaypoints.portal.PortalGuide;
 import io.github.steelaspect.sharedwaypoints.join.JoinSummary;
 import io.github.steelaspect.sharedwaypoints.map.MapIntegrations;
 import io.github.steelaspect.sharedwaypoints.nav.NavigationManager;
@@ -24,6 +25,7 @@ public final class ModContext {
 	private final FavoritesStore favorites;
 	private final RouteStore routes;
 	private final NavigationManager navigation;
+	private final PortalGuide portalGuide = new PortalGuide();
 	private final MapIntegrations maps;
 	private final MenuNetworking menus;
 	private final SyncService sync;
@@ -92,6 +94,10 @@ public final class ModContext {
 
 	public FavoritesStore favorites() {
 		return favorites;
+	}
+
+	public PortalGuide portalGuide() {
+		return portalGuide;
 	}
 
 	public NavigationManager navigation() {

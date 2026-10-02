@@ -61,7 +61,8 @@ distance.
 - **By category / By name / By distance:** click to change the sort order.
 - **+ Add:** add a new waypoint.
 
-**Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates, its
+**Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates (at your own
+height), its
 description, and who added it and when.
 
 **Bottom right:** **Routes** opens the [routes screen](#routes), and **Done** closes the menu.
@@ -133,6 +134,21 @@ Everything also works in chat. `/cway route` lists the routes, and `/cway route 
 stops with buttons: **[Go from here]**, and for the creator **[↑]** and **[✕]**.
 
 ![A route in chat](images/guide/route-chat.png)
+
+## Portal guide
+
+Building the other half of a Nether portal? Look at the portal (the purple part) and type `/cway portal`.
+
+- Chat shows its size and where its twin goes, e.g. "Nether side: 130 ~ -39".
+- Go through. On the other side, the matching spot is **outlined with particles** that only you see: the same size
+  and facing as your portal, at your height. A bar at the top points you there.
+- Build the portal in the outline. Once it's lit, the guide finishes by itself. `/cway portal stop` ends it early;
+  otherwise it stops after 30 minutes.
+
+![The portal guide in the Nether](images/guide/portal-guide.png)
+
+It doesn't check which portal the game would link to, so portals built close together (for chunk loaders) are
+fine.
 
 ## Good to know
 

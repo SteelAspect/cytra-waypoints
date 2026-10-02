@@ -139,7 +139,12 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(categories.contains("[Portals] portals — 1 waypoint · Xaero colour: Purple (13)"), categories);
 		run(helper, dispatcher, alice, "cway info Hub");
 		String hubInfo = alice.out.take();
-		helper.assertTrue(hubInfo.contains("Overworld side: 80 70 -160"), "portal conversion in info:\n" + hubInfo);
+		// X and Z scaled by 8; Y is the reader's own height (Hub's Y 70 is a Nether height, meaningless up here).
+		helper.assertTrue(hubInfo.contains("Overworld side: 80 " + aliceEntity.getBlockY() + " -160"),
+				"portal conversion in info, at the reader's Y:\n" + hubInfo);
+		run(helper, dispatcher, moderator, "cway info Hub");
+		String consoleInfo = moderator.out.take();
+		helper.assertTrue(consoleInfo.contains("Overworld side: 80 ~ -160"), "no position (console): Y is ~\n" + consoleInfo);
 		helper.assertTrue(hubInfo.contains("via Nether portal"), "distance through the portal:\n" + hubInfo);
 		helper.assertTrue(!hubInfo.contains("[Teleport]"), "no teleport button for ordinary players");
 		helper.assertValueEqual(run(helper, dispatcher, alice, "cway xaero \"Main Storage\""), 1, "xaero share");
@@ -322,6 +327,7 @@ public class SharedWaypointsGameTest {
 		routes(helper, server, dispatcher, mod, aliceEntity, bobEntity, alice, bob, moderator);
 		clientModSync(helper, dispatcher, mod, aliceEntity, bobEntity, alice, moderator);
 		joinSummary(helper, dispatcher, mod, aliceEntity, moderator);
+		portalGuide(helper, server, dispatcher, mod, aliceEntity);
 
 		// Every /cway subcommand must be a reserved word, so no category can ever hide one.
 		for (var child : dispatcher.getRoot().getChild("cway").getChildren()) {
@@ -663,6 +669,52 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(toAlice.isEmpty(), "no updates after leaving");
 		run(helper, dispatcher, moderator, "cway remove Gone");
 		alice.out.take();
+	}
+
+	/** /cway portal: the matching spot for a portal you look at, highlighted on the other side until it's built. */
+	private static void portalGuide(GameTestHelper helper, MinecraftServer server, CommandDispatcher<CommandSourceStack> dispatcher,
+			ModContext mod, ServerPlayer aliceEntity) {
+		var guide = mod.portalGuide();
+		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
+		expectError(helper, dispatcher, alice, "cway portal", "Look at a Nether portal");
+
+		// A 2 wide × 3 tall portal (walked through north–south) in the Overworld. Flag 18 = update clients, and
+		// skip shape updates, so the portal blocks stand without a frame.
+		var overworld = server.overworld();
+		var portalState = net.minecraft.world.level.block.Blocks.NETHER_PORTAL.defaultBlockState()
+				.setValue(net.minecraft.world.level.block.NetherPortalBlock.AXIS, net.minecraft.core.Direction.Axis.X);
+		for (int x = 1040; x <= 1041; x++) {
+			for (int y = 100; y <= 102; y++) {
+				overworld.setBlock(new net.minecraft.core.BlockPos(x, y, -312), portalState, 18);
+			}
+		}
+		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1041, 101, -312), server.getTickCount()).isEmpty(),
+				"guide starts from any block of the portal");
+		var target = guide.targetOf(aliceEntity.getUUID()).orElseThrow();
+		helper.assertValueEqual(target, new io.github.steelaspect.sharedwaypoints.portal.PortalShape(130, 0, -39,
+				net.minecraft.core.Direction.Axis.X, 2, 3), "Nether side: ÷8, same size and facing");
+		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1045, 101, -312), server.getTickCount())
+				.orElse("").contains("Look at a Nether portal"), "not a portal block");
+
+		// Built: a portal block anywhere in the footprint on the Nether side, at any height.
+		var nether = server.getLevel(net.minecraft.world.level.Level.NETHER);
+		helper.assertFalse(io.github.steelaspect.sharedwaypoints.portal.PortalGuide.isBuilt(nether, target), "nothing built yet");
+		var built = new net.minecraft.core.BlockPos(131, 70, -39);
+		nether.setBlock(built, portalState, 18);
+		helper.assertTrue(io.github.steelaspect.sharedwaypoints.portal.PortalGuide.isBuilt(nether, target), "portal built there");
+		nether.setBlock(built, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
+
+		run(helper, dispatcher, alice, "cway portal stop");
+		helper.assertTrue(alice.out.take().contains("Portal guide stopped."), "stop");
+		helper.assertTrue(guide.targetOf(aliceEntity.getUUID()).isEmpty(), "no guide after stop");
+		run(helper, dispatcher, alice, "cway portal stop");
+		helper.assertTrue(alice.out.take().contains("You don't have a portal guide running."), "nothing to stop");
+		for (int x = 1040; x <= 1041; x++) {
+			for (int y = 100; y <= 102; y++) {
+				overworld.setBlock(new net.minecraft.core.BlockPos(x, y, -312),
+						net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
+			}
+		}
 	}
 
 	/** How players learn about the Xaero sync: the first-join tip and /cway sync. */

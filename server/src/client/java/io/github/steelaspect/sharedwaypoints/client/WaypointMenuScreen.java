@@ -232,7 +232,7 @@ public final class WaypointMenuScreen extends Screen {
 		if (player == null) {
 			return Double.MAX_VALUE;
 		}
-		return NavMath.project(waypoint, Dimensions.id(player.level().dimension()))
+		return NavMath.project(waypoint, Dimensions.id(player.level().dimension()), player.getBlockY())
 				.map(target -> target.horizontalDistance(player.getX(), player.getZ()))
 				.orElse(Double.MAX_VALUE);
 	}
@@ -413,7 +413,10 @@ public final class WaypointMenuScreen extends Screen {
 		String where = distance != null ? distance.replace(" ⟳", " via portal") : "in " + Dimensions.shortName(waypoint.dimension());
 		graphics.drawString(font, where, x + maxWidth - font.width(where), y, Colors.AQUA);
 		y += 11;
-		Optional<NavMath.Target> other = NavMath.portalEquivalent(waypoint);
+		// The other side at the player's own height: the waypoint's Y belongs to its own dimension.
+		var player = net.minecraft.client.Minecraft.getInstance().player;
+		Optional<NavMath.Target> other = player == null ? Optional.empty()
+				: NavMath.portalEquivalent(waypoint, player.getBlockY());
 		if (other.isPresent()) {
 			String side = waypoint.dimension().equals(Dimensions.OVERWORLD) ? "Nether side: " : "Overworld side: ";
 			graphics.drawString(font, side + other.get().x() + " " + other.get().y() + " " + other.get().z(), x, y, Colors.PURPLE);

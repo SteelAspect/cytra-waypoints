@@ -58,7 +58,7 @@ final class WaypointList extends ObjectSelectionList<WaypointList.Entry> {
 			return null;
 		}
 		String here = Dimensions.id(player.level().dimension());
-		return NavMath.project(waypoint, here).map(target -> {
+		return NavMath.project(waypoint, here, player.getBlockY()).map(target -> {
 			double distance = target.horizontalDistance(player.getX(), player.getZ());
 			String direction = NavMath.compass(player.getX(), player.getZ(), target.x() + 0.5, target.z() + 0.5);
 			return NavMath.formatDistance(distance) + " " + direction + (target.viaPortal() ? " ⟳" : "");
