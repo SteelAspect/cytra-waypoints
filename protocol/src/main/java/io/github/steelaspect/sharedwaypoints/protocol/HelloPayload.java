@@ -6,11 +6,11 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
 /**
- * Client → server, once per join: "I have the client mod and speak this protocol version". Only players who send
+ * Client → server, once per join: "I have the mod and speak this protocol version". Only players who send
  * this ever receive sync payloads.
  *
  * @param protocolVersion the client's {@link SyncProtocol#VERSION}
- * @param modVersion      the client mod's version, for the server log
+ * @param modVersion      the player's SharedWaypoints version, for the server log
  */
 public record HelloPayload(int protocolVersion, String modVersion) implements CustomPacketPayload {
 	public static final Type<HelloPayload> TYPE =

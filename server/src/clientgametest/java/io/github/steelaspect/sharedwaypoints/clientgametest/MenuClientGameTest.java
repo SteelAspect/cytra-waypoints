@@ -91,15 +91,29 @@ public class MenuClientGameTest implements FabricClientGameTest {
 				client.options.menuBackgroundBlurriness().set(5);
 			});
 			world.getClientWorld().waitForChunksRender();
-			// No sync client mod in this game: the first join shows how to get the Xaero sync.
-			context.waitFor(client -> chatText(client).contains("Want these waypoints in Xaero's Minimap automatically?"));
+			// The mod is in this game (one jar) but Xaero's Minimap isn't: a few seconds after the first join the server
+			// suggests Xaero, and never the "install the mod" tip.
+			context.waitFor(client -> chatText(client).contains("Your SharedWaypoints can't reach Xaero's Minimap."));
+			if (context.computeOnClient(client -> chatText(client).contains("Want these waypoints in Xaero's Minimap"))) {
+				throw new AssertionError("A player who has the mod was told to install it");
+			}
+			context.setScreen(() -> new ChatScreen("", false));
+			context.waitTicks(3);
+			shot(context, "xaero-tip");
+			context.setScreen(() -> null);
+			// What a player without the mod sees on their first join (sent by hand: this game has the mod).
+			context.runOnClient(client -> client.gui.getChat().clearMessages(false));
+			world.getServer().runOnServer(server -> server.getPlayerList().getPlayers().get(0)
+					.sendSystemMessage(SharedWaypoints.context().clientModTip().tip()));
+			context.waitFor(client -> chatText(client).contains("the same jar as the server"));
 			context.setScreen(() -> new ChatScreen("", false));
 			context.waitTicks(3);
 			shot(context, "sync-tip");
 			context.setScreen(() -> null);
 			// [How it works] runs /cway sync: the steps.
+			context.runOnClient(client -> client.gui.getChat().clearMessages(false));
 			context.runOnClient(client -> client.player.connection.sendCommand("cway sync"));
-			context.waitFor(client -> chatText(client).contains("1. Put sharedwaypoints-client-"));
+			context.waitFor(client -> chatText(client).contains("1. Put sharedwaypoints-"));
 			context.setScreen(() -> new ChatScreen("", false));
 			context.waitTicks(3);
 			shot(context, "sync-steps");

@@ -4,7 +4,7 @@ import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
 
 /**
- * One shared waypoint as the client mod needs it for Xaero's Minimap. The server fills in everything that depends
+ * One shared waypoint as a player's game needs it for Xaero's Minimap. The server fills in everything that depends
  * on its config (category name and colour, Xaero initials), so the client never has to know the categories.
  *
  * @param id           stable waypoint id (survives renames)

@@ -79,7 +79,7 @@ public final class SyncService {
 		String name = player.getGameProfile().name();
 		greeted.add(player.getUUID());
 		if (hello.protocolVersion() != SyncProtocol.VERSION) {
-			SharedWaypoints.LOGGER.info("{} has sharedwaypoints-client {} (sync protocol {}); this server speaks protocol {}, "
+			SharedWaypoints.LOGGER.info("{} has SharedWaypoints {} on their game (sync protocol {}); this server speaks protocol {}, "
 					+ "so their Xaero's Minimap won't be synced", name, hello.modVersion(), hello.protocolVersion(), SyncProtocol.VERSION);
 			sender.accept(new WelcomePayload(SyncProtocol.VERSION, false));
 			return;
@@ -91,7 +91,7 @@ public final class SyncService {
 		}
 		subscribers.put(player.getUUID(), sender);
 		fullSync().forEach(sender);
-		SharedWaypoints.LOGGER.info("Syncing shared waypoints to {}'s Xaero's Minimap (sharedwaypoints-client {})",
+		SharedWaypoints.LOGGER.info("Syncing shared waypoints to {}'s Xaero's Minimap (SharedWaypoints {} on their game)",
 				name, hello.modVersion());
 	}
 

@@ -3,8 +3,8 @@ plugins {
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}" apply false
 }
 
-// Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-server-<version>.jar);
-// builds from any other branch, e.g. `dev`, are test builds (sharedwaypoints-server-dev-<version>.jar, version
+// Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-<version>.jar);
+// builds from any other branch, e.g. `dev`, are test builds (sharedwaypoints-dev-<version>.jar, version
 // "<version>+dev" in-game), so the two can never be mixed up. Force either with -Prelease=true / -Prelease=false.
 def gitBranch = ''
 try {

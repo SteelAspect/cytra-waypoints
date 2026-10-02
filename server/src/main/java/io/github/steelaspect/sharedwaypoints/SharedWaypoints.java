@@ -33,7 +33,7 @@ public final class SharedWaypoints implements ModInitializer {
 		// Optional client menu: payload types must be registered on both sides; only modded clients use them.
 		MenuNetworking.registerPayloads();
 		context.menus().registerReceiver();
-		// Optional Xaero's Minimap sync for players with sharedwaypoints-client (handshake first; see SyncService).
+		// Optional Xaero's Minimap sync for players with SharedWaypoints on their game (handshake first; see SyncService).
 		context.sync().registerReceiver();
 
 		// (Re)load from disk every time a server starts. In singleplayer this runs for each world opened.
