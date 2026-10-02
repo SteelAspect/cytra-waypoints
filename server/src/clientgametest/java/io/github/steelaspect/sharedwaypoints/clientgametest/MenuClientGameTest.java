@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.gui.screens.ChatScreen;
@@ -176,6 +177,47 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			view(context, "", "all", "distance");
 			shot(context, "sort-distance");
 			view(context, "", "all", "category");
+
+			// --- project status: mark Iron Farm broken from the menu, with a note
+			world.getServer().runCommand("cway status \"Main Storage\" done");
+			world.getServer().runCommand("cway status \"Spawn Base\" wip Adding the east wing");
+			context.waitFor(client -> ClientWaypoints.waypoints().stream().filter(w -> w.status() != null).count() == 2);
+			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Iron Farm"));
+			context.waitTicks(2);
+			context.clickScreenButton("Set status…");
+			context.waitFor(client -> client.screen != null && client.screen.getClass().getSimpleName().equals("StatusScreen"));
+			context.getInput().typeChars("Out of bonemeal");
+			context.waitTicks(2);
+			shot(context, "status-screen");
+			context.clickScreenButton("⚠ Broken");
+			context.waitForScreen(WaypointMenuScreen.class);
+			context.waitFor(client -> ClientWaypoints.waypoints().stream().anyMatch(w -> w.name().equals("Iron Farm")
+					&& w.status() != null && w.status().state() == ProjectStatus.State.BROKEN
+					&& "Out of bonemeal".equals(w.status().note())));
+			boolean brokenOnServer = world.getServer().computeOnServer(server -> SharedWaypoints.context().waypoints()
+					.get("Iron Farm").map(w -> w.status() != null && w.status().state() == ProjectStatus.State.BROKEN)
+					.orElse(false));
+			if (!brokenOnServer) {
+				throw new AssertionError("Iron Farm should be Broken on the server");
+			}
+			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Iron Farm"));
+			context.waitTicks(5);
+			shot(context, "status-menu");
+			view(context, "", "projects", "category");
+			shot(context, "filter-projects");
+			view(context, "", "all", "category");
+			// The same in chat: /cway projects.
+			context.setScreen(() -> null);
+			context.runOnClient(client -> client.gui.getChat().clearMessages(false));
+			context.runOnClient(client -> client.player.connection.sendCommand("cway projects"));
+			context.waitFor(client -> chatText(client).contains("=== Projects (3) ==="));
+			context.setScreen(() -> new ChatScreen("", false));
+			context.waitTicks(3);
+			shot(context, "projects-chat");
+			context.setScreen(() -> null);
+			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
+			context.waitForScreen(WaypointMenuScreen.class);
+			context.waitTicks(3);
 
 			// --- routes: create one, add stops with the picker, reorder, then follow it
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).openRoutesForTest());

@@ -6,6 +6,7 @@ import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import io.github.steelaspect.sharedwaypoints.permission.WaypointPermissions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Route;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.util.ArrayList;
@@ -104,7 +105,8 @@ public final class MenuNetworking {
 					waypoint.x(), waypoint.y(), waypoint.z(), waypoint.dimension(), waypoint.description(),
 					waypoint.creatorName(), waypoint.created().getEpochSecond(),
 					WaypointPermissions.canEdit(source, waypoint), WaypointPermissions.canRemove(source, waypoint),
-					favorites.contains(waypoint.id())));
+					favorites.contains(waypoint.id()), statusData(waypoint.status()),
+					WaypointPermissions.canSetStatus(source, waypoint)));
 		}
 		List<SyncPayload.RouteData> routes = new ArrayList<>();
 		for (Route route : mod.routes().all()) {
@@ -118,6 +120,11 @@ public final class MenuNetworking {
 		return new SyncPayload(List.copyOf(categories.values()), waypoints, WaypointPermissions.canAdd(source),
 				WaypointPermissions.canTeleport(source), mod.navigation().destinationOf(player.getUUID()).orElse(null),
 				routes, WaypointPermissions.canCreateRoute(source), onRoute);
+	}
+
+	private static SyncPayload.StatusData statusData(ProjectStatus status) {
+		return status == null ? null : new SyncPayload.StatusData(status.state().id(), status.note(), status.setByName(),
+				status.setAt().getEpochSecond());
 	}
 
 	private static SyncPayload.CategoryData categoryData(Category category) {
@@ -162,6 +169,15 @@ public final class MenuNetworking {
 					yield "cway route describe " + routeName(args, 0) + (text.isEmpty() ? "" : " " + text);
 				}
 				case ROUTE_DELETE -> "cway route delete " + routeName(args, 0);
+				case STATUS -> {
+					String state = arg(args, 1);
+					if (!state.equals("clear") && ProjectStatus.State.byId(state).isEmpty()) {
+						throw new BadRequest("Invalid value: " + state);
+					}
+					String note = args.size() > 2 ? oneLine(args.get(2)) : "";
+					yield "cway status " + name(args, 0) + " " + state.toLowerCase(java.util.Locale.ROOT)
+							+ (note.isEmpty() || state.equals("clear") ? "" : " " + note);
+				}
 			};
 		} catch (BadRequest e) {
 			return new ResultPayload(false, e.getMessage());

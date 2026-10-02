@@ -53,4 +53,15 @@ class MapMarkerTest {
 		assertEquals(0x55FFFF, ring & 0xFFFFFF, "disc uses the category colour");
 		assertTrue(MarkerIcons.dataUri(0x55FFFF).startsWith("data:image/png;base64,iVBOR"), "PNG data URI");
 	}
+
+	@Test
+	void statusShowsInTheLabelAndPopup() {
+		Waypoint farm = waypoint("Gold Farm", null, "Steve").withStatus(new io.github.steelaspect.sharedwaypoints.waypoint
+				.ProjectStatus(io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus.State.BROKEN, "<b>empty</b>",
+				Waypoint.SERVER_UUID, "Alex", Instant.EPOCH));
+		MapMarker marker = MapMarker.of(farm);
+		assertEquals("Gold Farm (⚠ Broken)", marker.label());
+		assertTrue(marker.detailHtml().contains("<b style=\"color:#FF5555\">⚠ Broken: &lt;b&gt;empty&lt;/b&gt;</b>"
+				+ " <small>(Alex)</small>"), marker.detailHtml());
+	}
 }

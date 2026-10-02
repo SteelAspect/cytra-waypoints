@@ -12,7 +12,7 @@ import net.minecraft.resources.Identifier;
  * @param message what the command replied (e.g. "Added waypoint Farm" or the error)
  */
 public record ResultPayload(boolean success, String message) implements CustomPacketPayload {
-	public static final Type<ResultPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "result2"));
+	public static final Type<ResultPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "result3"));
 	public static final StreamCodec<FriendlyByteBuf, ResultPayload> CODEC = StreamCodec.of(
 			(buf, payload) -> {
 				buf.writeBoolean(payload.success);

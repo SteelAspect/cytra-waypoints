@@ -57,13 +57,14 @@ distance.
 
 **Top bar.**
 - **Search** by name, description or who added it.
-- **All / ★ Favourites / a category:** click to cycle through the filters.
+- **All / ★ Favourites / Projects / a status / a category:** click to cycle through the filters. **Projects**
+  shows everything with a status; **⚠ Broken** only what's broken.
 - **By category / By name / By distance:** click to change the sort order.
 - **+ Add:** add a new waypoint.
 
 **Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates (at your own
 height), its
-description, and who added it and when.
+project status (if it has one), its description, and who added it and when.
 
 **Bottom right:** **Routes** opens the [routes screen](#routes), and **Done** closes the menu.
 
@@ -78,6 +79,7 @@ description, and who added it and when.
 | **Edit** | Change the name or description. Available for waypoints you added (and for admins). |
 | **Remove** | Deletes it for everyone, after asking you first. Available for waypoints you added (and for admins). |
 | **Teleport** | Only shown to server admins. |
+| **Set status…** / **Status: …** | Mark it Planned, WIP, Done or Broken, with a note. See [Project status](#project-status). |
 
 A greyed-out button means you aren't allowed to use it; hover it to see why. The line at the bottom left shows
 the server's answer to your last action, e.g. "Teleported to Iron Farm".
@@ -101,6 +103,27 @@ new waypoint straight away.
 Favourites are per player: yours don't change what anyone else sees.
 
 ![Only favourites](images/guide/favourites.png)
+
+## Project status
+
+Tell everyone where a build stands: **✎ Planned**, **⚒ WIP**, **✔ Done** or **⚠ Broken**, with an optional note
+such as "out of bonemeal". Select the waypoint, click **Set status…**, type the note, and pick a status.
+**Clear status** removes it.
+
+![Setting a status](images/guide/status-screen.png)
+
+The status shows next to the name in the list and in the details, so a broken farm stands out:
+
+![A broken farm in the menu](images/guide/status-menu.png)
+
+- Anyone can set a status, so whoever finds a broken farm can say so. If it's your waypoint and you're online,
+  you're told who changed it.
+- When you join, you see "⚠ 2 builds are marked Broken (1 of yours)" with a **[Show]** button.
+- With the automatic Xaero's Minimap sync, a broken build's waypoint shows **!** as its symbol.
+- In chat: `/cway status <name>` shows it with buttons, `/cway status <name> broken out of bonemeal` sets it, and
+  `/cway projects` lists everything with a status (broken first). Click a filter, or use `/cway projects broken`.
+
+![Projects in chat](images/guide/projects-chat.png)
 
 ## Routes
 
@@ -153,7 +176,8 @@ fine.
 ## Good to know
 
 - The server decides everything. The menu can only do what you're allowed to do with commands.
-- The menu needs 1.5.0 or newer on both your game and the server. If the server is older, **J** tells you, and chat
+- The menu needs the same SharedWaypoints version family on both your game and the server (2.2.0 or newer since
+  project status changed the menu's data). If the server is older, **J** tells you, and chat
   works as normal.
 - The list updates by itself when anyone adds, renames or removes a waypoint.
 - Everything in the menu also works in chat. See the [command list](../README.md#commands).

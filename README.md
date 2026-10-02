@@ -2,7 +2,7 @@
 
 # SharedWaypoints
 
-[![Download 2.1.0](https://img.shields.io/badge/download-2.1.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
+[![Download 2.2.0](https://img.shields.io/badge/download-2.2.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
@@ -53,6 +53,10 @@ Players without the client mod see exactly what they always did: chat lists with
 - **"3 new waypoints since you last played"** when you join, with the same buttons, so nobody misses new places.
 - **Automatic Xaero's Minimap sync** for players with the optional client mod (see [Xaero's Minimap](#xaeros-minimap)).
 - **★ Favourites** per player, marked in every list.
+- **Project status:** mark a build **Planned**, **WIP**, **Done** or **Broken**, with a short note ("out of
+  bonemeal"). `/cway projects broken` shows what needs fixing. The status shows in every list, in the menu, on the
+  web maps, and as a `!` in Xaero's Minimap for broken builds. Anyone can set it by default, and the creator is told.
+  Returning players see "⚠ 2 builds are marked Broken" when they join.
 
 **Navigate**
 - **[Go] / `/cway go`:** the boss bar becomes a compass. It shows an arrow relative to where you look, the
@@ -151,7 +155,7 @@ The mod also works in singleplayer and LAN worlds.
 | `/cway <category> [page]` | List one category, e.g. `storage` (see `/cway categories`) |
 | `/cway categories` | Categories with their counts and Xaero colours |
 | `/cway info <name>` | Details, portal-side coordinates, distance and all buttons |
-| `/cway search <text>` | Search names, descriptions and creators |
+| `/cway search <text>` | Search names, descriptions, creators and status notes |
 | `/cway near [radius]` | Waypoints around you, closest first (default 512 blocks) |
 | `/cway nearest [category]` | The closest waypoint |
 | `/cway go <name>` | Start compass navigation |
@@ -162,6 +166,10 @@ The mod also works in singleplayer and LAN worlds.
 | `/cway rename <old> <new>` | Rename a waypoint |
 | `/cway describe <name> [text]` | Set a description (max 120 characters). Leave the text out to clear it |
 | `/cway remove <name>` | Remove a waypoint |
+| `/cway status <name>` | Show its project status, with buttons to change it |
+| `/cway status <name> <planned\|wip\|done\|broken> [note]` | Set the status, with an optional note (max 80 characters) |
+| `/cway status <name> clear` | Remove the status |
+| `/cway projects [status]` | Everything with a status, broken first, or only one status, e.g. `/cway projects broken` |
 | `/cway tp <name>` | Teleport to a waypoint (ops) |
 | `/cway route [list]` | List routes with their stop count and length |
 | `/cway route info <route>` | A route's numbered stops, with buttons |
@@ -196,6 +204,7 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
 | `sharedwaypoints.route` | everyone: create routes |
 | `sharedwaypoints.edit` | op level 2, and creators can always rename or describe their own waypoints and change their own routes |
 | `sharedwaypoints.remove` | op level 2, and creators can always remove their own waypoints and routes |
+| `sharedwaypoints.status` | everyone: set or clear a waypoint's project status. Creators (and `edit`) can always set their own |
 | `sharedwaypoints.teleport` | op level 2 |
 | `sharedwaypoints.reload` | op level 2 |
 
@@ -271,7 +280,14 @@ Waypoints are stored in `config/sharedwaypoints/waypoints.json` and saved after 
       "description": "Sorted chests, bring shulkers",
       "creatorUuid": "8667ba71-b85a-4004-af54-457a9734eed7",
       "creatorName": "Steve",
-      "created": "2026-09-29T12:00:00Z"
+      "created": "2026-09-29T12:00:00Z",
+      "status": {
+        "state": "broken",
+        "note": "Out of bonemeal",
+        "setByUuid": "8667ba71-b85a-4004-af54-457a9734eed7",
+        "setByName": "Steve",
+        "setAt": "2026-10-02T17:30:00Z"
+      }
     }
   ],
   "lastSeen": {
@@ -280,6 +296,8 @@ Waypoints are stored in `config/sharedwaypoints/waypoints.json` and saved after 
 }
 ```
 
+- `status` is optional: waypoints without a project status don't have it. `state` is `planned`, `wip`, `done` or
+  `broken`; an unknown state is dropped on load.
 - `lastSeen` records when each player (by UUID) was last online, for the join summary. It's updated when players
   join and leave.
 - You can edit the file by hand while the server is stopped. An unknown `category` becomes `other`, and broken

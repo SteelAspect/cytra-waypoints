@@ -87,6 +87,10 @@ final class WaypointList extends ObjectSelectionList<WaypointList.Entry> {
 			boolean navigating = waypoint.id().equals(ClientWaypoints.navigatingTo());
 			String title = (navigating ? "▶ " : "") + waypoint.name() + (favorite ? " ★" : "");
 			graphics.drawString(font, title, x + 11, y + 2, navigating ? 0xFF55FF55 : 0xFFFFFFFF);
+			if (waypoint.status() != null) {
+				graphics.drawString(font, waypoint.status().state().symbol(), x + 11 + font.width(title) + 4, y + 2,
+						0xFF000000 | waypoint.status().state().rgb());
+			}
 
 			String distance = distanceLabel(waypoint);
 			if (distance != null) {

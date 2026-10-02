@@ -3,6 +3,7 @@ package io.github.steelaspect.sharedwaypoints.client;
 import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
 import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -42,9 +43,19 @@ public final class ClientWaypoints {
 		waypoints = payload.waypoints().stream()
 				.map(data -> new Waypoint(data.id(), data.name(), category(data.categoryId()), data.x(), data.y(),
 						data.z(), data.dimension(), data.description(), Waypoint.SERVER_UUID, data.creatorName(),
-						Instant.ofEpochSecond(data.createdEpochSecond())))
+						Instant.ofEpochSecond(data.createdEpochSecond()), status(data.status())))
 				.toList();
 		listener.run();
+	}
+
+	private static ProjectStatus status(SyncPayload.StatusData data) {
+		if (data == null) {
+			return null;
+		}
+		return ProjectStatus.State.byId(data.state())
+				.map(state -> new ProjectStatus(state, data.note(), Waypoint.SERVER_UUID, data.setByName(),
+						Instant.ofEpochSecond(data.setAtEpochSecond())))
+				.orElse(null);
 	}
 
 	static void result(ResultPayload payload) {

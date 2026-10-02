@@ -10,6 +10,7 @@ import io.github.steelaspect.sharedwaypoints.protocol.SyncProtocol;
 import io.github.steelaspect.sharedwaypoints.protocol.SyncedWaypoint;
 import io.github.steelaspect.sharedwaypoints.protocol.UpsertPayload;
 import io.github.steelaspect.sharedwaypoints.protocol.WelcomePayload;
+import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import io.github.steelaspect.sharedwaypoints.xaero.XaeroShareFormat;
 import java.util.ArrayList;
@@ -152,13 +153,21 @@ public final class SyncService {
 		return packets;
 	}
 
-	/** Everything the client needs for Xaero, including what depends on the server's categories. */
+	/**
+	 * Everything the client needs for Xaero, including what depends on the server's categories. A waypoint marked
+	 * Broken gets {@code !} as its Xaero symbol, so it stands out on the minimap.
+	 */
 	public static SyncedWaypoint toSynced(Waypoint waypoint) {
-		return new SyncedWaypoint(waypoint.id(), clip(waypoint.name()), clip(XaeroShareFormat.initials(waypoint.name())),
+		boolean broken = waypoint.status() != null && waypoint.status().state() == ProjectStatus.State.BROKEN;
+		String initials = broken ? BROKEN_INITIALS : XaeroShareFormat.initials(waypoint.name());
+		return new SyncedWaypoint(waypoint.id(), clip(waypoint.name()), clip(initials),
 				clip(waypoint.category().id()), clip(waypoint.category().displayName()), waypoint.category().xaeroColorIndex(),
 				waypoint.x(), waypoint.y(), waypoint.z(), clip(waypoint.dimension()),
 				waypoint.description() == null ? null : clip(waypoint.description()));
 	}
+
+	/** Xaero symbol of a waypoint marked Broken. */
+	public static final String BROKEN_INITIALS = "!";
 
 	/** Never more than the protocol allows, even from a hand-edited waypoints.json (too long would kick the player). */
 	private static String clip(String text) {
