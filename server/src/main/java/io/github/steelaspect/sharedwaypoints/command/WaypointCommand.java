@@ -57,6 +57,7 @@ import net.minecraft.server.level.ServerPlayer;
  * Projects                  /cway status &lt;name&gt; [planned|wip|done|broken [note] | clear] | projects [status]
  * Routes                    /cway route [list] | info | go &lt;route&gt; [stop] | skip | create | add | drop | move
  *                           | rename | describe | delete
+ * Portals                   /cway portal | portal list | portal stop [number]
  * Xaero                     /cway xaero &lt;name&gt;   (what [Add to Xaero] runs)
  * </pre>
  *
@@ -104,6 +105,8 @@ public final class WaypointCommand {
 
 	private static final SimpleCommandExceptionType NO_PORTAL = new SimpleCommandExceptionType(Component.literal(
 			"Look at a Nether portal (the purple part) within " + (int) PortalGuide.LOOK_RANGE + " blocks"));
+	private static final DynamicCommandExceptionType NO_PORTAL_GUIDE = new DynamicCommandExceptionType(
+			number -> Component.literal("You don't have a portal guide #" + number + " (see /cway portal list)"));
 
 	private final ModContext mod;
 
@@ -180,11 +183,16 @@ public final class WaypointCommand {
 				.then(Commands.literal("sync")
 						.executes(context -> command.syncHelp(context.getSource())))
 
-				// ---- portals: look at one, and its matching spot on the other side is highlighted
+				// ---- portals: look at one, and its matching spot on the other side is highlighted (several at once)
 				.then(Commands.literal("portal")
 						.executes(context -> command.portalGuide(context.getSource()))
+						.then(Commands.literal("list")
+								.executes(context -> command.listPortalGuides(context.getSource())))
 						.then(Commands.literal("stop")
-								.executes(context -> command.stopPortalGuide(context.getSource()))))
+								.executes(context -> command.stopPortalGuides(context.getSource()))
+								.then(Commands.argument("number", IntegerArgumentType.integer(1))
+										.executes(context -> command.stopPortalGuide(context.getSource(),
+												IntegerArgumentType.getInteger(context, "number"))))))
 
 				// ---- editing
 				.then(Commands.literal("add")
@@ -871,7 +879,7 @@ public final class WaypointCommand {
 						route -> Component.literal(route.stops().size() + (route.stops().size() == 1 ? " stop" : " stops"))));
 	}
 
-	/** {@code /cway portal}: highlight the matching spot for the portal you're looking at. */
+	/** {@code /cway portal}: highlight the matching spot for the portal you're looking at, next to any others. */
 	private int portalGuide(CommandSourceStack source) throws CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
 		BlockPos portal = PortalGuide.lookedAt(player).orElseThrow(() -> NO_PORTAL.create());
@@ -882,10 +890,30 @@ public final class WaypointCommand {
 		return 1;
 	}
 
-	private int stopPortalGuide(CommandSourceStack source) throws CommandSyntaxException {
+	private int listPortalGuides(CommandSourceStack source) throws CommandSyntaxException {
 		ServerPlayer player = source.getPlayerOrException();
-		reply(source, Component.literal(mod.portalGuide().stop(player.getUUID())
-				? "Portal guide stopped." : "You don't have a portal guide running.").withStyle(ChatFormatting.GRAY));
+		mod.portalGuide().list(player, source.getServer().getTickCount()).forEach(line -> reply(source, line));
+		return 1;
+	}
+
+	/** {@code /cway portal stop}: all your portal guides. */
+	private int stopPortalGuides(CommandSourceStack source) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		int stopped = mod.portalGuide().stopAll(player.getUUID());
+		reply(source, Component.literal(switch (stopped) {
+			case 0 -> "You don't have a portal guide running.";
+			case 1 -> "Portal guide stopped.";
+			default -> "Stopped all " + stopped + " portal guides.";
+		}).withStyle(ChatFormatting.GRAY));
+		return stopped;
+	}
+
+	/** {@code /cway portal stop <number>}: one of them (what the [Stop] buttons run). */
+	private int stopPortalGuide(CommandSourceStack source, int number) throws CommandSyntaxException {
+		ServerPlayer player = source.getPlayerOrException();
+		String where = mod.portalGuide().stop(player, number).orElseThrow(() -> NO_PORTAL_GUIDE.create(number));
+		reply(source, Component.literal("Portal guide #" + number + " stopped (" + where + ").")
+				.withStyle(ChatFormatting.GRAY));
 		return 1;
 	}
 
