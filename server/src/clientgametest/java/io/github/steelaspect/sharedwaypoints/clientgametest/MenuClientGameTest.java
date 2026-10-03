@@ -369,7 +369,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitTicks(10);
 			context.runOnClient(client -> client.player.connection.sendCommand("cway portal"));
 			context.waitFor(client -> chatText(client).contains("Portal at 1040 100 -312 (2 wide × 3 tall, facing north–south)"));
-			world.getServer().runCommand("execute in minecraft:the_nether run tp @a 131.0 70 -34 180 8");
+			world.getServer().runCommand("execute in minecraft:the_nether run tp @a 131.0 70 -31.5 180 2");
 			context.waitFor(client -> client.level != null
 					&& client.level.dimension() == net.minecraft.world.level.Level.NETHER, 400);
 			world.getClientWorld().waitForChunksRender();
@@ -377,7 +377,10 @@ public class MenuClientGameTest implements FabricClientGameTest {
 				client.gui.getChat().clearMessages(false); // a clean view of the highlight
 				client.getToastManager().clear();
 			});
-			context.waitTicks(30); // a few particle refreshes
+			// The spot is shown as ghost blocks: 6 for the 2 × 3 opening and 14 for the frame, only in this game.
+			context.waitFor(client -> client.level.getEntitiesOfClass(net.minecraft.world.entity.Display.BlockDisplay.class,
+					new net.minecraft.world.phys.AABB(125, 60, -45, 137, 80, -33)).size() == 20, 200);
+			context.waitTicks(10);
 			shot(context, "portal-guide");
 			world.getServer().runCommand("execute in minecraft:overworld run tp @a 0 -60 0");
 			context.waitFor(client -> client.level != null

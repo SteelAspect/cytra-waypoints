@@ -10,7 +10,6 @@ import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
@@ -28,22 +27,23 @@ import net.minecraft.world.phys.HitResult;
 
 /**
  * {@code /cway portal}: look at a Nether portal and the matching spot on the other side (X and Z ÷ 8 or × 8, the
- * same size and facing) is highlighted for you in the other dimension, at your height, with particles only you see
- * and a compass bar. It ends when a portal is built there, with {@code /cway portal stop}, or after 30 minutes.
+ * same size and facing) is shown to you in the other dimension, at your height, as see-through ghost blocks (the
+ * opening and the obsidian frame, with a glowing outline through terrain; see {@link PortalGhosts}) and a compass
+ * bar. Frame ghosts disappear as you place obsidian. It ends when a portal is built there, with
+ * {@code /cway portal stop}, or after 30 minutes.
  *
  * <p>It doesn't check which portal vanilla would link to: chunk-loader portals are often built close together on
- * purpose. Vanilla clients see everything (particles and a boss bar).
+ * purpose. Vanilla clients see everything (the ghosts are vanilla block displays, and a boss bar).
  */
 public final class PortalGuide {
 	/** How far you can be from the portal you look at. */
 	public static final double LOOK_RANGE = 16;
 	static final int LIFETIME_TICKS = 30 * 60 * 20;
-	private static final int PARTICLE_INTERVAL = 10;
+	/** How often the ghosts follow the player's height and drop frame blocks that are now obsidian. */
+	private static final int GHOST_INTERVAL = 10;
 	private static final int BUILT_CHECK_INTERVAL = 20;
-	/** Particles are only sent when you're this close (clients drop forced particles past 512 anyway). */
+	/** Ghosts are only shown when you're this close. */
 	private static final double SHOW_RANGE = 128;
-	private static final int PORTAL_PURPLE = 0xB34DFF;
-	private static final int FRAME_WHITE = 0xFFFFFF;
 
 	private final Map<UUID, Guide> guides = new HashMap<>();
 
@@ -54,6 +54,9 @@ public final class PortalGuide {
 		final PortalShape to;
 		final ServerBossEvent bar;
 		final int endsAt;
+		final PortalGhosts ghosts = new PortalGhosts();
+		/** The Y the ghosts' opening starts at (the player's height when they were last placed). */
+		int ghostY;
 		double startDistance = -1;
 
 		Guide(String fromDimension, String toDimension, PortalShape from, PortalShape to, ServerBossEvent bar, int endsAt) {
@@ -115,8 +118,21 @@ public final class PortalGuide {
 		if (guide == null) {
 			return false;
 		}
-		guide.bar.removeAllPlayers();
+		end(guide);
 		return true;
+	}
+
+	/** Updates the player's ghost blocks now instead of on the next refresh tick, for the GameTest. */
+	public void refreshGhosts(ServerPlayer player) {
+		Guide guide = guides.get(player.getUUID());
+		if (guide != null && Dimensions.id(player.level().dimension()).equals(guide.toDimension)) {
+			updateGhosts(player, guide);
+		}
+	}
+
+	/** How many ghost blocks the player's game shows right now, for the GameTest. */
+	public int ghostCount(UUID player) {
+		return Optional.ofNullable(guides.get(player)).map(guide -> guide.ghosts.count()).orElse(0);
 	}
 
 	/** Where the player's guide points (the other side, Y = 0), for the GameTest. */
@@ -129,11 +145,16 @@ public final class PortalGuide {
 	}
 
 	public void clear() {
-		guides.values().forEach(guide -> guide.bar.removeAllPlayers());
+		guides.values().forEach(PortalGuide::end);
 		guides.clear();
 	}
 
-	/** Every server tick: compass bar, particles, and whether the portal has been built. */
+	private static void end(Guide guide) {
+		guide.bar.removeAllPlayers();
+		guide.ghosts.hide();
+	}
+
+	/** Every server tick: compass bar, ghost blocks, and whether the portal has been built. */
 	public void tick(MinecraftServer server) {
 		if (guides.isEmpty()) {
 			return;
@@ -148,26 +169,27 @@ public final class PortalGuide {
 				continue;
 			}
 			if (now >= guide.endsAt) {
-				guide.bar.removeAllPlayers();
+				end(guide);
 				iterator.remove();
 				player.sendSystemMessage(Component.literal("Portal guide ended after 30 minutes. Look at the portal and "
 						+ "run /cway portal again to restart it.").withStyle(ChatFormatting.GRAY));
 				continue;
 			}
 			if (!Dimensions.id(player.level().dimension()).equals(guide.toDimension)) {
-				guide.bar.removeAllPlayers(); // only shown on the side you're building on
+				// Only shown on the side you're building on.
+				end(guide);
 				continue;
 			}
 			if (now % BUILT_CHECK_INTERVAL == 0 && isBuilt(player.level(), guide.to)) {
-				guide.bar.removeAllPlayers();
+				end(guide);
 				iterator.remove();
 				player.sendSystemMessage(Component.literal("✦ Portal built at the matching spot. Guide finished.")
 						.withStyle(ChatFormatting.LIGHT_PURPLE));
 				continue;
 			}
 			updateBar(player, guide);
-			if (now % PARTICLE_INTERVAL == 0) {
-				highlight(player, guide.to);
+			if (now % GHOST_INTERVAL == 0 || guide.ghosts.count() == 0) {
+				updateGhosts(player, guide);
 			}
 		}
 	}
@@ -197,7 +219,7 @@ public final class PortalGuide {
 		guide.bar.setProgress((float) Math.clamp(1.0 - distance / guide.startDistance, 0.0, 1.0));
 		String size = guide.to.width() + "×" + guide.to.height();
 		if (distance <= guide.to.width() / 2.0 + 3) {
-			guide.bar.setName(Component.literal("✦ Build your " + size + " portal here — it's highlighted")
+			guide.bar.setName(Component.literal("✦ Build your " + size + " portal in the ghost blocks")
 					.withStyle(ChatFormatting.LIGHT_PURPLE));
 			return;
 		}
@@ -209,43 +231,23 @@ public final class PortalGuide {
 	}
 
 	/**
-	 * A white outline round the portal's opening (where the inside meets the obsidian frame) and purple specks in
-	 * every portal block, at the player's Y, in the portal's own plane.
+	 * Shows the ghosts when the player is close enough, at their height. They follow the player up or down only once
+	 * they land, so jumping doesn't make them flicker.
 	 */
-	private static void highlight(ServerPlayer player, PortalShape spot) {
+	private static void updateGhosts(ServerPlayer player, Guide guide) {
+		PortalShape spot = guide.to;
 		if (Math.hypot(spot.centerX() - player.getX(), spot.centerZ() - player.getZ()) > SHOW_RANGE) {
+			guide.ghosts.hide();
 			return;
 		}
+		if (guide.ghosts.count() == 0 || player.onGround()) {
+			guide.ghostY = player.getBlockY();
+		}
 		ServerLevel level = player.level();
-		int baseY = player.getBlockY();
-		DustParticleOptions inside = new DustParticleOptions(PORTAL_PURPLE, 1.5f);
-		DustParticleOptions outline = new DustParticleOptions(FRAME_WHITE, 0.7f);
-		for (int along = 0; along < spot.width(); along++) {
-			for (int up = 0; up < spot.height(); up++) {
-				BlockPos cell = spot.cell(along, up, baseY);
-				level.sendParticles(player, inside, true, true,
-						cell.getX() + 0.5, cell.getY() + 0.5, cell.getZ() + 0.5, 2, 0.25, 0.25, 0.25, 0.0);
-			}
-		}
-		// The rectangle's edges, a dot every quarter block.
-		double step = 0.25;
-		for (double a = 0; a <= spot.width() + 1e-9; a += step) {
-			dot(level, player, outline, spot, a, 0, baseY);
-			dot(level, player, outline, spot, a, spot.height(), baseY);
-		}
-		for (double up = step; up < spot.height() - 1e-9; up += step) {
-			dot(level, player, outline, spot, 0, up, baseY);
-			dot(level, player, outline, spot, spot.width(), up, baseY);
-		}
-	}
-
-	/** One outline dot, {@code along} and {@code up} blocks from the opening's corner, in the middle of its plane. */
-	private static void dot(ServerLevel level, ServerPlayer player, DustParticleOptions options, PortalShape spot,
-			double along, double up, int baseY) {
-		boolean northSouth = spot.axis() == Direction.Axis.X;
-		double x = northSouth ? spot.x() + along : spot.x() + 0.5;
-		double z = northSouth ? spot.z() + 0.5 : spot.z() + along;
-		level.sendParticles(player, options, true, true, x, baseY + up, z, 1, 0, 0, 0, 0.0);
+		guide.ghosts.show(player, PortalGhosts.cells(spot, guide.ghostY, cell -> {
+			BlockState state = level.getBlockState(cell);
+			return state.is(Blocks.OBSIDIAN) || state.is(Blocks.CRYING_OBSIDIAN);
+		}));
 	}
 
 	private static String label(String dimension) {
@@ -268,7 +270,7 @@ public final class PortalGuide {
 				Component.literal("✦ Portal at " + from.x() + " " + from.y() + " " + from.z() + " (" + size + ", facing "
 						+ from.facing() + ")").withStyle(ChatFormatting.LIGHT_PURPLE),
 				Component.literal("  " + label(toDimension) + " side: " + coordinates
-						+ " — go through and the spot is highlighted for you. ").withStyle(ChatFormatting.GRAY)
+						+ " — go through and the spot is shown in ghost blocks. ").withStyle(ChatFormatting.GRAY)
 						.append(copy).append(" ").append(stop));
 	}
 }
