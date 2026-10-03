@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.5.0 — 2026-10-03
+
+- **Several portal guides at once.** `/cway portal` no longer replaces your guide: look at another portal and run
+  it again, and both spots are shown together (up to 10 guides).
+  - The compass bar points to the nearest spot in your dimension, with "+2 more" for the others.
+  - Each guide has a number. `/cway portal list` shows them, nearest first, with distance, time left,
+    **[Copy coords]** and **[Stop]**. `/cway portal stop 2` stops one, `/cway portal stop` stops them all.
+  - Each guide finishes on its own when its portal is built, or after its 30 minutes. Running `/cway portal` on a
+    portal whose spot is already guided gives it its 30 minutes back instead of a second guide.
+  - A spot's ghosts follow your height only while you're near it (16 blocks), so walking up or down to one spot
+    doesn't move the others.
+  - Checking whether a spot is built no longer loads its chunks: a spot far away is checked once you get near it.
+
 ## 2.4.0 — 2026-10-03
 
 - **Portal guide: ghost blocks.** The matching portal spot is no longer a thin particle outline. Every block is

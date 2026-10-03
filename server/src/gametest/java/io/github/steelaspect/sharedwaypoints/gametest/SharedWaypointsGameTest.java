@@ -808,11 +808,26 @@ public class SharedWaypointsGameTest {
 		}
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1041, 101, -312), server.getTickCount()).isEmpty(),
 				"guide starts from any block of the portal");
-		var target = guide.targetOf(aliceEntity.getUUID()).orElseThrow();
+		var target = guide.targetsOf(aliceEntity.getUUID()).getFirst();
 		helper.assertValueEqual(target, new io.github.steelaspect.sharedwaypoints.portal.PortalShape(130, 0, -39,
 				net.minecraft.core.Direction.Axis.X, 2, 3), "Nether side: ÷8, same size and facing");
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1045, 101, -312), server.getTickCount())
 				.orElse("").contains("Look at a Nether portal"), "not a portal block");
+		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1040, 100, -312), server.getTickCount()).isEmpty(),
+				"the same portal again");
+		helper.assertValueEqual(guide.targetsOf(aliceEntity.getUUID()).size(), 1, "the same spot again restarts its guide");
+
+		// A second portal, 3 × 3, guided at the same time: Nether side 138 ~ -39, next to the first.
+		for (int x = 1104; x <= 1106; x++) {
+			for (int y = 100; y <= 102; y++) {
+				overworld.setBlock(new net.minecraft.core.BlockPos(x, y, -312), portalState, 18);
+			}
+		}
+		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1105, 101, -312), server.getTickCount()).isEmpty(),
+				"a second guide");
+		helper.assertValueEqual(guide.targetsOf(aliceEntity.getUUID()), java.util.List.of(target,
+				new io.github.steelaspect.sharedwaypoints.portal.PortalShape(138, 0, -39, net.minecraft.core.Direction.Axis.X, 3, 3)),
+				"both guides run at once");
 
 		// Built: a portal block anywhere in the footprint on the Nether side, at any height.
 		var nether = server.getLevel(net.minecraft.world.level.Level.NETHER);
@@ -822,18 +837,19 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(io.github.steelaspect.sharedwaypoints.portal.PortalGuide.isBuilt(nether, target), "portal built there");
 		nether.setBlock(built, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
 
-		// Ghost blocks: none in the Overworld; in the Nether near the spot, the 2 × 3 opening and its 14 frame blocks.
+		// Ghost blocks: none in the Overworld; in the Nether near the spots, both together: the 2 × 3 opening and its
+		// 14 frame blocks, and the 3 × 3 opening and its 16.
 		guide.refreshGhosts(aliceEntity);
 		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 0, "no ghosts on the side you came from");
 		aliceEntity.teleportTo(nether, 131.5, 70, -35.5, java.util.Set.of(), 180, 0, true);
 		guide.tick(server);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 20, "ghosts for the opening and the frame");
+		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 20 + 25, "ghosts for both spots");
 		// Placing obsidian in the frame removes that block's ghost.
 		// The bottom frame row is at the player's feet (Y 70), not in the ground under them.
 		var frameBlock = new net.minecraft.core.BlockPos(129, 70, -39);
 		nether.setBlock(frameBlock, net.minecraft.world.level.block.Blocks.OBSIDIAN.defaultBlockState(), 18);
 		guide.refreshGhosts(aliceEntity);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 19, "placed obsidian loses its ghost");
+		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 44, "placed obsidian loses its ghost");
 		nether.setBlock(frameBlock, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
 		// Too far away: hidden.
 		aliceEntity.teleportTo(nether, 131.5 + 200, 70, -35.5, java.util.Set.of(), 180, 0, true);
@@ -841,16 +857,36 @@ public class SharedWaypointsGameTest {
 		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 0, "no ghosts from 200 blocks away");
 		aliceEntity.teleportTo(nether, 131.5, 70, -35.5, java.util.Set.of(), 180, 0, true);
 		guide.refreshGhosts(aliceEntity);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 20, "back in range: shown again");
+		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 45, "back in range: shown again");
+
+		run(helper, dispatcher, alice, "cway portal list");
+		String list = alice.out.take();
+		helper.assertTrue(list.contains("Portal guides (2)"), "list header: " + list);
+		helper.assertTrue(list.contains("#1 Nether side: 130 ~ -39 (2×3, north–south)"), "list #1: " + list);
+		helper.assertTrue(list.contains("#2 Nether side: 138 ~ -39 (3×3, north–south)"), "list #2: " + list);
+		run(helper, dispatcher, alice, "cway portal stop 1");
+		helper.assertTrue(alice.out.take().contains("Portal guide #1 stopped (Nether side: 130 ~ -39)."), "stop one");
+		helper.assertValueEqual(guide.targetsOf(aliceEntity.getUUID()).size(), 1, "the other guide keeps running");
+		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 25, "its ghosts stay, the stopped one's go at once");
+		expectError(helper, dispatcher, alice, "cway portal stop 1", "You don't have a portal guide #1");
+
+		// Numbers aren't reused: guiding the first portal again makes it #3.
+		aliceEntity.teleportTo(overworld, 1040.5, 100, -309.5, java.util.Set.of(), 180, 0, true);
+		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1040, 100, -312), server.getTickCount()).isEmpty(),
+				"guide the first portal again");
+		run(helper, dispatcher, alice, "cway portal list");
+		helper.assertTrue(alice.out.take().contains("#3 Nether side: 130 ~ -39"), "a new number");
 
 		run(helper, dispatcher, alice, "cway portal stop");
-		helper.assertTrue(alice.out.take().contains("Portal guide stopped."), "stop");
-		helper.assertTrue(guide.targetOf(aliceEntity.getUUID()).isEmpty(), "no guide after stop");
+		helper.assertTrue(alice.out.take().contains("Stopped all 2 portal guides."), "stop all");
+		helper.assertTrue(guide.targetsOf(aliceEntity.getUUID()).isEmpty(), "no guides after stop");
 		run(helper, dispatcher, alice, "cway portal stop");
 		helper.assertTrue(alice.out.take().contains("You don't have a portal guide running."), "nothing to stop");
 		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 0, "stopping removes the ghosts");
+		run(helper, dispatcher, alice, "cway portal list");
+		helper.assertTrue(alice.out.take().contains("You don't have a portal guide running."), "empty list");
 		aliceEntity.teleportTo(overworld, 0.5, 64, 0.5, java.util.Set.of(), 0, 0, true);
-		for (int x = 1040; x <= 1041; x++) {
+		for (int x = 1040; x <= 1106; x++) {
 			for (int y = 100; y <= 102; y++) {
 				overworld.setBlock(new net.minecraft.core.BlockPos(x, y, -312),
 						net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
