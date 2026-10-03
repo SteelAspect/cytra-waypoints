@@ -204,3 +204,4 @@
 [2026-10-03 01:05] FIXED - CI client test timed out at the ghost check: block displays have no size, so a search box starting at Y 70 didn't count the bottom frame row exactly at Y 70. Box back to Y 60-80 (count 20) plus an explicit check that the lowest ghost is at the player's Y 70
 [2026-10-03 01:03] TESTED - Real client test with 196d953 (ghost bottom row checked by Y): PASSED locally; guide screenshot updated to the new height (whole portal stands on the floor)
 [2026-10-03 01:11] DONE - PR #11 (2.4.0 portal ghost blocks) merged by SteelAspect as fdf3a2e; dev fast-forwarded to main. No v2.4.0 release yet (waiting for the user to ask)
+[2026-10-03 01:15] DONE - Release v2.4.0 published via the Release workflow from main fdf3a2e (unit tests, GameTest, dedicated-server install test passed): https://github.com/SteelAspect/sharedwaypoints/releases/tag/v2.4.0 with sharedwaypoints-2.4.0.jar
