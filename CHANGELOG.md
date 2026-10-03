@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.0 — 2026-10-03
+
+- **Portal guide: ghost blocks.** The matching portal spot is no longer a thin particle outline. Every block is
+  shown as a see-through ghost block: purple glass where the portal goes and white glass where the obsidian frame
+  goes (corners included), at your height: the bottom of the frame is level with your feet, not in the ground
+  under you.
+  - A glowing outline shows the whole shape through terrain, so a spot inside netherrack is easy to find and dig
+    out.
+  - Each frame ghost disappears as soon as you place obsidian (or crying obsidian) in it.
+  - Only you see them: they're never added to the world, nothing can bump into them, and you can walk and build
+    through them. Vanilla players see them too, no mod needed.
+  - They follow your height when you land, not while you jump, and disappear when you leave, go more than 128
+    blocks away, stop the guide, or light the portal.
+
 ## 2.3.0 — 2026-10-02
 
 - **One jar for everything.** There's now a single `sharedwaypoints-<version>.jar` for the server and for players,
