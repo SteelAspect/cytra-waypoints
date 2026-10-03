@@ -167,8 +167,8 @@ Building the other half of a Nether portal? Look at the portal (the purple part)
 
 - Chat shows its size and where its twin goes, e.g. "Nether side: 130 ~ -39".
 - Go through. On the other side, the matching spot is shown in **see-through ghost blocks** that only you see:
-  purple where the portal goes, white where the obsidian frame goes, the same size and facing as your portal, at
-  your height. A glowing outline shows the whole shape even through netherrack, so you know where to dig. A bar
+  purple where the portal goes, white where the obsidian frame goes, the same size and facing as your portal, with
+  the bottom of the frame level with your feet. A glowing outline shows the whole shape even through netherrack, so you know where to dig. A bar
   at the top points you there.
 - Build the frame in the white ghost blocks: each one disappears as you place obsidian in it. You can walk and
   build through all of them. Once the portal is lit, the guide finishes by itself. `/cway portal stop` ends it early;

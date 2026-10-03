@@ -829,7 +829,8 @@ public class SharedWaypointsGameTest {
 		guide.tick(server);
 		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 20, "ghosts for the opening and the frame");
 		// Placing obsidian in the frame removes that block's ghost.
-		var frameBlock = new net.minecraft.core.BlockPos(129, 69, -39);
+		// The bottom frame row is at the player's feet (Y 70), not in the ground under them.
+		var frameBlock = new net.minecraft.core.BlockPos(129, 70, -39);
 		nether.setBlock(frameBlock, net.minecraft.world.level.block.Blocks.OBSIDIAN.defaultBlockState(), 18);
 		guide.refreshGhosts(aliceEntity);
 		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 19, "placed obsidian loses its ghost");

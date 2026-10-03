@@ -53,8 +53,9 @@ final class PortalGhosts {
 	private ServerLevel shownIn;
 
 	/**
-	 * Where the ghosts go for a portal spot with its opening's bottom at {@code baseY}: every block of the opening, and
-	 * every block of the frame around it (corners included) that isn't already obsidian.
+	 * Where the ghosts go for a portal spot with its frame's bottom row at {@code baseY} (the player's feet, so the
+	 * whole portal stands on the ground they stand on) and the opening from {@code baseY + 1}: every block of the
+	 * opening, and every block of the frame around it (corners included) that isn't already obsidian.
 	 *
 	 * @param placed whether a frame block is already in place (obsidian or crying obsidian)
 	 */
@@ -62,7 +63,7 @@ final class PortalGhosts {
 		Map<BlockPos, Kind> cells = new LinkedHashMap<>();
 		for (int along = -1; along <= spot.width(); along++) {
 			for (int up = -1; up <= spot.height(); up++) {
-				BlockPos cell = spot.cell(along, up, baseY);
+				BlockPos cell = spot.cell(along, up, baseY + 1);
 				boolean frame = along < 0 || along == spot.width() || up < 0 || up == spot.height();
 				if (!frame) {
 					cells.put(cell, Kind.OPENING);

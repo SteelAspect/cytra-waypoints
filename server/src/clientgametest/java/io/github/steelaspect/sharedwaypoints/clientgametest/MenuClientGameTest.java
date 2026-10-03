@@ -377,9 +377,10 @@ public class MenuClientGameTest implements FabricClientGameTest {
 				client.gui.getChat().clearMessages(false); // a clean view of the highlight
 				client.getToastManager().clear();
 			});
-			// The spot is shown as ghost blocks: 6 for the 2 × 3 opening and 14 for the frame, only in this game.
+			// The spot is shown as ghost blocks: 6 for the 2 × 3 opening and 14 for the frame, only in this game. The
+			// frame's bottom row is at the player's feet (Y 70), none in the netherrack under them.
 			context.waitFor(client -> client.level.getEntitiesOfClass(net.minecraft.world.entity.Display.BlockDisplay.class,
-					new net.minecraft.world.phys.AABB(125, 60, -45, 137, 80, -33)).size() == 20, 200);
+					new net.minecraft.world.phys.AABB(125, 70, -45, 137, 80, -33)).size() == 20, 200);
 			context.waitTicks(10);
 			shot(context, "portal-guide");
 			world.getServer().runCommand("execute in minecraft:overworld run tp @a 0 -60 0");

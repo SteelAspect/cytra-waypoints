@@ -55,7 +55,7 @@ public final class PortalGuide {
 		final ServerBossEvent bar;
 		final int endsAt;
 		final PortalGhosts ghosts = new PortalGhosts();
-		/** The Y the ghosts' opening starts at (the player's height when they were last placed). */
+		/** The Y of the ghosts' bottom frame row (the player's height when they were last placed). */
 		int ghostY;
 		double startDistance = -1;
 
@@ -231,8 +231,8 @@ public final class PortalGuide {
 	}
 
 	/**
-	 * Shows the ghosts when the player is close enough, at their height. They follow the player up or down only once
-	 * they land, so jumping doesn't make them flicker.
+	 * Shows the ghosts when the player is close enough, with the bottom of the frame at their feet (not in the ground
+	 * under them). They follow the player up or down only once they land, so jumping doesn't make them flicker.
 	 */
 	private static void updateGhosts(ServerPlayer player, Guide guide) {
 		PortalShape spot = guide.to;
