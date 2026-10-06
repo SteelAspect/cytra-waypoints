@@ -1,6 +1,7 @@
 plugins {
 	// 1.21.11 is the last obfuscated Minecraft release, so it needs the remapping flavour of Loom.
 	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}" apply false
+	id 'com.modrinth.minotaur' version '2.10.0' apply false
 }
 
 // Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-<version>.jar);

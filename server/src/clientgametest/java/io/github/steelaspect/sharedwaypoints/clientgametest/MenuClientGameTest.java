@@ -124,6 +124,15 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			world.getServer().runCommand("cway add Hub portals 10 70 -20 minecraft:the_nether");
 			world.getServer().runCommand("cway add \"Spawn Base\" bases 0 -60 0");
 
+			// Client switch off (Cytra Hub's on/off switch): the key does nothing.
+			context.runOnClient(client -> io.github.steelaspect.sharedwaypoints.client.ClientSettings.setEnabled(false));
+			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
+			context.waitTicks(10);
+			if (context.computeOnClient(client -> client.screen != null)) {
+				throw new AssertionError("menu opened while SharedWaypoints is switched off");
+			}
+			context.runOnClient(client -> io.github.steelaspect.sharedwaypoints.client.ClientSettings.setEnabled(true));
+
 			// Open the menu the way a player does: the keybind.
 			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
 			context.waitForScreen(WaypointMenuScreen.class);

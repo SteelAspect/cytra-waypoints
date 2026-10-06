@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.0 — 2026-10-06
+
+- **Client on/off switch.** New `config/sharedwaypoints/client.json` with `"enabled"` (default on). Off: the menu
+  key and the Esc-menu button do nothing, and syncing into Xaero's Minimap pauses (changes are kept and written
+  when you turn it back on). Navigation particles come from the server and aren't affected. Cytra Hub uses it
+  for the mod's on/off switch and profiles.
+
 ## 2.5.0 — 2026-10-03
 
 - **Several portal guides at once.** `/cway portal` no longer replaces your guide: look at another portal and run

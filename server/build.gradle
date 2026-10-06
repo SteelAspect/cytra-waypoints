@@ -1,5 +1,6 @@
 plugins {
 	id 'net.fabricmc.fabric-loom-remap'
+	id 'com.modrinth.minotaur'
 }
 
 def modVersion = project.ext.modVersion
@@ -206,4 +207,43 @@ java {
 
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
+}
+
+// Modrinth upload: `./gradlew :server:modrinth` with the MODRINTH_TOKEN environment variable set (a Modrinth token
+// with the CREATE_VERSION scope). Release builds only (the main branch, or -Prelease=true), so a dev jar can never
+// be uploaded. The changelog is this version's section of CHANGELOG.md; add -PmodrinthDryRun to print the upload
+// without sending it. Fails if this version number is already on Modrinth.
+def changelogSection = { String version ->
+	def lines = rootProject.file("CHANGELOG.md").readLines()
+	def start = lines.findIndexOf { it == "## ${version}" || it.startsWith("## ${version} ") }
+	if (start < 0) return "SharedWaypoints ${version}"
+	def end = lines.findIndexOf(start + 1) { it.startsWith("## ") }
+	return lines.subList(start + 1, end < 0 ? lines.size() : end).join("\n").trim()
+}
+
+modrinth {
+	projectId = rootProject.modrinth_project
+	versionNumber = modVersion
+	versionName = "SharedWaypoints ${modVersion}"
+	uploadFile = remapJar
+	gameVersions = [rootProject.minecraft_version]
+	loaders = ["fabric"]
+	changelog = changelogSection(rootProject.mod_version)
+	debugMode = project.hasProperty("modrinthDryRun")
+	dependencies {
+		required.project "fabric-api"
+		// Optional integrations, used only when installed.
+		optional.project "bluemap"
+		optional.project "squaremap"
+		optional.project "xaeros-minimap"
+	}
+}
+
+tasks.named("modrinth") {
+	def release = project.ext.isRelease
+	doFirst {
+		if (!release) {
+			throw new GradleException("Only release builds go to Modrinth: build from main, or pass -Prelease=true")
+		}
+	}
 }
