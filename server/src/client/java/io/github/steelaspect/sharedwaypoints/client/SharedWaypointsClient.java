@@ -48,13 +48,16 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenu.consumeClick()) {
-				openMenu(client);
+				if (ClientSettings.enabled()) {
+					openMenu(client);
+				}
 			}
 		});
 
 		// The same menu from the Esc menu, for players who'd rather click than remember a key.
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-			if (screen instanceof PauseScreen pause && pause.showsPauseMenu() && ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
+			if (screen instanceof PauseScreen pause && pause.showsPauseMenu() && ClientSettings.enabled()
+					&& ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
 				Screens.getButtons(screen).add(pauseMenuButton(client, width));
 			}
 		});
