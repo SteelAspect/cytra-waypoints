@@ -3,7 +3,7 @@ package io.github.steelaspect.sharedwaypoints.protocol;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 
 /**
- * The sync protocol between the SharedWaypoints server and players' games running SharedWaypoints (or the old
+ * The sync protocol between the Cytra Waypoints server and players' games running Cytra Waypoints (or the old
  * sharedwaypoints-client jar, 2.2 and earlier).
  *
  * <ol>

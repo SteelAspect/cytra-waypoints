@@ -4,8 +4,8 @@ plugins {
 	id 'com.modrinth.minotaur' version '2.10.0' apply false
 }
 
-// Release vs. test builds. Builds from the `main` branch are releases (sharedwaypoints-<version>.jar);
-// builds from any other branch, e.g. `dev`, are test builds (sharedwaypoints-dev-<version>.jar, version
+// Release vs. test builds. Builds from the `main` branch are releases (cytra-waypoints-<version>.jar);
+// builds from any other branch, e.g. `dev`, are test builds (cytra-waypoints-dev-<version>.jar, version
 // "<version>+dev" in-game), so the two can never be mixed up. Force either with -Prelease=true / -Prelease=false.
 def gitBranch = ''
 try {

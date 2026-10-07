@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Entrypoint for SharedWaypoints.
+ * Entrypoint for Cytra Waypoints.
  *
  * <p>Everything here runs on the server only: the mod registers vanilla Brigadier commands and sends vanilla chat
  * components, boss bars, particles and titles, so unmodded clients (and Xaero's Minimap clients) can join without
@@ -22,7 +22,7 @@ public final class SharedWaypoints implements ModInitializer {
 	/** Last-seen times are written at most once a minute (and when the server stops). */
 	private static final int SAVE_SEEN_EVERY_TICKS = 20 * 60;
 	public static final String MOD_ID = "sharedwaypoints";
-	public static final Logger LOGGER = LoggerFactory.getLogger("SharedWaypoints");
+	public static final Logger LOGGER = LoggerFactory.getLogger("Cytra Waypoints");
 
 	private static ModContext context;
 
@@ -33,7 +33,7 @@ public final class SharedWaypoints implements ModInitializer {
 		// Optional client menu: payload types must be registered on both sides; only modded clients use them.
 		MenuNetworking.registerPayloads();
 		context.menus().registerReceiver();
-		// Optional Xaero's Minimap sync for players with SharedWaypoints on their game (handshake first; see SyncService).
+		// Optional Xaero's Minimap sync for players with Cytra Waypoints on their game (handshake first; see SyncService).
 		context.sync().registerReceiver();
 
 		// (Re)load from disk every time a server starts. In singleplayer this runs for each world opened.
@@ -74,7 +74,7 @@ public final class SharedWaypoints implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(
 				(dispatcher, registryAccess, environment) -> WaypointCommand.register(dispatcher, context));
 
-		LOGGER.info("SharedWaypoints initialised");
+		LOGGER.info("Cytra Waypoints initialised");
 	}
 
 	/** The running mod state, for integrations and tests. */

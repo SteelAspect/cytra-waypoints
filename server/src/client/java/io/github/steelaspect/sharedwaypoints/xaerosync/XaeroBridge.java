@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  * other set, so players' own waypoints are never touched.
  */
 final class XaeroBridge {
-	static final Logger LOGGER = LoggerFactory.getLogger("SharedWaypoints Client");
+	static final Logger LOGGER = LoggerFactory.getLogger("Cytra Waypoints Client");
 	/** The waypoint set the mod manages, in every dimension of the current server. */
 	static final String SET_NAME = "Shared";
 
@@ -147,7 +147,7 @@ final class XaeroBridge {
 		try {
 			return Optional.of(new XaeroBridge());
 		} catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
-			LOGGER.warn("This version of Xaero's Minimap ({}) isn't supported by SharedWaypoints' Xaero sync (tested with 26.5.0), "
+			LOGGER.warn("This version of Xaero's Minimap ({}) isn't supported by Cytra Waypoints' Xaero sync (tested with 26.5.0), "
 					+ "so waypoint sync is off: {}", xaeroVersion(), e.toString());
 			return Optional.empty();
 		}

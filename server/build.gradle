@@ -7,7 +7,7 @@ def modVersion = project.ext.modVersion
 
 base {
 	// One jar for the server and players.
-	archivesName = project.ext.isRelease ? "sharedwaypoints" : "sharedwaypoints-dev"
+	archivesName = project.ext.isRelease ? "cytra-waypoints" : "cytra-waypoints-dev"
 }
 
 repositories {
@@ -177,7 +177,7 @@ processResources {
 
 jar {
 	from(rootProject.file("LICENSE")) {
-		rename { "${it}_sharedwaypoints" }
+		rename { "${it}_cytra-waypoints" }
 	}
 }
 
@@ -216,7 +216,7 @@ java {
 def changelogSection = { String version ->
 	def lines = rootProject.file("CHANGELOG.md").readLines()
 	def start = lines.findIndexOf { it == "## ${version}" || it.startsWith("## ${version} ") }
-	if (start < 0) return "SharedWaypoints ${version}"
+	if (start < 0) return "Cytra Waypoints ${version}"
 	def end = lines.findIndexOf(start + 1) { it.startsWith("## ") }
 	return lines.subList(start + 1, end < 0 ? lines.size() : end).join("\n").trim()
 }
@@ -224,7 +224,7 @@ def changelogSection = { String version ->
 modrinth {
 	projectId = rootProject.modrinth_project
 	versionNumber = modVersion
-	versionName = "SharedWaypoints ${modVersion}"
+	versionName = "Cytra Waypoints ${modVersion}"
 	uploadFile = remapJar
 	gameVersions = [rootProject.minecraft_version]
 	loaders = ["fabric"]

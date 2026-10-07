@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.7.0 — 2026-10-07
+
+- **Renamed to Cytra Waypoints** to match the other Cytra mods. The jar is now `cytra-waypoints-<version>.jar`;
+  replace the old `sharedwaypoints-*.jar` with it (Cytra Hub does this for you).
+- Nothing else moves: the mod id (`sharedwaypoints`), `/cway`, `config/sharedwaypoints/` (waypoints, routes,
+  favourites, settings), the `sharedwaypoints.*` permissions and Xaero's "Shared" set are unchanged, so existing
+  servers and players keep everything. 2.6 players and servers still talk to 2.7.
+- The web map layer is called "Cytra Waypoints" on new installs. Existing servers keep the name in their
+  `config.json` (`webMapLayerName`).
+- The GitHub repo is now [SteelAspect/cytra-waypoints](https://github.com/SteelAspect/cytra-waypoints); old links
+  redirect.
+
 ## 2.6.0 — 2026-10-06
 
 - **Client on/off switch.** New `config/sharedwaypoints/client.json` with `"enabled"` (default on). Off: the menu

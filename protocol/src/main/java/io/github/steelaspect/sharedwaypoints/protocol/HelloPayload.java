@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
  * this ever receive sync payloads.
  *
  * @param protocolVersion the client's {@link SyncProtocol#VERSION}
- * @param modVersion      the player's SharedWaypoints version, for the server log
+ * @param modVersion      the player's Cytra Waypoints version, for the server log
  */
 public record HelloPayload(int protocolVersion, String modVersion) implements CustomPacketPayload {
 	public static final Type<HelloPayload> TYPE =

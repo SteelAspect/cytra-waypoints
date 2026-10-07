@@ -1,9 +1,9 @@
 # Player guide
 
-SharedWaypoints is a list of waypoints that everyone on the server shares. You can use it in two ways:
+Cytra Waypoints is a list of waypoints that everyone on the server shares. You can use it in two ways:
 
 - **In chat.** This works for everyone and needs nothing installed: type `/cway` and click the buttons.
-- **With the waypoint menu.** Put the SharedWaypoints jar (the same one the server uses) on your own game and
+- **With the waypoint menu.** Put the Cytra Waypoints jar (the same one the server uses) on your own game and
   press **J**, or click
   **✦ Waypoints** in the Esc menu. You get one screen with everything on buttons.
 
@@ -17,7 +17,7 @@ working.
 
 ![The steps from /cway sync](images/guide/sync-steps.png)
 
-1. Put `sharedwaypoints-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
+1. Put `cytra-waypoints-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
    Fabric API. It's the same jar the server uses, and the same jar that gives you the menu below.
 2. Join the server. The shared waypoints appear in a waypoint set called **"Shared"**. They stay up to date when
    anyone adds, changes or removes one, and the set is refreshed every time you join.
@@ -34,7 +34,7 @@ You need Minecraft **1.21.11** with **Fabric**.
 1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for 1.21.11, if you haven't already.
 2. Put these two files in your `.minecraft/mods/` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.21.11
-   - `sharedwaypoints-<version>.jar`, the same jar the server uses (ask your server admin, or download it from the
+   - `cytra-waypoints-<version>.jar`, the same jar the server uses (ask your server admin, or download it from the
      latest release).
    - Had the old `sharedwaypoints-client` jar? Take it out: the new jar replaces it, and Fabric won't start with
      both.
@@ -43,10 +43,10 @@ You need Minecraft **1.21.11** with **Fabric**.
 
 ![The Waypoints button in the Esc menu](images/guide/pause-menu.png)
 
-On a server without SharedWaypoints, **J** just shows "SharedWaypoints isn't installed on this server".
+On a server without Cytra Waypoints, **J** just shows "Cytra Waypoints isn't installed on this server".
 
 To use a different key, go to **Options → Controls → Key Binds**. The setting is at the bottom, under
-**SharedWaypoints**.
+**Cytra Waypoints**.
 
 ![The key setting](images/guide/keybind.png)
 
@@ -187,7 +187,7 @@ fine.
 ## Good to know
 
 - The server decides everything. The menu can only do what you're allowed to do with commands.
-- The menu needs the same SharedWaypoints version family on both your game and the server (2.2.0 or newer since
+- The menu needs the same Cytra Waypoints version family on both your game and the server (2.2.0 or newer since
   project status changed the menu's data). If the server is older, **J** tells you, and chat
   works as normal.
 - The list updates by itself when anyone adds, renames or removes a waypoint.

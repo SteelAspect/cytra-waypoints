@@ -305,7 +305,7 @@ public final class WaypointCommand {
 	private int reload(CommandSourceStack source) {
 		mod.reload(source.getServer());
 		List<String> maps = mod.maps().activeMaps();
-		reply(source, WaypointText.success("Reloaded SharedWaypoints: " + mod.waypoints().size() + " waypoints, "
+		reply(source, WaypointText.success("Reloaded Cytra Waypoints: " + mod.waypoints().size() + " waypoints, "
 				+ mod.routes().size() + " routes, " + mod.categories().all().size() + " categories"
 				+ (maps.isEmpty() ? "" : ", markers on " + String.join(" and ", maps)) + "."));
 		return 1;

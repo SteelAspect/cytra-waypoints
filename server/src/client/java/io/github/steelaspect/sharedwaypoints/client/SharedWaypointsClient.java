@@ -87,7 +87,7 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 			boolean olderServer = ClientPlayNetworking.getSendable().stream().anyMatch(OLD_ACTION_CHANNELS::contains);
 			client.player.displayClientMessage(Component.literal(olderServer
 					? "This server runs an older SharedWaypoints; the menu needs the same version on both sides"
-					: "SharedWaypoints isn't installed on this server").withStyle(ChatFormatting.GRAY), true);
+					: "Cytra Waypoints isn't installed on this server").withStyle(ChatFormatting.GRAY), true);
 			return;
 		}
 		client.setScreen(new WaypointMenuScreen());

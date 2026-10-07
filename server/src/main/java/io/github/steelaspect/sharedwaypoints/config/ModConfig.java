@@ -20,17 +20,17 @@ public final class ModConfig {
 	/** On join, tell players which waypoints were added since they last played (with the usual buttons). */
 	public boolean joinSummary = true;
 	/**
-	 * Keep players who have SharedWaypoints on their game (and Xaero's Minimap) in sync: their Xaero's Minimap gets the shared
+	 * Keep players who have Cytra Waypoints on their game (and Xaero's Minimap) in sync: their Xaero's Minimap gets the shared
 	 * waypoints in its own "Shared" set. Players without the mod are never affected.
 	 */
 	public boolean syncToClientMod = true;
 	/**
-	 * On their first join, tell players who don't have SharedWaypoints on their game how to get the Xaero sync
+	 * On their first join, tell players who don't have Cytra Waypoints on their game how to get the Xaero sync
 	 * (once per player). {@code /cway sync} shows the steps any time.
 	 */
 	public boolean clientModTip = true;
 	/** Where [Download] in that tip and in {@code /cway sync} points. Empty: no link ("ask an admin"). */
-	public String clientModUrl = "https://github.com/SteelAspect/sharedwaypoints/releases/latest";
+	public String clientModUrl = "https://github.com/SteelAspect/cytra-waypoints/releases/latest";
 	/** Show a particle beacon at the destination while navigating. */
 	public boolean navigationParticles = true;
 	/** Navigation ends when you get this close (blocks). */
@@ -42,7 +42,7 @@ public final class ModConfig {
 	/** Show waypoints on BlueMap / squaremap when one of them is installed. */
 	public boolean webMapMarkers = true;
 	/** Name of the marker layer on the web map. */
-	public String webMapLayerName = "Shared Waypoints";
+	public String webMapLayerName = "Cytra Waypoints";
 	/** Categories in display order: id (a single lower-case word), name, and one of the 16 chat colours. */
 	public List<CategoryRegistry.Definition> categories = new ArrayList<>(CategoryRegistry.DEFAULT_DEFINITIONS);
 
@@ -71,7 +71,7 @@ public final class ModConfig {
 			clientModUrl = "";
 		}
 		if (webMapLayerName == null || webMapLayerName.isBlank()) {
-			webMapLayerName = "Shared Waypoints";
+			webMapLayerName = "Cytra Waypoints";
 		}
 		if (categories == null || categories.isEmpty()) {
 			categories = new ArrayList<>(CategoryRegistry.DEFAULT_DEFINITIONS);

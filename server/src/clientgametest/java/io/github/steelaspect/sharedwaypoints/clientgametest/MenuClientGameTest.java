@@ -38,7 +38,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			}
 		});
 		context.waitTicks(1);
-		System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-" + name));
+		System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-" + name));
 	}
 
 	private static Optional<SyncPayload.RouteData> farmRun() {
@@ -93,7 +93,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			world.getClientWorld().waitForChunksRender();
 			// The mod is in this game (one jar) but Xaero's Minimap isn't: a few seconds after the first join the server
 			// suggests Xaero, and never the "install the mod" tip.
-			context.waitFor(client -> chatText(client).contains("Your SharedWaypoints can't reach Xaero's Minimap."));
+			context.waitFor(client -> chatText(client).contains("Your Cytra Waypoints can't reach Xaero's Minimap."));
 			if (context.computeOnClient(client -> chatText(client).contains("Want these waypoints in Xaero's Minimap"))) {
 				throw new AssertionError("A player who has the mod was told to install it");
 			}
@@ -113,7 +113,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			// [How it works] runs /cway sync: the steps.
 			context.runOnClient(client -> client.gui.getChat().clearMessages(false));
 			context.runOnClient(client -> client.player.connection.sendCommand("cway sync"));
-			context.waitFor(client -> chatText(client).contains("1. Put sharedwaypoints-"));
+			context.waitFor(client -> chatText(client).contains("1. Put cytra-waypoints-"));
 			context.setScreen(() -> new ChatScreen("", false));
 			context.waitTicks(3);
 			shot(context, "sync-steps");
@@ -129,7 +129,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
 			context.waitTicks(10);
 			if (context.computeOnClient(client -> client.screen != null)) {
-				throw new AssertionError("menu opened while SharedWaypoints is switched off");
+				throw new AssertionError("menu opened while Cytra Waypoints is switched off");
 			}
 			context.runOnClient(client -> io.github.steelaspect.sharedwaypoints.client.ClientSettings.setEnabled(true));
 
@@ -138,14 +138,14 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitForScreen(WaypointMenuScreen.class);
 			context.waitFor(client -> ClientWaypoints.waypoints().size() == 4);
 			context.waitTicks(5);
-			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-menu"));
+			System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-menu"));
 
 			// Add a waypoint through the form.
 			context.clickScreenButton("+ Add");
 			context.waitForScreen(AddWaypointScreen.class);
 			context.getInput().typeChars("Test Spot");
 			context.waitTicks(2);
-			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-add"));
+			System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-add"));
 			context.clickScreenButton("Add");
 			context.waitForScreen(WaypointMenuScreen.class);
 			context.waitFor(client -> ClientWaypoints.waypoints().stream().anyMatch(w -> w.name().equals("Test Spot")));
@@ -155,14 +155,14 @@ public class MenuClientGameTest implements FabricClientGameTest {
 				throw new AssertionError("Test Spot was not added on the server");
 			}
 			context.waitTicks(5);
-			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-after-add"));
+			System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-after-add"));
 
 			// Favourite the selected waypoint with the button, and check the server agrees.
 			context.clickScreenButton("☆ Favourite");
 			context.waitFor(client -> ClientWaypoints.waypoints().stream().anyMatch(w ->
 					ClientWaypoints.data(w.id()).map(data -> data.favorite()).orElse(false)));
 			context.waitTicks(5);
-			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-favourite"));
+			System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-favourite"));
 
 			// Edit the player's own waypoint (Test Spot): select it, open Edit, change the description.
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Test Spot"));
@@ -171,13 +171,13 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB);
 			context.getInput().typeChars("Near spawn");
 			context.waitTicks(2);
-			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edit"));
+			System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edit"));
 			context.clickScreenButton("Save");
 			context.waitForScreen(WaypointMenuScreen.class);
 			context.waitFor(client -> ClientWaypoints.waypoints().stream()
 					.anyMatch(w -> w.name().equals("Test Spot") && "Near spawn".equals(w.description())));
 			context.waitTicks(5);
-			System.out.println("[SharedWaypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edited"));
+			System.out.println("[Cytra Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edited"));
 
 			// --- a tour of every screen, for the screenshots
 			// Remove asks for confirmation first ("No" keeps it).
@@ -413,7 +413,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 					.forEach(child -> ((KeyBindsList) child).setScrollAmount(Double.MAX_VALUE)));
 			context.waitTicks(3);
 			shot(context, "keybind");
-			System.out.println("[SharedWaypoints test] PASSED");
+			System.out.println("[Cytra Waypoints test] PASSED");
 			context.setScreen(() -> null);
 		}
 	}

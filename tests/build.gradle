@@ -21,7 +21,7 @@ repositories {
 	}
 }
 
-// Real-client test: singleplayer with SharedWaypoints and the real Xaero's Minimap, checking what ends up in Xaero's
+// Real-client test: singleplayer with Cytra Waypoints and the real Xaero's Minimap, checking what ends up in Xaero's
 // "Shared" set. Needs a display (xvfb-run in CI).
 evaluationDependsOn(':server')
 def serverProject = project(':server')
@@ -101,7 +101,7 @@ tasks.named("runClientGametest") {
 }
 
 // Install test: a production game (real Fabric Loader, remapped jars) whose mods folder holds only what a player
-// installs: the built SharedWaypoints jar, Fabric API and Xaero's Minimap. Catches packaging mistakes the dev-run
+// installs: the built Cytra Waypoints jar, Fabric API and Xaero's Minimap. Catches packaging mistakes the dev-run
 // tests can't, like the menu or the Xaero sync missing from the jar.
 // Run with `xvfb-run -a ./gradlew :tests:runInstalledClientTest`.
 sourceSets {
@@ -136,7 +136,7 @@ def remapProdTestJar = tasks.register("remapProdTestJar", net.fabricmc.loom.task
 }
 
 tasks.register("runInstalledClientTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
-	description = "Runs the built SharedWaypoints jar in a production game, like a player's mods folder."
+	description = "Runs the built Cytra Waypoints jar in a production game, like a player's mods folder."
 	mods.from(serverProject.tasks.named("remapJar"))
 	mods.from(configurations.installedTestMods)
 	// -PwithoutXaero: no Xaero's Minimap, to check the menu still works and the player is told to add Xaero.
@@ -166,7 +166,7 @@ java {
 }
 
 // Server install test: a production dedicated server whose mods folder holds the same built jar and Fabric API, and
-// nothing else (no Xaero's Minimap). A tiny test mod checks SharedWaypoints loaded and /cway exists once the server
+// nothing else (no Xaero's Minimap). A tiny test mod checks Cytra Waypoints loaded and /cway exists once the server
 // has started, then stops the server. Proves the one jar needs nothing client-side on a server.
 // Run with `./gradlew :tests:runInstalledServerTest` (no display needed).
 sourceSets {
@@ -199,7 +199,7 @@ dependencies {
 }
 
 tasks.register("runInstalledServerTest", net.fabricmc.loom.task.prod.ServerProductionRunTask) {
-	description = "Runs the built SharedWaypoints jar on a production dedicated server, like a server's mods folder."
+	description = "Runs the built Cytra Waypoints jar on a production dedicated server, like a server's mods folder."
 	mods.from(serverProject.tasks.named("remapJar"))
 	mods.from(configurations.installedServerMods)
 	mods.from(remapServerTestJar)
