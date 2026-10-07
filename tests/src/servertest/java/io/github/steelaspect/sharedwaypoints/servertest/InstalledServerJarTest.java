@@ -6,8 +6,8 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * Runs on a production dedicated server whose mods folder holds the built SharedWaypoints jar (the same one players
- * install) and Fabric API, and nothing else. Once the server has started it checks that SharedWaypoints loaded, that
+ * Runs on a production dedicated server whose mods folder holds the built Cytra Waypoints jar (the same one players
+ * install) and Fabric API, and nothing else. Once the server has started it checks that Cytra Waypoints loaded, that
  * Xaero's Minimap isn't needed, and that /cway is registered, then stops the server. Any problem exits with status 1.
  */
 public class InstalledServerJarTest implements ModInitializer {
@@ -23,7 +23,7 @@ public class InstalledServerJarTest implements ModInitializer {
 			} catch (InterruptedException e) {
 				// The test finished.
 			}
-		}, "SharedWaypoints server test watchdog");
+		}, "Cytra Waypoints server test watchdog");
 		watchdog.setDaemon(true);
 		watchdog.start();
 
@@ -43,12 +43,12 @@ public class InstalledServerJarTest implements ModInitializer {
 	private static void check(MinecraftServer server) {
 		FabricLoader loader = FabricLoader.getInstance();
 		if (!loader.isModLoaded("sharedwaypoints")) {
-			throw new AssertionError("SharedWaypoints didn't load from the installed jar");
+			throw new AssertionError("Cytra Waypoints didn't load from the installed jar");
 		}
 		if (loader.isModLoaded("xaerominimap")) {
 			throw new AssertionError("this test must run without Xaero's Minimap");
 		}
-		log("SharedWaypoints " + loader.getModContainer("sharedwaypoints").orElseThrow().getMetadata().getVersion()
+		log("Cytra Waypoints " + loader.getModContainer("sharedwaypoints").orElseThrow().getMetadata().getVersion()
 				.getFriendlyString() + " loaded on a dedicated server without Xaero's Minimap");
 		if (server.getCommands().getDispatcher().getRoot().getChild("cway") == null) {
 			throw new AssertionError("/cway isn't registered");
@@ -62,6 +62,6 @@ public class InstalledServerJarTest implements ModInitializer {
 	}
 
 	private static void log(String message) {
-		System.out.println("[SharedWaypoints server install test] " + message);
+		System.out.println("[Cytra Waypoints server install test] " + message);
 	}
 }

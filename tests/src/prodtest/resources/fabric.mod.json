@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints-prodtest",
 	"version": "1.0.0",
-	"name": "SharedWaypoints install test",
+	"name": "Cytra Waypoints install test",
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [

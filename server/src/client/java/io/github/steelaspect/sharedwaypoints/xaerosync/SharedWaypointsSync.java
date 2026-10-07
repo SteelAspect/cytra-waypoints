@@ -20,7 +20,7 @@ import net.minecraft.client.Minecraft;
 /**
  * Client entrypoint of the Xaero's Minimap sync (only clients run it; without Xaero's Minimap it writes nothing).
  *
- * <p>On joining a server it says hello (see {@link SyncProtocol}). Servers running SharedWaypoints 2.0+ answer
+ * <p>On joining a server it says hello (see {@link SyncProtocol}). Servers running Cytra Waypoints 2.0+ answer
  * with the full waypoint list and then every change; everything else ignores the hello. What arrives is kept in
  * {@link SyncState} and written into Xaero's "Shared" waypoint set by {@link XaeroBridge} on the game thread, as
  * soon as Xaero is ready for the current world.
@@ -56,7 +56,7 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 			active = payload.protocolVersion() == SyncProtocol.VERSION && payload.syncEnabled();
 			if (payload.protocolVersion() != SyncProtocol.VERSION && !mismatchLogged) {
 				mismatchLogged = true;
-				XaeroBridge.LOGGER.warn("This server's SharedWaypoints speaks sync protocol {} and this game speaks {}; "
+				XaeroBridge.LOGGER.warn("This server's Cytra Waypoints speaks sync protocol {} and this game speaks {}; "
 						+ "update both to the same version to sync waypoints into Xaero's Minimap", payload.protocolVersion(),
 						SyncProtocol.VERSION);
 			} else if (!payload.syncEnabled()) {

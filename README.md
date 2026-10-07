@@ -1,13 +1,17 @@
 <img src="src/main/resources/assets/sharedwaypoints/icon.png" alt="" width="96" align="right">
 
-# SharedWaypoints
+# Cytra Waypoints
 
-[![Download 2.6.0](https://img.shields.io/badge/download-2.6.0-2ea44f)](https://github.com/SteelAspect/sharedwaypoints/releases/latest)
-[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/sharedwaypoints/actions/workflows/build.yml)
+[![Download 2.7.0](https://img.shields.io/badge/download-2.7.0-2ea44f)](https://github.com/SteelAspect/cytra-waypoints/releases/latest)
+[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/cytra-waypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
 ![One jar](https://img.shields.io/badge/one%20jar-server%20%2B%20optional%20client-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
+*Formerly **SharedWaypoints**: renamed in 2.7.0 to match the other Cytra mods. Only the name and the jar name
+changed: the mod id, `/cway`, `config/sharedwaypoints/`, the `sharedwaypoints.*` permissions and Xaero's
+"Shared" set are the same, so existing servers and players keep everything. See [Upgrading to 2.7.0](#upgrading-to-270).*
 
 **A shared waypoint list for your Fabric server.** Players browse waypoints in chat, add them to
 **Xaero's Minimap** with a click, navigate to them with a **live on-screen compass**, follow **routes** stop by stop,
@@ -22,7 +26,7 @@ install. Players who want more put **the same jar** in their own mods folder, an
 
 ## One jar
 
-Since 2.3.0 there is one jar, `sharedwaypoints-<version>.jar`, for the server and for players:
+Since 2.3.0 there is one jar, `cytra-waypoints-<version>.jar`, for the server and for players:
 
 | Where | Needed? | What it does there |
 |---|---|---|
@@ -91,8 +95,8 @@ client jar on its own still works with a 2.3 server until players update.
   web maps.
 
 **Optional menu (the same jar on your game)**
-- Put the SharedWaypoints jar in your own mods folder and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
-  runs SharedWaypoints: a full screen with
+- Put the Cytra Waypoints jar in your own mods folder and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
+  runs Cytra Waypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
 - Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
   **Favourite**, **Edit** (name and description), **Remove**, **Teleport** (ops) and **+ Add** with your position
@@ -110,7 +114,7 @@ client jar on its own still works with a 2.3 server until players update.
 
 **Web maps**
 - **BlueMap and squaremap:** if either is installed, every waypoint shows up on the web map in a
-  toggleable "Shared Waypoints" layer. Pins use the category colour, and clicking one shows its details.
+  toggleable "Cytra Waypoints" layer. Pins use the category colour, and clicking one shows its details.
   Routes are drawn as gold lines between their stops.
 - **Always in sync:** adding, renaming or removing a waypoint or route updates the map straight away.
 
@@ -127,22 +131,22 @@ client jar on its own still works with a 2.3 server until players update.
 
 ## Download and install
 
-The jar is on the **[latest release](https://github.com/SteelAspect/sharedwaypoints/releases/latest)**.
+The jar is on the **[latest release](https://github.com/SteelAspect/cytra-waypoints/releases/latest)**.
 
 **Server owners**
-1. Put `sharedwaypoints-<version>.jar` in your server's `mods/` folder, together with
+1. Put `cytra-waypoints-<version>.jar` in your server's `mods/` folder, together with
    [Fabric API](https://modrinth.com/mod/fabric-api). Nothing else: Xaero's Minimap is never needed on the server.
 2. Start the server. Players don't need to install anything.
 
 **Players (optional)**
-- Put the same `sharedwaypoints-<version>.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your
+- Put the same `cytra-waypoints-<version>.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your
   `.minecraft/mods/` folder.
 - **The menu:** press **J**, or open the Esc menu and click **✦ Waypoints** (top right).
 - **Automatic Xaero sync:** also have [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) installed. The
   shared waypoints appear in Xaero's **"Shared"** set when you join.
 - The [player guide](docs/PLAYER-GUIDE.md) has step-by-step instructions you can share.
 
-The menu works on servers running SharedWaypoints 1.5.0 or newer; the Xaero sync needs 2.0.0 or newer.
+The menu works on servers running Cytra Waypoints 1.5.0 or newer; the Xaero sync needs 2.0.0 or newer.
 
 | Requirement | Version |
 |---|---|
@@ -153,6 +157,15 @@ The menu works on servers running SharedWaypoints 1.5.0 or newer; the Xaero sync
 | Xaero's Minimap (players' games only, optional) | 26.5.0 for Fabric 1.21.11 (tested) |
 
 The mod also works in singleplayer and LAN worlds.
+
+### Upgrading to 2.7.0
+
+2.7.0 renames SharedWaypoints to **Cytra Waypoints**. Swap `sharedwaypoints-<version>.jar` for
+`cytra-waypoints-2.7.0.jar` (Cytra Hub does this for you). Don't keep both jars: they're the same mod, and Fabric
+refuses to start with two copies. Everything else stays the same: waypoints, routes and favourites in
+`config/sharedwaypoints/`, the `sharedwaypoints.*` permissions, `/cway`, and Xaero's "Shared" set. The web map layer
+is called "Cytra Waypoints" on new installs; servers that already have a `config.json` keep their layer name until
+they change `webMapLayerName`.
 
 ## Commands
 
@@ -226,13 +239,13 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
   "joinSummary": true,
   "syncToClientMod": true,
   "clientModTip": true,
-  "clientModUrl": "https://github.com/SteelAspect/sharedwaypoints/releases/latest",
+  "clientModUrl": "https://github.com/SteelAspect/cytra-waypoints/releases/latest",
   "navigationParticles": true,
   "arrivalRadius": 6,
   "pageSize": 8,
   "nearRadius": 512,
   "webMapMarkers": true,
-  "webMapLayerName": "Shared Waypoints",
+  "webMapLayerName": "Cytra Waypoints",
   "categories": [
     { "id": "storage", "name": "Storage", "color": "aqua" },
     { "id": "farms", "name": "Farms", "color": "green" },
@@ -337,7 +350,7 @@ There are two ways shared waypoints get into Xaero's Minimap.
 
 ### Automatic sync (the mod on your game too)
 
-With **SharedWaypoints** on your game (next to Xaero's Minimap), joining a server that runs SharedWaypoints 2.0+
+With **Cytra Waypoints** on your game (next to Xaero's Minimap), joining a server that runs Cytra Waypoints 2.0+
 fills a waypoint set called **"Shared"** in Xaero:
 
 - every shared waypoint, in the right dimension, with its category colour and Xaero initials;
@@ -392,7 +405,7 @@ for how the format was verified.
 ## Web maps
 
 With [BlueMap](https://modrinth.com/plugin/bluemap) or [squaremap](https://modrinth.com/plugin/squaremap)
-installed, a **Shared Waypoints** layer appears on every map. Each waypoint is a pin in its category colour, and
+installed, a **Cytra Waypoints** layer appears on every map. Each waypoint is a pin in its category colour, and
 clicking it shows the name, category, coordinates, description and creator. Nothing needs setting up; turn it off
 with `"webMapMarkers": false`. Tested against BlueMap 5.16 and squaremap 1.3.12 for 1.21.11.
 
@@ -402,8 +415,8 @@ with `"webMapMarkers": false`. Tested against BlueMap 5.16 and squaremap 1.3.12 
 ./gradlew build
 ```
 
-This builds the jar: `server/build/libs/sharedwaypoints-<version>.jar` (one jar for the server and players). On any
-branch other than `main` it's named `sharedwaypoints-dev-<version>.jar`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
+This builds the jar: `server/build/libs/cytra-waypoints-<version>.jar` (one jar for the server and players). On any
+branch other than `main` it's named `cytra-waypoints-dev-<version>.jar`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
 how the code is organised. The [changelog](CHANGELOG.md) lists what changed in each version.
 
 ## License

@@ -21,7 +21,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.world.TestWorldSave;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
- * The real game with SharedWaypoints (both sides of singleplayer) and Xaero's Minimap
+ * The real game with Cytra Waypoints (both sides of singleplayer) and Xaero's Minimap
  * 26.5.0: checks that shared waypoints end up in Xaero's "Shared" set, follow adds, edits and deletes, and are
  * reconciled on rejoin, without touching the player's own waypoints.
  */
@@ -162,6 +162,6 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void log(String message) {
-		System.out.println("[SharedWaypoints Xaero sync test] " + message);
+		System.out.println("[Cytra Waypoints Xaero sync test] " + message);
 	}
 }

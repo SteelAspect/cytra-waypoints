@@ -10,7 +10,7 @@ import xyz.jpenilla.squaremap.api.WorldIdentifier;
 import xyz.jpenilla.squaremap.api.marker.Marker;
 
 /**
- * Reads SharedWaypoints' layer on squaremap's overworld map. Kept in its own class, and only called after
+ * Reads Cytra Waypoints' layer on squaremap's overworld map. Kept in its own class, and only called after
  * checking squaremap is installed, so the GameTest still loads on a server without squaremap.
  */
 final class SquaremapProbe {

@@ -10,7 +10,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 
 /**
- * Shows the shared waypoints (pins) and routes (lines) on web maps: a toggleable "Shared Waypoints" layer on BlueMap
+ * Shows the shared waypoints (pins) and routes (lines) on web maps: a toggleable "Cytra Waypoints" layer (name set in config) on BlueMap
  * and/or squaremap,
  * whichever is installed. Both are optional: their classes are only touched after checking the mod is loaded,
  * and any failure only disables that one map (the rest of the mod keeps working).

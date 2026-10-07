@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints-xaero-gametest",
 	"version": "1.0.0",
-	"name": "SharedWaypoints Xaero sync GameTest",
+	"name": "Cytra Waypoints Xaero sync GameTest",
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [

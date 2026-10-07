@@ -57,7 +57,7 @@ jobs:
       - name: Release notes from CHANGELOG.md
         run: |
           awk -v v="$VERSION" 'index($0, "## " v " ") == 1 || $0 == "## " v {found=1; next} /^## / && found {exit} found' CHANGELOG.md > release-notes.md
-          test -s release-notes.md || echo "SharedWaypoints $VERSION" > release-notes.md
+          test -s release-notes.md || echo "Cytra Waypoints $VERSION" > release-notes.md
           cat release-notes.md
 
       - name: Publish the jars
@@ -65,7 +65,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           # One jar, for the server and for players.
-          jars="server/build/libs/sharedwaypoints-$VERSION.jar"
+          jars="server/build/libs/cytra-waypoints-$VERSION.jar"
           if gh release view "$TAG" > /dev/null 2>&1; then
             gh release upload "$TAG" $jars --clobber
             # A release written by hand with no notes gets the changelog section.
@@ -74,7 +74,7 @@ jobs:
             fi
           elif [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
             # Creates the tag on the checked-out commit.
-            gh release create "$TAG" $jars --target "$(git rev-parse HEAD)" --title "SharedWaypoints $VERSION" --notes-file release-notes.md
+            gh release create "$TAG" $jars --target "$(git rev-parse HEAD)" --title "Cytra Waypoints $VERSION" --notes-file release-notes.md
           else
-            gh release create "$TAG" $jars --title "SharedWaypoints $VERSION" --notes-file release-notes.md --verify-tag
+            gh release create "$TAG" $jars --title "Cytra Waypoints $VERSION" --notes-file release-notes.md --verify-tag
           fi

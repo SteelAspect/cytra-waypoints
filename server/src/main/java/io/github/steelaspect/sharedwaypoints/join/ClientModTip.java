@@ -24,9 +24,9 @@ import net.minecraft.server.level.ServerPlayer;
  * Tells players how to get the automatic Xaero's Minimap sync, once, on their first join, and any time with
  * {@code /cway sync}:
  * <ul>
- * <li>without SharedWaypoints on their game: install it, the same jar as the server ({@link #tip()}, right away);</li>
+ * <li>without Cytra Waypoints on their game: install it, the same jar as the server ({@link #tip()}, right away);</li>
  * <li>with it, but nothing synced a few seconds later: Xaero's Minimap is missing or a version the mod can't
- *     use ({@link #xaeroTip()}), or their SharedWaypoints is a different version ({@link #updateTip()}).</li>
+ *     use ({@link #xaeroTip()}), or their Cytra Waypoints is a different version ({@link #updateTip()}).</li>
  * </ul>
  * Players who still have the old (2.2 and earlier) sharedwaypoints-client jar count as having the mod: it speaks the
  * same sync protocol.
@@ -48,7 +48,7 @@ public final class ClientModTip {
 	}
 
 	/**
-	 * Whether this player's game runs SharedWaypoints (2.3.0 or newer, or the old sharedwaypoints-client 2.0.1 and
+	 * Whether this player's game runs Cytra Waypoints (2.3.0 or newer, or the old sharedwaypoints-client 2.0.1 and
 	 * newer): it listens on the sync channel, which Fabric tells the server about before the player joins.
 	 */
 	public static boolean hasClientMod(ServerPlayer player) {
@@ -109,7 +109,7 @@ public final class ClientModTip {
 	public Component tip() {
 		MutableComponent line = Component.literal("✦ Want these waypoints in Xaero's Minimap automatically? ")
 				.withStyle(ChatFormatting.GOLD)
-				.append(Component.literal("Install SharedWaypoints on your game too, the same jar as the server. ")
+				.append(Component.literal("Install Cytra Waypoints on your game too, the same jar as the server. ")
 						.withStyle(ChatFormatting.GRAY));
 		downloadButton().ifPresent(button -> line.append(button).append(" "));
 		return line.append(howItWorksButton());
@@ -131,16 +131,16 @@ public final class ClientModTip {
 
 	/** The mod is on their game but Xaero's Minimap isn't (or isn't a version it can use). */
 	public Component xaeroTip() {
-		return Component.literal("✦ Your SharedWaypoints can't reach Xaero's Minimap. ")
+		return Component.literal("✦ Your Cytra Waypoints can't reach Xaero's Minimap. ")
 				.withStyle(ChatFormatting.GOLD)
 				.append(Component.literal("Install Xaero's Minimap (tested with " + TESTED_XAERO + ") to get these waypoints "
 						+ "in it automatically. ").withStyle(ChatFormatting.GRAY))
 				.append(xaeroButton()).append(" ").append(howItWorksButton());
 	}
 
-	/** Their SharedWaypoints speaks a different sync protocol than this server. */
+	/** Their Cytra Waypoints speaks a different sync protocol than this server. */
 	public Component updateTip() {
-		MutableComponent line = Component.literal("✦ Your SharedWaypoints doesn't match this server, ")
+		MutableComponent line = Component.literal("✦ Your Cytra Waypoints doesn't match this server, ")
 				.withStyle(ChatFormatting.GOLD)
 				.append(Component.literal("so Xaero's Minimap isn't synced. Update it to " + jarName() + ". ")
 						.withStyle(ChatFormatting.GRAY));
@@ -166,17 +166,17 @@ public final class ClientModTip {
 			return lines;
 		}
 		if (player != null && mod.sync().hasSaidHello(player.getUUID())) {
-			lines.add(Component.literal("Your SharedWaypoints doesn't match this server. Update it to "
+			lines.add(Component.literal("Your Cytra Waypoints doesn't match this server. Update it to "
 					+ jarName() + ".").withStyle(ChatFormatting.YELLOW));
 		} else if (player != null && hasClientMod(player)) {
-			lines.add(Component.literal("You have SharedWaypoints, but it can't reach Xaero's Minimap: install "
+			lines.add(Component.literal("You have Cytra Waypoints, but it can't reach Xaero's Minimap: install "
 					+ "Xaero's Minimap (tested with " + TESTED_XAERO + ").").withStyle(ChatFormatting.YELLOW));
 		}
 		lines.add(Component.literal("The server's shared waypoints can appear in Xaero's Minimap by themselves, in their "
 				+ "own \"Shared\" waypoint set, and stay up to date. Your own waypoints are never touched.")
 				.withStyle(ChatFormatting.GRAY));
 		lines.add(step(1, "Put " + jarName() + " (the same jar as the server) in your .minecraft/mods folder. "
-				+ "It replaces the old sharedwaypoints-client jar."));
+				+ "It replaces any old sharedwaypoints jar."));
 		lines.add(step(2, "Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
 				+ SharedConstants.getCurrentVersion().name() + ")."));
 		lines.add(step(3, "Rejoin. The waypoints appear in Xaero's \"Shared\" set. You also get the waypoint menu (J)."));
@@ -212,7 +212,7 @@ public final class ClientModTip {
 		}
 	}
 
-	/** The jar that matches this server, e.g. sharedwaypoints-2.3.0.jar (the same jar on the server and on players' games). */
+	/** The jar that matches this server, e.g. cytra-waypoints-2.3.0.jar (the same jar on the server and on players' games). */
 	static String jarName() {
 		String version = FabricLoader.getInstance().getModContainer("sharedwaypoints")
 				.map(container -> container.getMetadata().getVersion().getFriendlyString())
@@ -221,6 +221,6 @@ public final class ClientModTip {
 		if (plus >= 0) {
 			version = version.substring(0, plus);
 		}
-		return version.isEmpty() ? "sharedwaypoints.jar" : "sharedwaypoints-" + version + ".jar";
+		return version.isEmpty() ? "cytra-waypoints.jar" : "cytra-waypoints-" + version + ".jar";
 	}
 }

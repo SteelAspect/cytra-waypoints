@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints-clientgametest",
 	"version": "1.0.0",
-	"name": "SharedWaypoints client GameTests",
-	"description": "Real-client tests for the SharedWaypoints menu. Dev only, not shipped.",
+	"name": "Cytra Waypoints client GameTests",
+	"description": "Real-client tests for the Cytra Waypoints menu. Dev only, not shipped.",
 	"environment": "client",
 	"entrypoints": {
 		"fabric-client-gametest": [

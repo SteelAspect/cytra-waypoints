@@ -23,7 +23,7 @@ One Gradle build, three projects, one released jar:
 
 | Project | Jar | What it is |
 |---|---|---|
-| `server/` | `sharedwaypoints-<v>.jar` (mod id `sharedwaypoints`) | The mod, for the server and players. `src/main` is common (commands, chat, routes, web maps, join summary, sync sender). `src/client` only runs on players' games: the menu, the J key, the Esc menu button and the Xaero sync (`xaerosync`, all Xaero code in `XaeroBridge`, found by reflection, so Xaero is never required). |
+| `server/` | `cytra-waypoints-<v>.jar` (mod id `sharedwaypoints`) | The mod, for the server and players. `src/main` is common (commands, chat, routes, web maps, join summary, sync sender). `src/client` only runs on players' games: the menu, the J key, the Esc menu button and the Xaero sync (`xaerosync`, all Xaero code in `XaeroBridge`, found by reflection, so Xaero is never required). |
 | `protocol/` | bundled in the mod (mod id `sharedwaypoints-protocol`) | The sync payloads and `SyncProtocol.VERSION`. |
 | `tests/` | none | Tests only: the Xaero sync with the real Xaero's Minimap, and the built jar installed like a player's and a server's mods folder. |
 
@@ -53,10 +53,10 @@ xvfb-run -a ./gradlew --no-daemon :tests:runInstalledClientTest -PwithoutXaero  
   missing something. With `-PwithoutXaero` it checks the menu still works without Xaero, and that the server
   tells the player to install Xaero's Minimap.
 - **Server install test** (`tests/src/servertest`): a production dedicated server whose mods folder has only the
-  built jar and Fabric API. A small test mod checks SharedWaypoints loaded without Xaero's Minimap and `/cway` is
+  built jar and Fabric API. A small test mod checks Cytra Waypoints loaded without Xaero's Minimap and `/cway` is
   registered, then stops the server. No display needed; CI and the release workflow run it.
 
-- **Xaero sync test** (`tests/src/clientgametest`): runs the real game with SharedWaypoints and
+- **Xaero sync test** (`tests/src/clientgametest`): runs the real game with Cytra Waypoints and
   Xaero's Minimap 26.5.0. Xaero is dropped unchanged into the test game's `mods/` folder, because its bundled
   XaeroLib only loads that way. The test checks that:
   - adds reach Xaero's "Shared" set in the right dimension;
@@ -85,8 +85,8 @@ xvfb-run -a ./gradlew --no-daemon :tests:runInstalledClientTest -PwithoutXaero  
 
 | Branch | Purpose | Jar | Version in-game |
 |---|---|---|---|
-| `main` | releases | `sharedwaypoints-<version>.jar` | `<version>` |
-| `dev` and others | testing | `sharedwaypoints-dev-<version>.jar` | `<version>+dev` |
+| `main` | releases | `cytra-waypoints-<version>.jar` | `<version>` |
+| `dev` and others | testing | `cytra-waypoints-dev-<version>.jar` | `<version>+dev` |
 
 The branch is read from git (or `GITHUB_REF_NAME` in CI). Force either with `-Prelease=true` / `-Prelease=false`.
 The jar is in `server/build/libs/`. `build/devlibs/` only holds development jars that

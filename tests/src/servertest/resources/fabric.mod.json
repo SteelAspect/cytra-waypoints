@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints-servertest",
 	"version": "1.0.0",
-	"name": "SharedWaypoints server install test",
+	"name": "Cytra Waypoints server install test",
 	"environment": "server",
 	"entrypoints": {
 		"main": [

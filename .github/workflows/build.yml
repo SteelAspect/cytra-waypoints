@@ -31,9 +31,9 @@ jobs:
       - name: Upload the jar
         uses: actions/upload-artifact@v4
         with:
-          name: sharedwaypoints-${{ github.sha }}
+          name: cytra-waypoints-${{ github.sha }}
           path: |
-            server/build/libs/sharedwaypoints-*.jar
+            server/build/libs/cytra-waypoints-*.jar
             !**/*-sources.jar
           if-no-files-found: error
 
