@@ -202,7 +202,7 @@ public class SharedWaypointsGameTest {
 		Waypoint hub = mod.waypoints().get("Hub").orElseThrow();
 		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
 			helper.assertTrue(SquaremapProbe.layerRegistered(), "our squaremap layer is registered");
-			helper.assertValueEqual(SquaremapProbe.layerLabel(), "Cytra Waypoints", "layer name");
+			helper.assertValueEqual(SquaremapProbe.layerLabel(), "Alloy Waypoints", "layer name");
 			helper.assertTrue(SquaremapProbe.hasMarker("wp-" + ironFarm.id()), "Iron-Farm on the overworld map");
 			helper.assertTrue(!SquaremapProbe.hasMarker("wp-" + hub.id()), "Hub is in the Nether, not on the overworld map");
 			String popup = SquaremapProbe.clickTooltip("wp-" + ironFarm.id());
@@ -269,7 +269,7 @@ public class SharedWaypointsGameTest {
 		}
 		expectError(helper, dispatcher, alice, "cway reload", ""); // ops only
 		run(helper, dispatcher, moderator, "cway reload");
-		helper.assertTrue(moderator.out.take().contains("Reloaded Cytra Waypoints: 1 waypoints, 0 routes, 6 categories"), "reload summary");
+		helper.assertTrue(moderator.out.take().contains("Reloaded Alloy Waypoints: 1 waypoints, 0 routes, 6 categories"), "reload summary");
 		run(helper, dispatcher, moderator, "cway add Market shops 5 64 5");
 		helper.assertValueEqual(run(helper, dispatcher, alice, "cway shops"), 1, "list the new category");
 		String shopsList = alice.out.take();
@@ -911,7 +911,7 @@ public class SharedWaypointsGameTest {
 
 		Component tip = tips.tip();
 		helper.assertTrue(tip.getString().startsWith("✦ Want these waypoints in Xaero's Minimap automatically? "
-				+ "Install Cytra Waypoints on your game too, the same jar as the server. [Download] [How it works]"),
+				+ "Install Alloy Waypoints on your game too, the same jar as the server. [Download] [How it works]"),
 				tip.getString());
 		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/cway sync")),
 				"How it works runs /cway sync");
@@ -922,7 +922,7 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, alice, "cway sync");
 		String steps = alice.out.take();
 		helper.assertTrue(steps.contains("Automatic Xaero's Minimap sync")
-				&& steps.contains("1. Put cytra-waypoints-") && !steps.contains("sharedwaypoints-client-")
+				&& steps.contains("1. Put alloy-waypoints-") && !steps.contains("sharedwaypoints-client-")
 				&& steps.contains(".jar (the same jar as the server) in your .minecraft/mods folder.")
 				&& steps.contains("It replaces any old sharedwaypoints jar.")
 				&& steps.contains("2. Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
@@ -938,17 +938,17 @@ public class SharedWaypointsGameTest {
 
 		// The mod on their game but nothing synced a few seconds after the first join: Xaero's Minimap is missing.
 		Component xaeroTip = tips.followUp(aliceEntity).orElseThrow();
-		helper.assertTrue(xaeroTip.getString().startsWith("✦ Your Cytra Waypoints can't reach Xaero's Minimap. ")
+		helper.assertTrue(xaeroTip.getString().startsWith("✦ Your Alloy Waypoints can't reach Xaero's Minimap. ")
 				&& xaeroTip.getString().endsWith("[Get Xaero's Minimap] [How it works]"), xaeroTip.getString());
 		helper.assertValueEqual(clickOf(xaeroTip, "[Get Xaero's Minimap]"), Optional.of(new ClickEvent.OpenUrl(
 				java.net.URI.create("https://modrinth.com/mod/xaeros-minimap"))), "link to Xaero's Minimap");
 		// Said hello with another protocol version: update the mod on their game.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), payload -> { });
 		String update = tips.followUp(aliceEntity).orElseThrow().getString();
-		helper.assertTrue(update.startsWith("✦ Your Cytra Waypoints doesn't match this server, ")
+		helper.assertTrue(update.startsWith("✦ Your Alloy Waypoints doesn't match this server, ")
 				&& update.contains("[Download]"), update);
 		run(helper, dispatcher, alice, "cway sync");
-		helper.assertTrue(alice.out.take().contains("doesn't match this server. Update it to cytra-waypoints-2."),
+		helper.assertTrue(alice.out.take().contains("doesn't match this server. Update it to alloy-waypoints-2."),
 				"/cway sync explains the mismatch");
 		mod.sync().forget(aliceEntity.getUUID());
 

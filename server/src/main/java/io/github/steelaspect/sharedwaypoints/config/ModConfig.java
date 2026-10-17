@@ -42,7 +42,7 @@ public final class ModConfig {
 	/** Show waypoints on BlueMap / squaremap when one of them is installed. */
 	public boolean webMapMarkers = true;
 	/** Name of the marker layer on the web map. */
-	public String webMapLayerName = "Cytra Waypoints";
+	public String webMapLayerName = "Alloy Waypoints";
 	/** Categories in display order: id (a single lower-case word), name, and one of the 16 chat colours. */
 	public List<CategoryRegistry.Definition> categories = new ArrayList<>(CategoryRegistry.DEFAULT_DEFINITIONS);
 
@@ -71,7 +71,7 @@ public final class ModConfig {
 			clientModUrl = "";
 		}
 		if (webMapLayerName == null || webMapLayerName.isBlank()) {
-			webMapLayerName = "Cytra Waypoints";
+			webMapLayerName = "Alloy Waypoints";
 		}
 		if (categories == null || categories.isEmpty()) {
 			categories = new ArrayList<>(CategoryRegistry.DEFAULT_DEFINITIONS);

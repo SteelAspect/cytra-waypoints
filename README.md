@@ -1,17 +1,18 @@
 <img src="src/main/resources/assets/sharedwaypoints/icon.png" alt="" width="96" align="right">
 
-# Cytra Waypoints
+# Alloy Waypoints
 
-[![Download 2.7.0](https://img.shields.io/badge/download-2.7.0-2ea44f)](https://github.com/SteelAspect/cytra-waypoints/releases/latest)
+[![Download 2.8.0](https://img.shields.io/badge/download-2.8.0-2ea44f)](https://github.com/SteelAspect/cytra-waypoints/releases/latest)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/cytra-waypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
 ![One jar](https://img.shields.io/badge/one%20jar-server%20%2B%20optional%20client-blue)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-*Formerly **SharedWaypoints**: renamed in 2.7.0 to match the other Cytra mods. Only the name and the jar name
-changed: the mod id, `/cway`, `config/sharedwaypoints/`, the `sharedwaypoints.*` permissions and Xaero's
-"Shared" set are the same, so existing servers and players keep everything. See [Upgrading to 2.7.0](#upgrading-to-270).*
+*Formerly **SharedWaypoints** (renamed to Cytra Waypoints in 2.7.0, then to Alloy Waypoints in 2.8.0, to match
+the other Alloy mods). Only the name and the jar name changed: the mod id, `/cway`, `config/sharedwaypoints/`, the
+`sharedwaypoints.*` permissions and Xaero's "Shared" set are the same, so existing servers and players keep
+everything. See [Upgrading](#upgrading-from-sharedwaypoints-or-cytra-waypoints).*
 
 **A shared waypoint list for your Fabric server.** Players browse waypoints in chat, add them to
 **Xaero's Minimap** with a click, navigate to them with a **live on-screen compass**, follow **routes** stop by stop,
@@ -95,8 +96,8 @@ client jar on its own still works with a 2.3 server until players update.
   web maps.
 
 **Optional menu (the same jar on your game)**
-- Put the Cytra Waypoints jar in your own mods folder and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
-  runs Cytra Waypoints: a full screen with
+- Put the Alloy Waypoints jar in your own mods folder and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
+  runs Alloy Waypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
 - Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
   **Favourite**, **Edit** (name and description), **Remove**, **Teleport** (ops) and **+ Add** with your position
@@ -114,7 +115,7 @@ client jar on its own still works with a 2.3 server until players update.
 
 **Web maps**
 - **BlueMap and squaremap:** if either is installed, every waypoint shows up on the web map in a
-  toggleable "Cytra Waypoints" layer. Pins use the category colour, and clicking one shows its details.
+  toggleable "Alloy Waypoints" layer. Pins use the category colour, and clicking one shows its details.
   Routes are drawn as gold lines between their stops.
 - **Always in sync:** adding, renaming or removing a waypoint or route updates the map straight away.
 
@@ -146,7 +147,7 @@ The jar is on the **[latest release](https://github.com/SteelAspect/cytra-waypoi
   shared waypoints appear in Xaero's **"Shared"** set when you join.
 - The [player guide](docs/PLAYER-GUIDE.md) has step-by-step instructions you can share.
 
-The menu works on servers running Cytra Waypoints 1.5.0 or newer; the Xaero sync needs 2.0.0 or newer.
+The menu works on servers running Alloy Waypoints 1.5.0 or newer; the Xaero sync needs 2.0.0 or newer.
 
 | Requirement | Version |
 |---|---|
@@ -158,13 +159,14 @@ The menu works on servers running Cytra Waypoints 1.5.0 or newer; the Xaero sync
 
 The mod also works in singleplayer and LAN worlds.
 
-### Upgrading to 2.7.0
+### Upgrading from SharedWaypoints or Cytra Waypoints
 
-2.7.0 renames SharedWaypoints to **Cytra Waypoints**. Swap `sharedwaypoints-<version>.jar` for
-`cytra-waypoints-2.7.0.jar` (Cytra Hub does this for you). Don't keep both jars: they're the same mod, and Fabric
+2.8.0 is **Alloy Waypoints** (2.7.0 was Cytra Waypoints, older versions SharedWaypoints). Swap
+`sharedwaypoints-<version>.jar` or `cytra-waypoints-<version>.jar` for `alloy-waypoints-2.8.0.jar` (Alloy Hub does
+this for you). Don't keep both jars: they're the same mod, and Fabric
 refuses to start with two copies. Everything else stays the same: waypoints, routes and favourites in
 `config/sharedwaypoints/`, the `sharedwaypoints.*` permissions, `/cway`, and Xaero's "Shared" set. The web map layer
-is called "Cytra Waypoints" on new installs; servers that already have a `config.json` keep their layer name until
+is called "Alloy Waypoints" on new installs; servers that already have a `config.json` keep their layer name until
 they change `webMapLayerName`.
 
 ## Commands
@@ -245,7 +247,7 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
   "pageSize": 8,
   "nearRadius": 512,
   "webMapMarkers": true,
-  "webMapLayerName": "Cytra Waypoints",
+  "webMapLayerName": "Alloy Waypoints",
   "categories": [
     { "id": "storage", "name": "Storage", "color": "aqua" },
     { "id": "farms", "name": "Farms", "color": "green" },
@@ -350,7 +352,7 @@ There are two ways shared waypoints get into Xaero's Minimap.
 
 ### Automatic sync (the mod on your game too)
 
-With **Cytra Waypoints** on your game (next to Xaero's Minimap), joining a server that runs Cytra Waypoints 2.0+
+With **Alloy Waypoints** on your game (next to Xaero's Minimap), joining a server that runs Alloy Waypoints 2.0+
 fills a waypoint set called **"Shared"** in Xaero:
 
 - every shared waypoint, in the right dimension, with its category colour and Xaero initials;
@@ -405,7 +407,7 @@ for how the format was verified.
 ## Web maps
 
 With [BlueMap](https://modrinth.com/plugin/bluemap) or [squaremap](https://modrinth.com/plugin/squaremap)
-installed, a **Cytra Waypoints** layer appears on every map. Each waypoint is a pin in its category colour, and
+installed, a **Alloy Waypoints** layer appears on every map. Each waypoint is a pin in its category colour, and
 clicking it shows the name, category, coordinates, description and creator. Nothing needs setting up; turn it off
 with `"webMapMarkers": false`. Tested against BlueMap 5.16 and squaremap 1.3.12 for 1.21.11.
 

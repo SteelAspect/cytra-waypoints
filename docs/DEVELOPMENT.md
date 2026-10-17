@@ -53,10 +53,10 @@ xvfb-run -a ./gradlew --no-daemon :tests:runInstalledClientTest -PwithoutXaero  
   missing something. With `-PwithoutXaero` it checks the menu still works without Xaero, and that the server
   tells the player to install Xaero's Minimap.
 - **Server install test** (`tests/src/servertest`): a production dedicated server whose mods folder has only the
-  built jar and Fabric API. A small test mod checks Cytra Waypoints loaded without Xaero's Minimap and `/cway` is
+  built jar and Fabric API. A small test mod checks Alloy Waypoints loaded without Xaero's Minimap and `/cway` is
   registered, then stops the server. No display needed; CI and the release workflow run it.
 
-- **Xaero sync test** (`tests/src/clientgametest`): runs the real game with Cytra Waypoints and
+- **Xaero sync test** (`tests/src/clientgametest`): runs the real game with Alloy Waypoints and
   Xaero's Minimap 26.5.0. Xaero is dropped unchanged into the test game's `mods/` folder, because its bundled
   XaeroLib only loads that way. The test checks that:
   - adds reach Xaero's "Shared" set in the right dimension;

@@ -2,7 +2,7 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints",
 	"version": "${version}",
-	"name": "Cytra Waypoints",
+	"name": "Alloy Waypoints",
 	"description": "Shared waypoints for your server (formerly SharedWaypoints): browse them in chat, add them to Xaero's Minimap in one click, navigate with a live compass and see them on web maps. One jar for the server and players: only the server needs it, and players who add the same jar get the waypoint menu (J) and, with Xaero's Minimap, the waypoints synced into Xaero automatically. Xaero's Minimap is never required.",
 	"authors": [
 		"steelaspect"

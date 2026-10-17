@@ -22,7 +22,7 @@ public final class SharedWaypoints implements ModInitializer {
 	/** Last-seen times are written at most once a minute (and when the server stops). */
 	private static final int SAVE_SEEN_EVERY_TICKS = 20 * 60;
 	public static final String MOD_ID = "sharedwaypoints";
-	public static final Logger LOGGER = LoggerFactory.getLogger("Cytra Waypoints");
+	public static final Logger LOGGER = LoggerFactory.getLogger("Alloy Waypoints");
 
 	private static ModContext context;
 
@@ -74,7 +74,7 @@ public final class SharedWaypoints implements ModInitializer {
 		CommandRegistrationCallback.EVENT.register(
 				(dispatcher, registryAccess, environment) -> WaypointCommand.register(dispatcher, context));
 
-		LOGGER.info("Cytra Waypoints initialised");
+		LOGGER.info("Alloy Waypoints initialised");
 	}
 
 	/** The running mod state, for integrations and tests. */

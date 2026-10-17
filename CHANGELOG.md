@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.8.0 — 2026-10-17
+
+- **Renamed to Alloy Waypoints**, with the new Alloy logo. The jar is now `alloy-waypoints-<version>.jar`
+  (Alloy Hub swaps it for you). The mod id, `/cway`, config, permissions and Xaero's "Shared" set are unchanged.
+
 ## 2.7.0 — 2026-10-07
 
 - **Renamed to Cytra Waypoints** to match the other Cytra mods. The jar is now `cytra-waypoints-<version>.jar`;

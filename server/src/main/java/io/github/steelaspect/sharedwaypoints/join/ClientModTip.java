@@ -109,7 +109,7 @@ public final class ClientModTip {
 	public Component tip() {
 		MutableComponent line = Component.literal("✦ Want these waypoints in Xaero's Minimap automatically? ")
 				.withStyle(ChatFormatting.GOLD)
-				.append(Component.literal("Install Cytra Waypoints on your game too, the same jar as the server. ")
+				.append(Component.literal("Install Alloy Waypoints on your game too, the same jar as the server. ")
 						.withStyle(ChatFormatting.GRAY));
 		downloadButton().ifPresent(button -> line.append(button).append(" "));
 		return line.append(howItWorksButton());
@@ -131,7 +131,7 @@ public final class ClientModTip {
 
 	/** The mod is on their game but Xaero's Minimap isn't (or isn't a version it can use). */
 	public Component xaeroTip() {
-		return Component.literal("✦ Your Cytra Waypoints can't reach Xaero's Minimap. ")
+		return Component.literal("✦ Your Alloy Waypoints can't reach Xaero's Minimap. ")
 				.withStyle(ChatFormatting.GOLD)
 				.append(Component.literal("Install Xaero's Minimap (tested with " + TESTED_XAERO + ") to get these waypoints "
 						+ "in it automatically. ").withStyle(ChatFormatting.GRAY))
@@ -140,7 +140,7 @@ public final class ClientModTip {
 
 	/** Their Cytra Waypoints speaks a different sync protocol than this server. */
 	public Component updateTip() {
-		MutableComponent line = Component.literal("✦ Your Cytra Waypoints doesn't match this server, ")
+		MutableComponent line = Component.literal("✦ Your Alloy Waypoints doesn't match this server, ")
 				.withStyle(ChatFormatting.GOLD)
 				.append(Component.literal("so Xaero's Minimap isn't synced. Update it to " + jarName() + ". ")
 						.withStyle(ChatFormatting.GRAY));
@@ -166,10 +166,10 @@ public final class ClientModTip {
 			return lines;
 		}
 		if (player != null && mod.sync().hasSaidHello(player.getUUID())) {
-			lines.add(Component.literal("Your Cytra Waypoints doesn't match this server. Update it to "
+			lines.add(Component.literal("Your Alloy Waypoints doesn't match this server. Update it to "
 					+ jarName() + ".").withStyle(ChatFormatting.YELLOW));
 		} else if (player != null && hasClientMod(player)) {
-			lines.add(Component.literal("You have Cytra Waypoints, but it can't reach Xaero's Minimap: install "
+			lines.add(Component.literal("You have Alloy Waypoints, but it can't reach Xaero's Minimap: install "
 					+ "Xaero's Minimap (tested with " + TESTED_XAERO + ").").withStyle(ChatFormatting.YELLOW));
 		}
 		lines.add(Component.literal("The server's shared waypoints can appear in Xaero's Minimap by themselves, in their "
@@ -212,7 +212,7 @@ public final class ClientModTip {
 		}
 	}
 
-	/** The jar that matches this server, e.g. cytra-waypoints-2.3.0.jar (the same jar on the server and on players' games). */
+	/** The jar that matches this server, e.g. alloy-waypoints-2.3.0.jar (the same jar on the server and on players' games). */
 	static String jarName() {
 		String version = FabricLoader.getInstance().getModContainer("sharedwaypoints")
 				.map(container -> container.getMetadata().getVersion().getFriendlyString())
@@ -221,6 +221,6 @@ public final class ClientModTip {
 		if (plus >= 0) {
 			version = version.substring(0, plus);
 		}
-		return version.isEmpty() ? "cytra-waypoints.jar" : "cytra-waypoints-" + version + ".jar";
+		return version.isEmpty() ? "alloy-waypoints.jar" : "alloy-waypoints-" + version + ".jar";
 	}
 }

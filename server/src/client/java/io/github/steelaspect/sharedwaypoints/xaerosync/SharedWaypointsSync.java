@@ -56,7 +56,7 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 			active = payload.protocolVersion() == SyncProtocol.VERSION && payload.syncEnabled();
 			if (payload.protocolVersion() != SyncProtocol.VERSION && !mismatchLogged) {
 				mismatchLogged = true;
-				XaeroBridge.LOGGER.warn("This server's Cytra Waypoints speaks sync protocol {} and this game speaks {}; "
+				XaeroBridge.LOGGER.warn("This server's Alloy Waypoints speaks sync protocol {} and this game speaks {}; "
 						+ "update both to the same version to sync waypoints into Xaero's Minimap", payload.protocolVersion(),
 						SyncProtocol.VERSION);
 			} else if (!payload.syncEnabled()) {

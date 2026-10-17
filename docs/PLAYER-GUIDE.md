@@ -1,9 +1,9 @@
 # Player guide
 
-Cytra Waypoints is a list of waypoints that everyone on the server shares. You can use it in two ways:
+Alloy Waypoints is a list of waypoints that everyone on the server shares. You can use it in two ways:
 
 - **In chat.** This works for everyone and needs nothing installed: type `/cway` and click the buttons.
-- **With the waypoint menu.** Put the Cytra Waypoints jar (the same one the server uses) on your own game and
+- **With the waypoint menu.** Put the Alloy Waypoints jar (the same one the server uses) on your own game and
   press **J**, or click
   **✦ Waypoints** in the Esc menu. You get one screen with everything on buttons.
 
@@ -43,10 +43,10 @@ You need Minecraft **1.21.11** with **Fabric**.
 
 ![The Waypoints button in the Esc menu](images/guide/pause-menu.png)
 
-On a server without Cytra Waypoints, **J** just shows "Cytra Waypoints isn't installed on this server".
+On a server without Alloy Waypoints, **J** just shows "Alloy Waypoints isn't installed on this server".
 
 To use a different key, go to **Options → Controls → Key Binds**. The setting is at the bottom, under
-**Cytra Waypoints**.
+**Alloy Waypoints**.
 
 ![The key setting](images/guide/keybind.png)
 
@@ -187,7 +187,7 @@ fine.
 ## Good to know
 
 - The server decides everything. The menu can only do what you're allowed to do with commands.
-- The menu needs the same Cytra Waypoints version family on both your game and the server (2.2.0 or newer since
+- The menu needs the same Alloy Waypoints version family on both your game and the server (2.2.0 or newer since
   project status changed the menu's data). If the server is older, **J** tells you, and chat
   works as normal.
 - The list updates by itself when anyone adds, renames or removes a waypoint.

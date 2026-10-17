@@ -2,8 +2,8 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints-protocol",
 	"version": "${version}",
-	"name": "Cytra Waypoints Protocol",
-	"description": "The sync messages used by Cytra Waypoints. Bundled inside it; not installed on its own.",
+	"name": "Alloy Waypoints Protocol",
+	"description": "The sync messages used by Alloy Waypoints. Bundled inside it; not installed on its own.",
 	"authors": [
 		"steelaspect"
 	],

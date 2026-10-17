@@ -17,7 +17,7 @@ import net.minecraft.client.gui.screens.PauseScreen;
  * menu itself; the Xaero sync when Xaero is there; and, without Xaero, that the server tells the player to add it.
  */
 public class InstalledClientJarTest implements FabricClientGameTest {
-	private static final String XAERO_TIP = "Your Cytra Waypoints can't reach Xaero's Minimap.";
+	private static final String XAERO_TIP = "Your Alloy Waypoints can't reach Xaero's Minimap.";
 	/** Chat lines from the server, as the player sees them. */
 	private final List<String> chat = new CopyOnWriteArrayList<>();
 
@@ -26,7 +26,7 @@ public class InstalledClientJarTest implements FabricClientGameTest {
 		ClientReceiveMessageEvents.GAME.register((message, overlay) -> chat.add(message.getString()));
 		boolean xaero = FabricLoader.getInstance().isModLoaded("xaerominimap");
 		if (!FabricLoader.getInstance().isModLoaded("sharedwaypoints")) {
-			throw new AssertionError("Cytra Waypoints not loaded from the installed jar");
+			throw new AssertionError("Alloy Waypoints not loaded from the installed jar");
 		}
 		boolean syncEntrypoint = FabricLoader.getInstance().getEntrypointContainers("client", Object.class).stream()
 				.anyMatch(entry -> entry.getProvider().getMetadata().getId().equals("sharedwaypoints")
@@ -34,7 +34,7 @@ public class InstalledClientJarTest implements FabricClientGameTest {
 		if (!syncEntrypoint) {
 			throw new AssertionError("The jar has no Xaero sync entrypoint");
 		}
-		log("the jar loads Cytra Waypoints with the menu and the Xaero sync" + (xaero ? "" : "; no Xaero's Minimap installed"));
+		log("the jar loads Alloy Waypoints with the menu and the Xaero sync" + (xaero ? "" : "; no Xaero's Minimap installed"));
 
 		boolean hasKey = context.computeOnClient(client -> Arrays.stream(client.options.keyMappings)
 				.anyMatch(key -> key.getName().equals("key.sharedwaypoints.open_menu")));
@@ -70,7 +70,7 @@ public class InstalledClientJarTest implements FabricClientGameTest {
 			context.setScreen(() -> new PauseScreen(true));
 			context.waitTicks(3);
 			context.getInput().setCursorPos(1, 1);
-			System.out.println("[Cytra Waypoints install test] screenshot: "
+			System.out.println("[Alloy Waypoints install test] screenshot: "
 					+ context.takeScreenshot("sharedwaypoints-installed-pause-menu"));
 			context.clickScreenButton("✦ Waypoints");
 			context.waitFor(client -> client.screen != null
@@ -92,6 +92,6 @@ public class InstalledClientJarTest implements FabricClientGameTest {
 	}
 
 	private static void log(String message) {
-		System.out.println("[Cytra Waypoints install test] " + message);
+		System.out.println("[Alloy Waypoints install test] " + message);
 	}
 }

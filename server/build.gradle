@@ -7,7 +7,7 @@ def modVersion = project.ext.modVersion
 
 base {
 	// One jar for the server and players.
-	archivesName = project.ext.isRelease ? "cytra-waypoints" : "cytra-waypoints-dev"
+	archivesName = project.ext.isRelease ? "alloy-waypoints" : "alloy-waypoints-dev"
 }
 
 repositories {

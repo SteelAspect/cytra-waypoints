@@ -162,6 +162,6 @@ public class XaeroSyncClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void log(String message) {
-		System.out.println("[Cytra Waypoints Xaero sync test] " + message);
+		System.out.println("[Alloy Waypoints Xaero sync test] " + message);
 	}
 }

@@ -23,7 +23,7 @@ public class InstalledServerJarTest implements ModInitializer {
 			} catch (InterruptedException e) {
 				// The test finished.
 			}
-		}, "Cytra Waypoints server test watchdog");
+		}, "Alloy Waypoints server test watchdog");
 		watchdog.setDaemon(true);
 		watchdog.start();
 
@@ -43,12 +43,12 @@ public class InstalledServerJarTest implements ModInitializer {
 	private static void check(MinecraftServer server) {
 		FabricLoader loader = FabricLoader.getInstance();
 		if (!loader.isModLoaded("sharedwaypoints")) {
-			throw new AssertionError("Cytra Waypoints didn't load from the installed jar");
+			throw new AssertionError("Alloy Waypoints didn't load from the installed jar");
 		}
 		if (loader.isModLoaded("xaerominimap")) {
 			throw new AssertionError("this test must run without Xaero's Minimap");
 		}
-		log("Cytra Waypoints " + loader.getModContainer("sharedwaypoints").orElseThrow().getMetadata().getVersion()
+		log("Alloy Waypoints " + loader.getModContainer("sharedwaypoints").orElseThrow().getMetadata().getVersion()
 				.getFriendlyString() + " loaded on a dedicated server without Xaero's Minimap");
 		if (server.getCommands().getDispatcher().getRoot().getChild("cway") == null) {
 			throw new AssertionError("/cway isn't registered");
@@ -62,6 +62,6 @@ public class InstalledServerJarTest implements ModInitializer {
 	}
 
 	private static void log(String message) {
-		System.out.println("[Cytra Waypoints server install test] " + message);
+		System.out.println("[Alloy Waypoints server install test] " + message);
 	}
 }
