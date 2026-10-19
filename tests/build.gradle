@@ -49,6 +49,9 @@ loom {
 			client()
 			name = "Client Game Test (Xaero sync)"
 			vmArg "-Dfabric.client.gametest"
+			// Xaero's Minimap talks to the network below Fabric's packet hooks, which made the synchronizer fail at
+			// random when the world closed for the rejoin step. The test waits for its own conditions instead.
+			vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer"
 			runDir "build/clientgametest"
 			source sourceSets.clientgametest
 		}
