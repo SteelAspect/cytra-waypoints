@@ -3,7 +3,7 @@
 # Alloy Waypoints
 
 [![Download 2.8.0](https://img.shields.io/badge/download-2.8.0-2ea44f)](https://github.com/SteelAspect/cytra-releases/releases?q=sharedwaypoints)
-[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/alloy-waypoints/actions/workflows/build.yml)
+[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/cytra-waypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
 ![One jar](https://img.shields.io/badge/one%20jar-server%20%2B%20optional%20client-blue)
@@ -241,7 +241,7 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
   "joinSummary": true,
   "syncToClientMod": true,
   "clientModTip": true,
-  "clientModUrl": "https://github.com/SteelAspect/alloy-waypoints/releases/latest",
+  "clientModUrl": "https://github.com/SteelAspect/cytra-waypoints/releases/latest",
   "navigationParticles": true,
   "arrivalRadius": 6,
   "pageSize": 8,
