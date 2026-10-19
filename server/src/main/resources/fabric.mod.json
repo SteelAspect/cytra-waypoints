@@ -8,9 +8,9 @@
 		"steelaspect"
 	],
 	"contact": {
-		"homepage": "https://github.com/SteelAspect/cytra-waypoints",
-		"sources": "https://github.com/SteelAspect/cytra-waypoints",
-		"issues": "https://github.com/SteelAspect/cytra-waypoints/issues"
+		"homepage": "https://github.com/SteelAspect/alloy-waypoints",
+		"sources": "https://github.com/SteelAspect/alloy-waypoints",
+		"issues": "https://github.com/SteelAspect/alloy-waypoints/issues"
 	},
 	"license": "MIT",
 	"icon": "assets/sharedwaypoints/icon.png",

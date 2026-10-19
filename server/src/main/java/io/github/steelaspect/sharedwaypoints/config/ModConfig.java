@@ -30,7 +30,7 @@ public final class ModConfig {
 	 */
 	public boolean clientModTip = true;
 	/** Where [Download] in that tip and in {@code /cway sync} points. Empty: no link ("ask an admin"). */
-	public String clientModUrl = "https://github.com/SteelAspect/cytra-waypoints/releases/latest";
+	public String clientModUrl = "https://github.com/SteelAspect/alloy-waypoints/releases/latest";
 	/** Show a particle beacon at the destination while navigating. */
 	public boolean navigationParticles = true;
 	/** Navigation ends when you get this close (blocks). */

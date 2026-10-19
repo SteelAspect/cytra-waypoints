@@ -2,8 +2,8 @@
 
 # Alloy Waypoints
 
-[![Download 2.8.0](https://img.shields.io/badge/download-2.8.0-2ea44f)](https://github.com/SteelAspect/cytra-waypoints/releases/latest)
-[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/cytra-waypoints/actions/workflows/build.yml)
+[![Download 2.8.0](https://img.shields.io/badge/download-2.8.0-2ea44f)](https://github.com/SteelAspect/cytra-releases/releases?q=sharedwaypoints)
+[![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/alloy-waypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
 ![One jar](https://img.shields.io/badge/one%20jar-server%20%2B%20optional%20client-blue)
@@ -132,7 +132,7 @@ client jar on its own still works with a 2.3 server until players update.
 
 ## Download and install
 
-The jar is on the **[latest release](https://github.com/SteelAspect/cytra-waypoints/releases/latest)**.
+The jar is on the **[latest release](https://github.com/SteelAspect/cytra-releases/releases?q=sharedwaypoints)**.
 
 **Server owners**
 1. Put `alloy-waypoints-<version>.jar` in your server's `mods/` folder, together with
@@ -162,7 +162,7 @@ The mod also works in singleplayer and LAN worlds.
 ### Upgrading from SharedWaypoints or Cytra Waypoints
 
 2.8.0 is **Alloy Waypoints** (2.7.0 was Cytra Waypoints, older versions SharedWaypoints). Swap
-`sharedwaypoints-<version>.jar` or `alloy-waypoints-<version>.jar` for `alloy-waypoints-2.8.0.jar` (Alloy Hub does
+`sharedwaypoints-<version>.jar` or `cytra-waypoints-<version>.jar` for `alloy-waypoints-2.8.0.jar` (Alloy Hub does
 this for you). Don't keep both jars: they're the same mod, and Fabric
 refuses to start with two copies. Everything else stays the same: waypoints, routes and favourites in
 `config/sharedwaypoints/`, the `sharedwaypoints.*` permissions, `/cway`, and Xaero's "Shared" set. The web map layer
@@ -241,7 +241,7 @@ With a permissions mod such as LuckPerms the nodes decide. Without one, these de
   "joinSummary": true,
   "syncToClientMod": true,
   "clientModTip": true,
-  "clientModUrl": "https://github.com/SteelAspect/cytra-waypoints/releases/latest",
+  "clientModUrl": "https://github.com/SteelAspect/alloy-waypoints/releases/latest",
   "navigationParticles": true,
   "arrivalRadius": 6,
   "pageSize": 8,

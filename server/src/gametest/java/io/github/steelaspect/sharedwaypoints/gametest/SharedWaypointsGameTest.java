@@ -916,7 +916,7 @@ public class SharedWaypointsGameTest {
 		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/cway sync")),
 				"How it works runs /cway sync");
 		helper.assertValueEqual(clickOf(tip, "[Download]"), Optional.of(new ClickEvent.OpenUrl(
-				java.net.URI.create("https://github.com/SteelAspect/cytra-waypoints/releases/latest"))), "Download link");
+				java.net.URI.create("https://github.com/SteelAspect/alloy-waypoints/releases/latest"))), "Download link");
 
 		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
 		run(helper, dispatcher, alice, "cway sync");
@@ -934,7 +934,7 @@ public class SharedWaypointsGameTest {
 		helper.assertFalse(tips.tip().getString().contains("[Download]"), "no Download button without a link");
 		run(helper, dispatcher, alice, "cway sync");
 		helper.assertTrue(alice.out.take().contains("Ask a server admin for the file."), "no link: ask an admin");
-		config.clientModUrl = "https://github.com/SteelAspect/cytra-waypoints/releases/latest";
+		config.clientModUrl = "https://github.com/SteelAspect/alloy-waypoints/releases/latest";
 
 		// The mod on their game but nothing synced a few seconds after the first join: Xaero's Minimap is missing.
 		Component xaeroTip = tips.followUp(aliceEntity).orElseThrow();
