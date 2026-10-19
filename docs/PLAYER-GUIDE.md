@@ -17,7 +17,7 @@ working.
 
 ![The steps from /cway sync](images/guide/sync-steps.png)
 
-1. Put `cytra-waypoints-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
+1. Put `alloy-waypoints-<version>.jar` in your `.minecraft/mods/` folder, next to Xaero's Minimap and
    Fabric API. It's the same jar the server uses, and the same jar that gives you the menu below.
 2. Join the server. The shared waypoints appear in a waypoint set called **"Shared"**. They stay up to date when
    anyone adds, changes or removes one, and the set is refreshed every time you join.
@@ -34,7 +34,7 @@ You need Minecraft **1.21.11** with **Fabric**.
 1. Install [Fabric Loader](https://fabricmc.net/use/installer/) for 1.21.11, if you haven't already.
 2. Put these two files in your `.minecraft/mods/` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.21.11
-   - `cytra-waypoints-<version>.jar`, the same jar the server uses (ask your server admin, or download it from the
+   - `alloy-waypoints-<version>.jar`, the same jar the server uses (ask your server admin, or download it from the
      latest release).
    - Had the old `sharedwaypoints-client` jar? Take it out: the new jar replaces it, and Fabric won't start with
      both.

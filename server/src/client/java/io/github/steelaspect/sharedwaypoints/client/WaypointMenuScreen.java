@@ -76,7 +76,7 @@ public final class WaypointMenuScreen extends Screen {
 	private long localStatusAt;
 
 	public WaypointMenuScreen() {
-		super(Component.literal("Shared Waypoints"));
+		super(Component.literal("Alloy Waypoints"));
 	}
 
 	@Override

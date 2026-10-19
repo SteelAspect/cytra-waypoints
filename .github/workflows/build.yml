@@ -33,7 +33,7 @@ jobs:
         with:
           name: alloy-waypoints-${{ github.sha }}
           path: |
-            server/build/libs/cytra-waypoints-*.jar
+            server/build/libs/alloy-waypoints-*.jar
             !**/*-sources.jar
           if-no-files-found: error
 

@@ -23,7 +23,7 @@ One Gradle build, three projects, one released jar:
 
 | Project | Jar | What it is |
 |---|---|---|
-| `server/` | `cytra-waypoints-<v>.jar` (mod id `sharedwaypoints`) | The mod, for the server and players. `src/main` is common (commands, chat, routes, web maps, join summary, sync sender). `src/client` only runs on players' games: the menu, the J key, the Esc menu button and the Xaero sync (`xaerosync`, all Xaero code in `XaeroBridge`, found by reflection, so Xaero is never required). |
+| `server/` | `alloy-waypoints-<v>.jar` (mod id `sharedwaypoints`) | The mod, for the server and players. `src/main` is common (commands, chat, routes, web maps, join summary, sync sender). `src/client` only runs on players' games: the menu, the J key, the Esc menu button and the Xaero sync (`xaerosync`, all Xaero code in `XaeroBridge`, found by reflection, so Xaero is never required). |
 | `protocol/` | bundled in the mod (mod id `sharedwaypoints-protocol`) | The sync payloads and `SyncProtocol.VERSION`. |
 | `tests/` | none | Tests only: the Xaero sync with the real Xaero's Minimap, and the built jar installed like a player's and a server's mods folder. |
 
@@ -85,8 +85,8 @@ xvfb-run -a ./gradlew --no-daemon :tests:runInstalledClientTest -PwithoutXaero  
 
 | Branch | Purpose | Jar | Version in-game |
 |---|---|---|---|
-| `main` | releases | `cytra-waypoints-<version>.jar` | `<version>` |
-| `dev` and others | testing | `cytra-waypoints-dev-<version>.jar` | `<version>+dev` |
+| `main` | releases | `alloy-waypoints-<version>.jar` | `<version>` |
+| `dev` and others | testing | `alloy-waypoints-dev-<version>.jar` | `<version>+dev` |
 
 The branch is read from git (or `GITHUB_REF_NAME` in CI). Force either with `-Prelease=true` / `-Prelease=false`.
 The jar is in `server/build/libs/`. `build/devlibs/` only holds development jars that

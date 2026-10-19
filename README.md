@@ -27,7 +27,7 @@ install. Players who want more put **the same jar** in their own mods folder, an
 
 ## One jar
 
-Since 2.3.0 there is one jar, `cytra-waypoints-<version>.jar`, for the server and for players:
+Since 2.3.0 there is one jar, `alloy-waypoints-<version>.jar`, for the server and for players:
 
 | Where | Needed? | What it does there |
 |---|---|---|
@@ -135,12 +135,12 @@ client jar on its own still works with a 2.3 server until players update.
 The jar is on the **[latest release](https://github.com/SteelAspect/cytra-waypoints/releases/latest)**.
 
 **Server owners**
-1. Put `cytra-waypoints-<version>.jar` in your server's `mods/` folder, together with
+1. Put `alloy-waypoints-<version>.jar` in your server's `mods/` folder, together with
    [Fabric API](https://modrinth.com/mod/fabric-api). Nothing else: Xaero's Minimap is never needed on the server.
 2. Start the server. Players don't need to install anything.
 
 **Players (optional)**
-- Put the same `cytra-waypoints-<version>.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your
+- Put the same `alloy-waypoints-<version>.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your
   `.minecraft/mods/` folder.
 - **The menu:** press **J**, or open the Esc menu and click **✦ Waypoints** (top right).
 - **Automatic Xaero sync:** also have [Xaero's Minimap](https://modrinth.com/mod/xaeros-minimap) installed. The
@@ -162,7 +162,7 @@ The mod also works in singleplayer and LAN worlds.
 ### Upgrading from SharedWaypoints or Cytra Waypoints
 
 2.8.0 is **Alloy Waypoints** (2.7.0 was Cytra Waypoints, older versions SharedWaypoints). Swap
-`sharedwaypoints-<version>.jar` or `cytra-waypoints-<version>.jar` for `alloy-waypoints-2.8.0.jar` (Alloy Hub does
+`sharedwaypoints-<version>.jar` or `alloy-waypoints-<version>.jar` for `alloy-waypoints-2.8.0.jar` (Alloy Hub does
 this for you). Don't keep both jars: they're the same mod, and Fabric
 refuses to start with two copies. Everything else stays the same: waypoints, routes and favourites in
 `config/sharedwaypoints/`, the `sharedwaypoints.*` permissions, `/cway`, and Xaero's "Shared" set. The web map layer
@@ -417,8 +417,8 @@ with `"webMapMarkers": false`. Tested against BlueMap 5.16 and squaremap 1.3.12 
 ./gradlew build
 ```
 
-This builds the jar: `server/build/libs/cytra-waypoints-<version>.jar` (one jar for the server and players). On any
-branch other than `main` it's named `cytra-waypoints-dev-<version>.jar`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
+This builds the jar: `server/build/libs/alloy-waypoints-<version>.jar` (one jar for the server and players). On any
+branch other than `main` it's named `alloy-waypoints-dev-<version>.jar`. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for tests, the release process and
 how the code is organised. The [changelog](CHANGELOG.md) lists what changed in each version.
 
 ## License
