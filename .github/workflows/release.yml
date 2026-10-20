@@ -27,6 +27,11 @@ permissions:
 env:
   TAG: ${{ github.event.release.tag_name || inputs.tag || github.ref_name }}
 
+
+# Alloy UI comes from GitHub Packages in CI (needs this repo secret: a token with read:packages).
+env:
+  ALLOY_PACKAGES_TOKEN: ${{ secrets.ALLOY_PACKAGES_TOKEN }}
+
 jobs:
   release:
     runs-on: ubuntu-latest

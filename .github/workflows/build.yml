@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+
+# Alloy UI comes from GitHub Packages in CI (needs this repo secret: a token with read:packages).
+env:
+  ALLOY_PACKAGES_TOKEN: ${{ secrets.ALLOY_PACKAGES_TOKEN }}
+
 jobs:
   build:
     runs-on: ubuntu-latest

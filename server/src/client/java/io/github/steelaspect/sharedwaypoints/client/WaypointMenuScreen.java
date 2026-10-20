@@ -1,8 +1,17 @@
 package io.github.steelaspect.sharedwaypoints.client;
 
+import dev.steelaspect.alloyui.Toast;
+import dev.steelaspect.alloyui.UiContext;
+import dev.steelaspect.alloyui.render.Draw;
+import dev.steelaspect.alloyui.widget.Button;
+import dev.steelaspect.alloyui.widget.Container;
+import dev.steelaspect.alloyui.widget.Dialog;
+import dev.steelaspect.alloyui.widget.Dropdown;
+import dev.steelaspect.alloyui.widget.Menu;
+import dev.steelaspect.alloyui.widget.Segmented;
+import dev.steelaspect.alloyui.widget.TextField;
 import io.github.steelaspect.sharedwaypoints.nav.NavMath;
 import io.github.steelaspect.sharedwaypoints.network.ActionPayload.Action;
-import io.github.steelaspect.sharedwaypoints.network.ResultPayload;
 import io.github.steelaspect.sharedwaypoints.text.Formats;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Category;
@@ -16,224 +25,366 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
-import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.screens.ConfirmScreen;
-import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
+import org.jspecify.annotations.Nullable;
 
 /**
- * The waypoint menu: search, category/favourite filter and sort along the top, the list on the left, details and
- * every action for the selected waypoint on the right. The Routes button opens {@link RoutesScreen}.
+ * The waypoint menu: search, + Add and settings in the header; filter chips, a category (or status) choice and the
+ * sort above the list; the selected waypoint's details and actions on the right. On a narrow window the details
+ * replace the list (with a back button). Routes opens {@link RoutesScreen}.
  */
-public final class WaypointMenuScreen extends Screen {
-	private static final int MARGIN = 10;
-	private static final int TOP = 44;
-	private static final String ALL = "\u0000all";
-	private static final String FAVORITES = "\u0000favorites";
-	/** Any waypoint with a project status. */
-	private static final String PROJECTS = "\u0000projects";
-	/** Prefix of the one-status filters, followed by the state id. */
-	private static final String STATUS_PREFIX = "\u0000status:";
+public final class WaypointMenuScreen extends WaypointsScreen {
+	private enum Chip { ALL, FAVORITES, PROJECTS }
 
-	/** Sorting options. */
-	private enum Sort {
-		CATEGORY("By category"), NAME("By name"), DISTANCE("By distance");
+	/** "Any" in the category / status dropdown. */
+	private static final String ANY = "";
 
-		final String label;
-
-		Sort(String label) {
-			this.label = label;
-		}
-	}
-
-	// Remembered while the game runs, so the menu reopens where you left it.
+	// The view, remembered while the game runs when "Remember last view" is on.
 	private static String search = "";
-	private static String filter = ALL;
-	private static Sort sort = Sort.CATEGORY;
-	private static UUID selectedId;
+	private static Chip chip = Chip.ALL;
+	/** A category id, or a status id while the Projects chip is on; {@link #ANY} for all. */
+	private static String refine = ANY;
+	private static ClientSettings.Sort sort = ClientSettings.defaultSort();
+	private static @Nullable UUID selectedId;
+	private static boolean viewRemembered;
 
-	private WaypointList list;
-	private Button goButton;
-	private Button xaeroButton;
-	private Button copyButton;
-	private Button favoriteButton;
-	private Button editButton;
-	private Button teleportButton;
-	private Button removeButton;
-	private Button statusButton;
-	private List<String> filterIds = List.of();
-	/** Whether the current layout has the Teleport button (it changes the last row). */
-	private boolean builtWithTeleport;
-	private int panelLeft;
-	private int bottom;
-	private int buttonsTop;
-	private String localStatus;
-	private long localStatusAt;
+	private final SelectList<Waypoint> list;
+	private final Frame frame;
+	/** On a narrow window: true while the details are shown instead of the list. */
+	private boolean detailOpen;
 
 	public WaypointMenuScreen() {
-		super(Component.literal("Alloy Waypoints"));
+		this(null);
+	}
+
+	public WaypointMenuScreen(net.minecraft.client.gui.screens.@Nullable Screen parent) {
+		super(Ui.tr("menu.title"), parent);
+		if (!ClientSettings.rememberView() || !viewRemembered) {
+			search = "";
+			chip = Chip.ALL;
+			refine = ANY;
+			sort = ClientSettings.defaultSort();
+			selectedId = null;
+		}
+		viewRemembered = true;
+
+		list = new SelectList<Waypoint>(24, Waypoint::id, WaypointMenuScreen::renderRow)
+				.onSelect(this::onSelect)
+				.onActivate(waypoint -> go())
+				.emptyText(() -> !ClientWaypoints.hasData() ? Ui.tr("menu.loading")
+						: ClientWaypoints.waypoints().isEmpty() ? Ui.tr("menu.empty") : Ui.tr("menu.no_match"));
+
+		frame = new Frame(Ui.tr("menu.title"));
+		frame.headerFill(new TextField(() -> search, value -> {
+			search = value;
+			refresh();
+		}).live().maxLength(64).placeholder(Ui.tr("menu.search")), 200);
+		Button add = frame.header(new Button(Ui.tr("menu.add"), () -> minecraft.setScreen(new AddWaypointScreen(this))), -1);
+		add.enabledWhen(ClientWaypoints::canAdd);
+		add.tooltip(Ui.tr("menu.add.tooltip"));
+		frame.header(new Button(Component.literal("⚙"), () -> minecraft.setScreen(new SettingsScreen(this))), 18)
+				.tooltip(Ui.tr("settings.title"));
+		frame.body(new Body());
+		frame.footerText(this::footerText);
+		frame.footer(new Button(Ui.tr("menu.routes"), () -> minecraft.setScreen(new RoutesScreen(this))))
+				.tooltip(Ui.tr("menu.routes.tooltip"));
+		frame.footer(new Button(Component.translatable("gui.done"), this::onClose));
+		setRoot(frame);
 	}
 
 	@Override
 	protected void init() {
-		ClientWaypoints.setListener(this::onServerUpdate);
+		super.init();
 		SharedWaypointsClient.send(Action.SYNC);
-
-		int listRight = Math.max(170, (int) (width * 0.52));
-		panelLeft = listRight + 8;
-		bottom = height - 32;
-		int panelWidth = width - MARGIN - panelLeft;
-
-		// --- toolbar: search on the left, filter / sort / add on the right
-		EditBox searchBox = new EditBox(font, MARGIN, 20, listRight - MARGIN, 18, Component.literal("Search"));
-		searchBox.setHint(Component.literal("Search names, notes, creators…"));
-		searchBox.setMaxLength(64);
-		searchBox.setValue(search);
-		searchBox.setResponder(value -> {
-			search = value;
-			refreshList();
-		});
-		addRenderableWidget(searchBox);
-
-		filterIds = filterValues();
-		if (!filterIds.contains(filter)) {
-			filter = ALL;
-		}
-		int addWidth = 48;
-		int cycleWidth = Math.max(60, (panelWidth - addWidth - 8) / 2);
-		addRenderableWidget(CycleButton.builder(WaypointMenuScreen::filterLabel, filter)
-				.withValues(filterIds)
-				.displayOnlyValue()
-				.create(panelLeft, 19, cycleWidth, 20, Component.literal("Show"), (button, value) -> {
-					filter = value;
-					refreshList();
-				}));
-		addRenderableWidget(CycleButton.builder((Sort value) -> Component.literal(value.label), sort)
-				.withValues(Sort.values())
-				.displayOnlyValue()
-				.create(panelLeft + cycleWidth + 4, 19, cycleWidth, 20, Component.literal("Sort"), (button, value) -> {
-					sort = value;
-					refreshList();
-				}));
-		Button addButton = addRenderableWidget(Button.builder(Component.literal("+ Add"),
-						button -> minecraft.setScreen(new AddWaypointScreen(this)))
-				.bounds(width - MARGIN - addWidth, 19, addWidth, 20)
-				.tooltip(Tooltip.create(Component.literal("Add a waypoint here or at any coordinates")))
-				.build());
-		addButton.active = ClientWaypoints.canAdd();
-
-		// --- list
-		list = addRenderableWidget(new WaypointList(minecraft, this::onSelect, waypoint -> go()));
-		list.updateSizeAndPosition(listRight - MARGIN, bottom - TOP, MARGIN, TOP);
-
-		// --- action buttons: four rows at the bottom of the details panel (the third row has a third
-		// button, Teleport, for players allowed to teleport; the last row is Status)
-		int half = (panelWidth - 4) / 2;
-		int third = (panelWidth - 8) / 3;
-		boolean teleport = ClientWaypoints.canTeleport();
-		builtWithTeleport = teleport;
-		buttonsTop = bottom - 4 * 22 + 2;
-		goButton = actionButton("▶ Go", panelLeft, 0, half, "Start the on-screen compass", this::go);
-		xaeroButton = actionButton("Add to Xaero", panelLeft + half + 4, 0, half, "", this::addToXaero);
-		copyButton = actionButton("Copy coords", panelLeft, 1, half, "Copy \"X Y Z\" to the clipboard", this::copyCoordinates);
-		favoriteButton = actionButton("☆ Favourite", panelLeft + half + 4, 1, half, "Only you see your favourites",
-				() -> act(Action.FAVORITE));
-		int lastWidth = teleport ? third : half;
-		editButton = actionButton("Edit", panelLeft, 2, lastWidth, "Rename it or change its description", this::edit);
-		removeButton = actionButton("Remove", panelLeft + lastWidth + 4, 2, lastWidth, "Remove it for everyone", this::remove);
-		teleportButton = actionButton("Teleport", panelLeft + 2 * (lastWidth + 4), 2, lastWidth, "Teleport there", this::teleport);
-		teleportButton.visible = teleport;
-		statusButton = actionButton("Status…", panelLeft, 3, panelWidth, "", this::status);
-
-		addRenderableWidget(Button.builder(Component.literal("Routes"), button -> minecraft.setScreen(new RoutesScreen(this)))
-				.bounds(width - MARGIN - 80 - 4 - 80, height - 26, 80, 20)
-				.tooltip(Tooltip.create(Component.literal("Routes: waypoints to visit one after another")))
-				.build());
-		addRenderableWidget(Button.builder(Component.literal("Done"), button -> onClose())
-				.bounds(width - MARGIN - 80, height - 26, 80, 20).build());
-
-		refreshList();
+		refresh();
 	}
 
-	private Button actionButton(String label, int x, int row, int buttonWidth, String tooltip, Runnable action) {
-		Button button = addRenderableWidget(Button.builder(Component.literal(label), pressed -> action.run())
-				.bounds(x, buttonsTop + row * 22, buttonWidth, 20)
-				.build());
-		if (!tooltip.isEmpty()) {
-			button.setTooltip(Tooltip.create(Component.literal(tooltip)));
+	// ---------------------------------------------------------------- layout
+
+	/** The body: the filter bar, then the list and the details side by side (or one of them when narrow). */
+	private final class Body extends Container {
+		private static final float BAR = 16, GAP = 4;
+		private final Segmented chips;
+		private final Dropdown<String> refineChoice;
+		private final Dropdown<ClientSettings.Sort> sortChoice;
+		private final Details details;
+		private final Button back;
+
+		Body() {
+			chips = add(new Segmented(() -> List.of(Ui.tr("filter.all"), Ui.tr("filter.favorites"), Ui.tr("filter.projects")),
+					() -> chip.ordinal(), i -> {
+						chip = Chip.values()[i];
+						refine = ANY;
+						refresh();
+					}).compact());
+			refineChoice = add(new Dropdown<>(WaypointMenuScreen::refineValues, WaypointMenuScreen::refineLabel,
+					() -> refine, value -> {
+						refine = value;
+						refresh();
+					}));
+			sortChoice = add(new Dropdown<>(() -> List.of(ClientSettings.Sort.values()),
+					value -> Ui.tr("sort." + value.id()), () -> sort, value -> {
+						sort = value;
+						refresh();
+					}));
+			add(list);
+			details = add(new Details());
+			back = add(new Button(Ui.tr("menu.back"), () -> detailOpen = false));
+			back.style(Button.Style.GHOST);
 		}
-		return button;
+
+		boolean narrow() {
+			return w < 300;
+		}
+
+		@Override
+		public float measure(float width) {
+			return 0;
+		}
+
+		@Override
+		protected void layout() {
+			boolean narrow = narrow();
+			if (!narrow) {
+				detailOpen = false;
+			}
+			boolean showList = !narrow || !detailOpen;
+			boolean showDetails = !narrow || detailOpen;
+			chips.visible(showList);
+			refineChoice.visible(showList);
+			sortChoice.visible(showList);
+			list.visible(showList);
+			details.visible(showDetails);
+			back.visible(narrow && detailOpen);
+
+			// The filter bar spans the whole body; the list and the details share the room below it.
+			float top = y + GAP;
+			if (showList) {
+				float chipsW = Math.min(chips.preferredWidth(), w * 0.45f);
+				chips.setBounds(x, top, chipsW, BAR);
+				float dw = Math.min(130, (w - chipsW - 2 * GAP) / 2);
+				sortChoice.setBounds(x + w - dw, top, dw, BAR);
+				refineChoice.setBounds(x + w - 2 * dw - GAP, top, dw, BAR);
+			} else if (back.visible()) {
+				back.setBounds(x, top, back.preferredWidth(), BAR);
+			}
+			float below = top + BAR + GAP + 2;
+			float listW = narrow ? w : (float) Math.floor(w * 0.5f);
+			if (showList) {
+				list.setBounds(x, below, listW, y + h - below - GAP);
+			}
+			if (showDetails) {
+				float dx = narrow ? x : x + listW + 3 * GAP;
+				float dw = narrow ? w : w - listW - 3 * GAP;
+				details.setBounds(dx, below + 2, dw, y + h - below - GAP - 2);
+			}
+		}
 	}
 
-	/** All, Favourites, Projects, each status, then the categories. */
-	private static List<String> filterValues() {
-		List<String> ids = new ArrayList<>(List.of(ALL, FAVORITES, PROJECTS));
-		for (ProjectStatus.State state : ProjectStatus.State.values()) {
-			ids.add(STATUS_PREFIX + state.id());
+	/** The selected waypoint's details, with its actions at the bottom. */
+	private final class Details extends Container {
+		private static final float ROW = 16, GAP = 4;
+		private final TextLines text;
+		private final Button goButton;
+		private final Button copyButton;
+		private final Button favoriteButton;
+		private final Button moreButton;
+
+		Details() {
+			text = add(new TextLines(WaypointMenuScreen.this::detailLines));
+			goButton = add(new Button(() -> isNavigating() ? Ui.tr("action.stop") : Ui.tr("action.go"), WaypointMenuScreen.this::go));
+			goButton.style(Button.Style.PRIMARY);
+			goButton.tooltip(Ui.tr("action.go.tooltip"));
+			copyButton = add(new Button(Ui.tr("action.copy"), WaypointMenuScreen.this::copyCoordinates));
+			copyButton.tooltip(Ui.tr("action.copy.tooltip"));
+			favoriteButton = add(new Button(() -> selectedData().map(d -> d.favorite()).orElse(false)
+					? Ui.tr("action.unfavorite") : Ui.tr("action.favorite"), () -> act(Action.FAVORITE)));
+			favoriteButton.tooltip(Ui.tr("action.favorite.tooltip"));
+			moreButton = add(new Button(Component.literal("⋯"), this::openMore));
+			moreButton.tooltip(Ui.tr("action.more"));
+
+			goButton.enabledWhen(() -> selected().isPresent());
+			copyButton.enabledWhen(() -> selected().isPresent());
+			favoriteButton.enabledWhen(() -> selected().isPresent());
+			moreButton.enabledWhen(() -> selected().isPresent());
+
+			// The menu items, so the client test can reach them by label.
+			testAction(Ui.tr("action.xaero"), WaypointMenuScreen.this::addToXaero);
+			testAction(Ui.tr("action.edit"), WaypointMenuScreen.this::edit);
+			testAction(Ui.tr("action.status"), WaypointMenuScreen.this::status);
+			testAction(Ui.tr("action.teleport"), WaypointMenuScreen.this::teleport);
+			testAction(Ui.tr("action.remove"), WaypointMenuScreen.this::remove);
 		}
-		ClientWaypoints.categories().forEach(category -> ids.add(category.id()));
+
+		private void openMore() {
+			var data = selectedData();
+			Menu menu = new Menu()
+					.item(Ui.tr("action.xaero"), WaypointMenuScreen.this::addToXaero)
+					.disabledWhen(() -> !Ui.xaeroInstalled())
+					.separator()
+					.item(Ui.tr("action.edit"), WaypointMenuScreen.this::edit)
+					.disabledWhen(() -> !data.map(d -> d.canEdit()).orElse(false))
+					.item(Ui.tr("action.status"), WaypointMenuScreen.this::status)
+					.disabledWhen(() -> !data.map(d -> d.canSetStatus()).orElse(false));
+			if (ClientWaypoints.canTeleport()) {
+				menu.item(Ui.tr("action.teleport"), WaypointMenuScreen.this::teleport);
+			}
+			menu.separator()
+					.item(Ui.tr("action.remove"), WaypointMenuScreen.this::remove)
+					.disabledWhen(() -> !data.map(d -> d.canRemove()).orElse(false))
+					.danger();
+			menu.open(ctx, moreButton.x(), moreButton.y() + moreButton.h() + 2);
+		}
+
+		@Override
+		public float measure(float width) {
+			return 0;
+		}
+
+		@Override
+		protected void layout() {
+			float bottom = y + h;
+			float rowY = bottom - ROW;
+			float moreW = 18;
+			float half = (w - moreW - 2 * GAP) / 2;
+			copyButton.setBounds(x, rowY, half, ROW);
+			favoriteButton.setBounds(x + half + GAP, rowY, half, ROW);
+			moreButton.setBounds(x + w - moreW, rowY, moreW, ROW);
+			goButton.setBounds(x, rowY - GAP - ROW, w, ROW);
+			text.setBounds(x, y + 2, w, Math.max(0, rowY - GAP - ROW - GAP - (y + 2)));
+		}
+
+		@Override
+		protected void renderWidget(UiContext ctx) {
+			Draw.roundRect(ctx.g, x - 4, y - 2, w + 8, h + 2, ctx.theme.metricF("radius"), ctx.theme.color("panelAlt"));
+			if (selected().isEmpty()) {
+				Draw.text(ctx.g, Ui.tr("menu.select"), x, y + 4, ctx.theme.color("textMuted"));
+			}
+			super.renderWidget(ctx);
+		}
+	}
+
+	private static void renderRow(UiContext ctx, Waypoint waypoint, float x, float y, float w, float h, boolean selected) {
+		var t = ctx.theme;
+		Draw.roundRect(ctx.g, x + 4, y + 4, 6, 6, 1, Ui.argb(waypoint.category()));
+		boolean favorite = ClientWaypoints.data(waypoint.id()).map(data -> data.favorite()).orElse(false);
+		boolean navigating = waypoint.id().equals(ClientWaypoints.navigatingTo());
+		String distance = Ui.distanceLabel(waypoint);
+		float distanceW = distance == null ? 0 : Draw.textWidth(Component.literal(distance)) + 8;
+		String name = (navigating ? "▶ " : "") + waypoint.name() + (favorite ? " ★" : "")
+				+ (waypoint.status() != null ? " " + waypoint.status().state().symbol() : "");
+		Draw.textClipped(ctx.g, Component.literal(name), x + 14, y + 2, w - 14 - distanceW,
+				t.color(navigating ? "good" : "text"), Draw.Role.STRONG);
+		if (distance != null) {
+			Draw.text(ctx.g, Component.literal(distance), x + w - distanceW + 4, y + 2, t.color("textMuted"));
+		}
+		Draw.textClipped(ctx.g, Component.literal(waypoint.coordinates() + "  ·  " + Dimensions.shortName(waypoint.dimension())),
+				x + 14, y + 12, w - 18, t.color("textMuted"));
+	}
+
+	private List<TextLines.Line> detailLines() {
+		Optional<Waypoint> selected = selected();
+		if (selected.isEmpty()) {
+			return List.of();
+		}
+		Waypoint waypoint = selected.get();
+		Category category = waypoint.category();
+		List<TextLines.Line> lines = new ArrayList<>();
+		boolean favorite = selectedData().map(d -> d.favorite()).orElse(false);
+		lines.add(TextLines.Line.heading(Component.literal(waypoint.name() + (favorite ? " ★" : "")), Ui.argb(category)));
+		lines.add(TextLines.Line.of(Component.literal(category.displayName() + " · " + Dimensions.shortName(waypoint.dimension())),
+				"textMuted"));
+		String distance = Ui.distanceLabel(waypoint);
+		Component where = distance != null ? Component.literal(distance.replace(" ⟳", "")).append(distance.endsWith("⟳")
+				? Ui.tr("details.via_portal") : Component.empty()) : Ui.tr("details.in", Dimensions.shortName(waypoint.dimension()));
+		lines.add(TextLines.Line.of(Component.literal(waypoint.coordinates()), "text").withRight(where, "info"));
+		// The other side at the player's own height: the waypoint's Y belongs to its own dimension.
+		var player = Minecraft.getInstance().player;
+		Optional<NavMath.Target> other = player == null ? Optional.empty() : NavMath.portalEquivalent(waypoint, player.getBlockY());
+		other.ifPresent(target -> lines.add(TextLines.Line.of(Ui.tr(waypoint.dimension().equals(Dimensions.OVERWORLD)
+				? "details.nether_side" : "details.overworld_side", target.x() + " " + target.y() + " " + target.z()), "accent")));
+		if (isNavigating()) {
+			lines.add(TextLines.Line.of(Ui.tr("details.navigating"), "good"));
+		}
+		if (waypoint.status() != null) {
+			ProjectStatus status = waypoint.status();
+			lines.add(TextLines.Line.space());
+			lines.add(new TextLines.Line(Component.literal(status.summary()), null, 0xFF000000 | status.state().rgb(), false, 2, 0, null, null));
+			lines.add(TextLines.Line.of(Ui.tr("details.status_by", status.setByName(), Formats.relativeAge(status.setAt(), Instant.now())),
+					"textMuted"));
+		}
+		if (waypoint.description() != null) {
+			lines.add(TextLines.Line.space());
+			lines.add(TextLines.Line.wrapped(Component.literal("“" + waypoint.description() + "”"), "textMuted", 3));
+		}
+		lines.add(TextLines.Line.space());
+		lines.add(TextLines.Line.of(Ui.tr("details.added_by", waypoint.creatorName(), Formats.relativeAge(waypoint.created(), Instant.now())),
+				"textMuted"));
+		return lines;
+	}
+
+	private Component footerText() {
+		return Ui.tr("menu.footer", ClientWaypoints.waypoints().size(), SharedWaypointsClient.openMenuKey().getTranslatedKeyMessage());
+	}
+
+	// ---------------------------------------------------------------- filters
+
+	private static List<String> refineValues() {
+		List<String> ids = new ArrayList<>();
+		ids.add(ANY);
+		if (chip == Chip.PROJECTS) {
+			for (ProjectStatus.State state : ProjectStatus.State.values()) {
+				ids.add(state.id());
+			}
+		} else {
+			ClientWaypoints.categories().forEach(category -> ids.add(category.id()));
+		}
 		return ids;
 	}
 
-	private static Component filterLabel(String id) {
-		if (ALL.equals(id)) {
-			return Component.literal("All");
+	private static Component refineLabel(String id) {
+		if (ANY.equals(id)) {
+			return Ui.tr(chip == Chip.PROJECTS ? "filter.any_status" : "filter.any_category");
 		}
-		if (FAVORITES.equals(id)) {
-			return Component.literal("★ Favourites");
-		}
-		if (PROJECTS.equals(id)) {
-			return Component.literal("Projects");
-		}
-		if (id.startsWith(STATUS_PREFIX)) {
-			return ProjectStatus.State.byId(id.substring(STATUS_PREFIX.length()))
-					.<Component>map(state -> Component.literal(state.symbol() + " " + state.displayName()).withStyle(state.color()))
+		if (chip == Chip.PROJECTS) {
+			return ProjectStatus.State.byId(id).<Component>map(state -> Component.literal(state.symbol() + " " + state.displayName()))
 					.orElse(Component.literal(id));
 		}
-		Category category = ClientWaypoints.category(id);
-		return Component.literal(category.displayName()).withStyle(category.color());
+		return Component.literal(ClientWaypoints.category(id).displayName());
 	}
 
-	// ---------------------------------------------------------------- updates
-
-	/** A new snapshot or action result arrived from the server. */
-	private void onServerUpdate() {
-		List<String> ids = filterValues();
-		if (!ids.equals(filterIds) || ClientWaypoints.canTeleport() != builtWithTeleport) {
-			// Categories or the player's rights changed: the filter values or the button row must be rebuilt.
-			rebuildWidgets();
-		} else {
-			refreshList();
-		}
+	@Override
+	protected void onServerUpdate() {
+		refresh();
 	}
 
-	private void refreshList() {
-		if (list == null) {
-			return;
+	private void refresh() {
+		if (!refineValues().contains(refine)) {
+			refine = ANY;
 		}
 		String needle = search.trim().toLowerCase(Locale.ROOT);
 		List<Waypoint> shown = ClientWaypoints.waypoints().stream()
 				.filter(waypoint -> needle.isEmpty() || matches(waypoint, needle))
-				.filter(waypoint -> switch (filter) {
+				.filter(waypoint -> switch (chip) {
 					case ALL -> true;
 					case FAVORITES -> isFavorite(waypoint);
 					case PROJECTS -> waypoint.status() != null;
-					default -> filter.startsWith(STATUS_PREFIX)
-							? waypoint.status() != null && waypoint.status().state().id().equals(filter.substring(STATUS_PREFIX.length()))
-							: waypoint.category().id().equals(filter);
 				})
+				.filter(waypoint -> ANY.equals(refine) || (chip == Chip.PROJECTS
+						? waypoint.status() != null && waypoint.status().state().id().equals(refine)
+						: waypoint.category().id().equals(refine)))
 				.sorted(comparator())
 				.toList();
-		list.show(shown, selectedId);
-		if (list.getSelected() == null && !shown.isEmpty() && selectedId == null) {
-			list.setSelected(list.children().get(0));
+		list.show(shown);
+		Waypoint keep = shown.stream().filter(waypoint -> waypoint.id().equals(selectedId)).findFirst().orElse(null);
+		if (keep == null && !shown.isEmpty() && selectedId == null) {
+			keep = shown.get(0);
 		}
-		updateButtons();
+		list.selectQuietly(keep);
+		if (keep != null) {
+			selectedId = keep.id();
+		}
 	}
 
 	private static boolean matches(Waypoint waypoint, String needle) {
@@ -251,68 +402,31 @@ public final class WaypointMenuScreen extends Screen {
 		return switch (sort) {
 			case CATEGORY -> Comparator.comparingInt((Waypoint waypoint) -> waypoint.category().order()).thenComparing(byName);
 			case NAME -> byName;
-			case DISTANCE -> Comparator.comparingDouble(WaypointMenuScreen::distance).thenComparing(byName);
+			case DISTANCE -> Comparator.comparingDouble(Ui::distance).thenComparing(byName);
 		};
 	}
 
-	/** Distance from the player, or infinity if it can't be reached from this dimension. */
-	private static double distance(Waypoint waypoint) {
-		var player = net.minecraft.client.Minecraft.getInstance().player;
-		if (player == null) {
-			return Double.MAX_VALUE;
-		}
-		return NavMath.project(waypoint, Dimensions.id(player.level().dimension()), player.getBlockY())
-				.map(target -> target.horizontalDistance(player.getX(), player.getZ()))
-				.orElse(Double.MAX_VALUE);
-	}
-
-	private void onSelect(Waypoint waypoint) {
+	private void onSelect(@Nullable Waypoint waypoint) {
 		selectedId = waypoint == null ? null : waypoint.id();
-		updateButtons();
-	}
-
-	/** Shows, hides and relabels the action buttons for the selected waypoint and the player's rights. */
-	private void updateButtons() {
-		Optional<Waypoint> selected = selected();
-		boolean any = selected.isPresent();
-		var data = selected.flatMap(waypoint -> ClientWaypoints.data(waypoint.id()));
-		boolean navigating = any && selected.get().id().equals(ClientWaypoints.navigatingTo());
-
-		goButton.active = any;
-		goButton.setMessage(Component.literal(navigating ? "■ Stop" : "▶ Go"));
-		xaeroButton.active = any && xaeroInstalled();
-		xaeroButton.setTooltip(Tooltip.create(Component.literal(xaeroInstalled()
-				? "Open Xaero's Minimap's add-waypoint screen"
-				: "Needs Xaero's Minimap on your client")));
-		copyButton.active = any;
-		favoriteButton.active = any;
-		favoriteButton.setMessage(Component.literal(data.map(d -> d.favorite()).orElse(false) ? "★ Unfavourite" : "☆ Favourite"));
-		editButton.active = data.map(d -> d.canEdit()).orElse(false);
-		editButton.setTooltip(Tooltip.create(Component.literal(editButton.active
-				? "Rename it or change its description" : "Only its creator or an op can edit it")));
-		removeButton.active = data.map(d -> d.canRemove()).orElse(false);
-		removeButton.setTooltip(Tooltip.create(Component.literal(removeButton.active
-				? "Remove it for everyone" : "Only its creator or an op can remove it")));
-		teleportButton.active = any;
-		statusButton.active = data.map(d -> d.canSetStatus()).orElse(false);
-		statusButton.setMessage(Component.literal(selected.flatMap(Waypoint::statusInfo)
-				.map(status -> "Status: " + status.state().symbol() + " " + status.state().displayName())
-				.orElse("Set status…")));
-		statusButton.setTooltip(Tooltip.create(Component.literal(statusButton.active
-				? "Mark it planned, WIP, done or broken, with a note" : "You can't change this waypoint's status")));
+		if (waypoint != null) {
+			detailOpen = true;
+		}
 	}
 
 	private Optional<Waypoint> selected() {
-		return list == null ? Optional.empty() : list.selectedWaypoint();
+		return Optional.ofNullable(list.selected());
+	}
+
+	private Optional<io.github.steelaspect.sharedwaypoints.network.SyncPayload.WaypointData> selectedData() {
+		return selected().flatMap(waypoint -> ClientWaypoints.data(waypoint.id()));
+	}
+
+	private boolean isNavigating() {
+		return selected().map(waypoint -> waypoint.id().equals(ClientWaypoints.navigatingTo())).orElse(false);
 	}
 
 	private static boolean isFavorite(Waypoint waypoint) {
 		return ClientWaypoints.data(waypoint.id()).map(data -> data.favorite()).orElse(false);
-	}
-
-	private static boolean xaeroInstalled() {
-		return FabricLoader.getInstance().isModLoaded("xaerominimap")
-				|| FabricLoader.getInstance().isModLoaded("xaerominimapfair");
 	}
 
 	// ---------------------------------------------------------------- actions
@@ -333,7 +447,7 @@ public final class WaypointMenuScreen extends Screen {
 				SharedWaypointsClient.send(Action.STOP);
 			} else {
 				act(Action.GO);
-				onClose();
+				minecraft.setScreen(null);
 			}
 		});
 	}
@@ -353,13 +467,13 @@ public final class WaypointMenuScreen extends Screen {
 	private void copyCoordinates() {
 		selected().ifPresent(waypoint -> {
 			minecraft.keyboardHandler.setClipboard(waypoint.coordinates());
-			showLocalStatus("Copied " + waypoint.coordinates());
+			toast(Toast.Kind.SUCCESS, Ui.tr("toast.copied", waypoint.coordinates()));
 		});
 	}
 
 	private void teleport() {
 		act(Action.TELEPORT);
-		onClose();
+		minecraft.setScreen(null);
 	}
 
 	private void status() {
@@ -371,28 +485,37 @@ public final class WaypointMenuScreen extends Screen {
 	}
 
 	private void remove() {
-		selected().ifPresent(waypoint -> minecraft.setScreen(new ConfirmScreen(confirmed -> {
-			if (confirmed) {
-				act(Action.REMOVE);
-			}
-			minecraft.setScreen(this);
-		}, Component.literal("Remove \"" + waypoint.name() + "\"?"),
-				Component.literal("This removes it for everyone on the server."))));
+		selected().ifPresent(waypoint -> confirm(new Dialog(Ui.tr("remove.title", waypoint.name()), Ui.tr("remove.message"),
+				Ui.tr("action.remove"), true, dialog -> act(Action.REMOVE))));
 	}
 
+	// ---------------------------------------------------------------- test hooks
+
 	/**
-	 * Sets the view (used by the client test): search text, filter ("all", "favorites" or a category id) and sort
-	 * ("category", "name" or "distance").
+	 * Sets the view (used by the client test): search text, filter ("all", "favorites", "projects", "status:&lt;id&gt;"
+	 * or a category id) and sort ("category", "name" or "distance").
 	 */
 	public void setViewForTest(String query, String filterId, String sortName) {
 		search = query;
-		filter = switch (filterId) {
-			case "all" -> ALL;
-			case "favorites" -> FAVORITES;
-			case "projects" -> PROJECTS;
-			default -> filterId.startsWith("status:") ? STATUS_PREFIX + filterId.substring("status:".length()) : filterId;
-		};
-		sort = Sort.valueOf(sortName.toUpperCase(Locale.ROOT));
+		switch (filterId) {
+			case "all" -> {
+				chip = Chip.ALL;
+				refine = ANY;
+			}
+			case "favorites" -> {
+				chip = Chip.FAVORITES;
+				refine = ANY;
+			}
+			case "projects" -> {
+				chip = Chip.PROJECTS;
+				refine = ANY;
+			}
+			default -> {
+				chip = filterId.startsWith("status:") ? Chip.PROJECTS : Chip.ALL;
+				refine = filterId.startsWith("status:") ? filterId.substring("status:".length()) : filterId;
+			}
+		}
+		sort = ClientSettings.Sort.valueOf(sortName.toUpperCase(Locale.ROOT));
 		rebuildWidgets();
 	}
 
@@ -403,119 +526,16 @@ public final class WaypointMenuScreen extends Screen {
 
 	/** Selects a waypoint by name (used by the client test). */
 	public void selectForTest(String name) {
-		list.children().stream().filter(entry -> entry.waypoint.name().equals(name)).findFirst().ifPresent(list::setSelected);
+		list.items().stream().filter(waypoint -> waypoint.name().equals(name)).findFirst().ifPresent(list::select);
 	}
 
-	private void showLocalStatus(String message) {
-		localStatus = message;
-		localStatusAt = System.currentTimeMillis();
-	}
-
-	// -------------------------------------------------------------- rendering
-
-	@Override
-	public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-		super.renderBackground(graphics, mouseX, mouseY, partialTick);
-		graphics.fill(panelLeft, TOP, width - MARGIN, bottom, 0x66000000);
+	/** Names of the listed waypoints, in order (used by the client test). */
+	public List<String> namesForTest() {
+		return list.items().stream().map(Waypoint::name).toList();
 	}
 
 	@Override
-	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-		super.render(graphics, mouseX, mouseY, partialTick);
-		graphics.drawCenteredString(font, title, width / 2, 6, Colors.WHITE);
-
-		if (!ClientWaypoints.hasData()) {
-			graphics.drawCenteredString(font, "Loading…", MARGIN + (panelLeft - 8 - MARGIN) / 2, TOP + 20, Colors.GRAY);
-		} else if (list.children().isEmpty()) {
-			String empty = ClientWaypoints.waypoints().isEmpty() ? "No waypoints yet. Click + Add." : "Nothing matches.";
-			graphics.drawCenteredString(font, empty, MARGIN + (panelLeft - 8 - MARGIN) / 2, TOP + 20, Colors.GRAY);
-		}
-		selected().ifPresentOrElse(waypoint -> renderDetails(graphics, waypoint),
-				() -> graphics.drawString(font, "Select a waypoint", panelLeft + 6, TOP + 6, Colors.GRAY));
-		renderStatus(graphics);
-	}
-
-	private void renderDetails(GuiGraphics graphics, Waypoint waypoint) {
-		int x = panelLeft + 6;
-		int maxWidth = width - MARGIN - x - 6;
-		int y = TOP + 6;
-		int limit = buttonsTop - 4;
-		Category category = waypoint.category();
-
-		String title = waypoint.name() + (isFavorite(waypoint) ? " ★" : "");
-		graphics.drawString(font, Component.literal(title).withStyle(style -> style.withBold(true)), x, y, Colors.argb(category));
-		y += 12;
-		graphics.drawString(font, category.displayName() + " · " + Dimensions.shortName(waypoint.dimension()), x, y,
-				Colors.argb(category));
-		y += 11;
-		graphics.drawString(font, waypoint.coordinates(), x, y, Colors.WHITE);
-		String distance = WaypointList.distanceLabel(waypoint);
-		String where = distance != null ? distance.replace(" ⟳", " via portal") : "in " + Dimensions.shortName(waypoint.dimension());
-		graphics.drawString(font, where, x + maxWidth - font.width(where), y, Colors.AQUA);
-		y += 11;
-		// The other side at the player's own height: the waypoint's Y belongs to its own dimension.
-		var player = net.minecraft.client.Minecraft.getInstance().player;
-		Optional<NavMath.Target> other = player == null ? Optional.empty()
-				: NavMath.portalEquivalent(waypoint, player.getBlockY());
-		if (other.isPresent()) {
-			String side = waypoint.dimension().equals(Dimensions.OVERWORLD) ? "Nether side: " : "Overworld side: ";
-			graphics.drawString(font, side + other.get().x() + " " + other.get().y() + " " + other.get().z(), x, y, Colors.PURPLE);
-			y += 11;
-		}
-		if (waypoint.id().equals(ClientWaypoints.navigatingTo())) {
-			graphics.drawString(font, "▶ Navigating here", x, y, Colors.GREEN);
-			y += 11;
-		}
-		if (waypoint.status() != null) {
-			ProjectStatus status = waypoint.status();
-			int color = 0xFF000000 | status.state().rgb();
-			var lines = font.split(Component.literal(status.summary()), maxWidth);
-			for (int i = 0; i < lines.size() && i < 2; i++) {
-				graphics.drawString(font, lines.get(i), x, y, color);
-				y += 10;
-			}
-			graphics.drawString(font, font.plainSubstrByWidth("set by " + status.setByName() + " · "
-					+ Formats.relativeAge(status.setAt(), Instant.now()), maxWidth), x, y, Colors.DARK_GRAY);
-			y += 11;
-		}
-		// The creator line sits at the bottom of the text area; the description fills the space above it.
-		int creatorY = limit - 9;
-		if (waypoint.description() != null) {
-			var lines = font.split(Component.literal("“" + waypoint.description() + "”"), maxWidth);
-			for (int i = 0; i < lines.size() && y + 9 <= creatorY - 2; i++) {
-				graphics.drawString(font, lines.get(i), x, y + 1, Colors.GRAY);
-				y += 9;
-			}
-		}
-		if (creatorY > y) {
-			graphics.drawString(font, font.plainSubstrByWidth("Added by " + waypoint.creatorName() + " · "
-					+ Formats.relativeAge(waypoint.created(), Instant.now()), maxWidth), x, creatorY, Colors.DARK_GRAY);
-		}
-	}
-
-	private void renderStatus(GuiGraphics graphics) {
-		int y = height - 20;
-		if (localStatus != null && System.currentTimeMillis() - localStatusAt < 4000) {
-			graphics.drawString(font, localStatus, MARGIN, y, Colors.GREEN);
-			return;
-		}
-		Optional<ResultPayload> result = ClientWaypoints.recentResult();
-		result.ifPresent(r -> graphics.drawString(font, font.plainSubstrByWidth(r.message(), width - 190), MARGIN, y,
-				r.success() ? Colors.GREEN : Colors.RED));
-		if (result.isEmpty()) {
-			graphics.drawString(font, font.plainSubstrByWidth(ClientWaypoints.waypoints().size()
-					+ " waypoints · J opens this menu", width - 190), MARGIN, y, Colors.DARK_GRAY);
-		}
-	}
-
-	@Override
-	public void removed() {
-		ClientWaypoints.setListener(null);
-		super.removed();
-	}
-
-	@Override
-	public boolean isPauseScreen() {
-		return false;
+	public void onClose() {
+		minecraft.setScreen(parent instanceof SettingsScreen ? null : parent);
 	}
 }

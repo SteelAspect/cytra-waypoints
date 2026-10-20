@@ -9,6 +9,18 @@ plugins {
 
 repositories {
 	mavenCentral()
+	mavenLocal {
+		content { includeModule "dev.steelaspect", "alloy-ui" }
+	}
+	// CI (no mavenLocal): GitHub Packages, read with the ALLOY_PACKAGES_TOKEN secret (alloy-ui DESIGN.md §8).
+	maven {
+		url = "https://maven.pkg.github.com/SteelAspect/alloy-ui"
+		credentials {
+			username = System.getenv("GITHUB_ACTOR") ?: findProperty("gpr.user") ?: "SteelAspect"
+			password = System.getenv("ALLOY_PACKAGES_TOKEN") ?: findProperty("gpr.key") ?: ""
+		}
+		content { includeModule "dev.steelaspect", "alloy-ui" }
+	}
 	// Xaero's Minimap, only at runtime in the client GameTest (never compiled against or bundled).
 	exclusiveContent {
 		forRepository {
@@ -62,7 +74,11 @@ tasks.named("runClientGametest") {
 	// Fresh config, saves and Xaero data every run.
 	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
 	doFirst {
-		["config/sharedwaypoints", "saves", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }
+		["config/sharedwaypoints", "saves", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }		// Test clients run muted.
+		def options = new File(runDirectory.get().asFile, "options.txt")
+		options.parentFile.mkdirs()
+		def lines = options.exists() ? options.readLines().findAll { !it.startsWith("soundCategory_master:") } : []
+		options.text = (lines + "soundCategory_master:0.0").join("\n") + "\n"
 	}
 }
 
@@ -78,6 +94,7 @@ dependencies {
 	clientgametestRuntimeOnly serverProject.sourceSets.main.output
 	clientgametestRuntimeOnly serverProject.sourceSets.client.output
 	modLocalRuntime "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
+	modLocalRuntime "dev.steelaspect:alloy-ui:${project.alloyui_version}"
 }
 
 configurations {

@@ -93,7 +93,8 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 
 	/** Writes pending changes once Xaero is ready. Runs every client tick; cheap when there's nothing to do. */
 	private static void apply() {
-		if (!STATE.hasWork() || bridge.isEmpty() || !io.github.steelaspect.sharedwaypoints.client.ClientSettings.enabled()) {
+		if (!STATE.hasWork() || bridge.isEmpty() || !io.github.steelaspect.sharedwaypoints.client.ClientSettings.enabled()
+				|| !io.github.steelaspect.sharedwaypoints.client.ClientSettings.xaeroSync()) {
 			return;
 		}
 		XaeroBridge xaero = bridge.get();

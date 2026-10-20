@@ -11,6 +11,24 @@ base {
 }
 
 repositories {
+	// Alloy UI (the shared Nocturne look), from the local Maven repo: ./gradlew publishToMavenLocal in alloy-ui.
+	mavenLocal {
+		content { includeModule "dev.steelaspect", "alloy-ui" }
+	}
+	// CI (no mavenLocal): GitHub Packages, read with the ALLOY_PACKAGES_TOKEN secret (alloy-ui DESIGN.md §8).
+	maven {
+		url = "https://maven.pkg.github.com/SteelAspect/alloy-ui"
+		credentials {
+			username = System.getenv("GITHUB_ACTOR") ?: findProperty("gpr.user") ?: "SteelAspect"
+			password = System.getenv("ALLOY_PACKAGES_TOKEN") ?: findProperty("gpr.key") ?: ""
+		}
+		content { includeModule "dev.steelaspect", "alloy-ui" }
+	}
+	maven {
+		name = "TerraformersMC"
+		url = "https://maven.terraformersmc.com/releases/"
+		content { includeGroup "com.terraformersmc" }
+	}
 	// fabric-permissions-api and squaremap-api are published to Maven Central.
 	mavenCentral {
 		content { excludeGroup "de.bluecolored" }
@@ -89,6 +107,9 @@ loom {
 			client()
 			name = "Client Game Test"
 			vmArg "-Dfabric.client.gametest"
+			// The portal guide sends its ghost blocks as raw packets, which made the synchronizer fail at random; the
+			// test waits for its own conditions instead.
+			vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer"
 			runDir "build/clientgametest"
 			source sourceSets.clientgametest
 		}
@@ -100,7 +121,11 @@ tasks.named("runClientGametest") {
 	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
 	doFirst {
 		new File(runDirectory.get().asFile, "config/sharedwaypoints").deleteDir()
-		new File(runDirectory.get().asFile, "saves").deleteDir()
+		new File(runDirectory.get().asFile, "saves").deleteDir()		// Test clients run muted.
+		def options = new File(runDirectory.get().asFile, "options.txt")
+		options.parentFile.mkdirs()
+		def lines = options.exists() ? options.readLines().findAll { !it.startsWith("soundCategory_master:") } : []
+		options.text = (lines + "soundCategory_master:0.0").join("\n") + "\n"
 	}
 }
 
@@ -144,6 +169,12 @@ dependencies {
 
 	// The GameTest server also runs squaremap 1.3.12, to check the web-map layer for real (see copyGametestMods).
 	gametestServerMods "maven.modrinth:squaremap:${project.squaremap_modrinth_version}"
+
+	// Alloy UI: the menu's look and widgets (client code only), bundled (jar-in-jar).
+	modImplementation "dev.steelaspect:alloy-ui:${project.alloyui_version}"
+	include "dev.steelaspect:alloy-ui:${project.alloyui_version}"
+	// Mod Menu: optional, only for the settings button there.
+	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
 
 	// The sync messages. Bundled (jar-in-jar).
 	implementation project(path: ':protocol', configuration: 'namedElements')

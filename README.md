@@ -2,7 +2,7 @@
 
 # Alloy Waypoints
 
-[![Download 2.8.0](https://img.shields.io/badge/download-2.8.0-2ea44f)](https://github.com/SteelAspect/cytra-releases/releases?q=sharedwaypoints)
+[![Download 2.9.0](https://img.shields.io/badge/download-2.9.0-2ea44f)](https://github.com/SteelAspect/cytra-releases/releases?q=sharedwaypoints)
 [![Tested](https://img.shields.io/badge/tested-unit%20%C2%B7%20server%20%C2%B7%20client-blue)](https://github.com/SteelAspect/cytra-waypoints/actions/workflows/build.yml)
 ![Minecraft 1.21.11](https://img.shields.io/badge/Minecraft-1.21.11-62B47A)
 ![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)
@@ -99,9 +99,11 @@ client jar on its own still works with a 2.3 server until players update.
 - Put the Alloy Waypoints jar in your own mods folder and press **J** (or click **✦ Waypoints** in the Esc menu) on a server that
   runs Alloy Waypoints: a full screen with
   search, category and ★ favourite filters, sorting by name or distance, and a details panel.
-- Every action is a button: **Go / Stop**, **Add to Xaero** (opens Xaero's add screen directly), **Copy coords**,
-  **Favourite**, **Edit** (name and description), **Remove**, **Teleport** (ops) and **+ Add** with your position
-  pre-filled.
+- Every action is a button: **Go / Stop**, **Copy coords**, **Favourite**, and in the **⋯** menu **Add to Xaero**
+  (opens Xaero's add screen directly), **Edit** (name and description), **Set status…**, **Teleport** (ops) and
+  **Remove**. **+ Add** has your position pre-filled.
+- Built with Alloy UI in the Alloy (Nocturne) look, so it follows the theme picked in Alloy Hub. **⚙** opens the
+  settings (also in Mod Menu): on/off, Xaero sync, Esc-menu button, default sort, remember last view, menu key.
 - A **Routes** screen lists every route and its stops. It has Start / Stop, Skip stop, **+ Stop** (pick a
   waypoint), **− Stop**, **↑ / ↓** to reorder, Edit and Delete.
 - The server still decides everything, so permissions are the same as in chat. The menu updates live when

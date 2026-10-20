@@ -56,7 +56,7 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 
 		// The same menu from the Esc menu, for players who'd rather click than remember a key.
 		ScreenEvents.AFTER_INIT.register((client, screen, width, height) -> {
-			if (screen instanceof PauseScreen pause && pause.showsPauseMenu() && ClientSettings.enabled()
+			if (screen instanceof PauseScreen pause && pause.showsPauseMenu() && ClientSettings.enabled() && ClientSettings.pauseButton()
 					&& ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
 				Screens.getButtons(screen).add(pauseMenuButton(client, width));
 			}
@@ -65,10 +65,9 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 
 	/** "✦ Waypoints" in the top-right corner of the Esc menu. Only shown on servers that run the mod. */
 	private static Button pauseMenuButton(Minecraft client, int screenWidth) {
-		return Button.builder(Component.literal("✦ Waypoints"), button -> openMenu(client))
+		return Button.builder(Component.translatable("sharedwaypoints.pause.button"), button -> openMenu(client))
 				.bounds(screenWidth - PAUSE_BUTTON_WIDTH - PAUSE_BUTTON_MARGIN, PAUSE_BUTTON_MARGIN, PAUSE_BUTTON_WIDTH, 20)
-				.tooltip(Tooltip.create(Component.literal("Open the shared waypoint menu (")
-						.append(openMenu.getTranslatedKeyMessage()).append(")")))
+				.tooltip(Tooltip.create(Component.translatable("sharedwaypoints.pause.tooltip", openMenu.getTranslatedKeyMessage())))
 				.build();
 	}
 
@@ -85,9 +84,8 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 		if (!ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
 			// Older servers speak an older version of the menu protocol ("action" or "action2" instead of "action3").
 			boolean olderServer = ClientPlayNetworking.getSendable().stream().anyMatch(OLD_ACTION_CHANNELS::contains);
-			client.player.displayClientMessage(Component.literal(olderServer
-					? "This server runs an older SharedWaypoints; the menu needs the same version on both sides"
-					: "Alloy Waypoints isn't installed on this server").withStyle(ChatFormatting.GRAY), true);
+			client.player.displayClientMessage(Component.translatable(olderServer
+					? "sharedwaypoints.server.older" : "sharedwaypoints.server.missing").withStyle(ChatFormatting.GRAY), true);
 			return;
 		}
 		client.setScreen(new WaypointMenuScreen());

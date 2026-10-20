@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.9.0 — 2026-10-20
+
+- **New look for the menu.** The waypoint menu, routes, add/edit forms, status and stop picker now use the Alloy
+  (Nocturne) style, the same as Alloy Hub, and follow the theme you pick there.
+  - Filter chips (All, ★, Projects) with a category choice (or a status choice under Projects), and a sort choice.
+  - Go / Stop is the main button; Copy coords and ★ sit below it. Add to Xaero, Edit, Set status…, Teleport and
+    Remove are in the **⋯** menu. Remove and Delete route ask first in a dialog.
+  - The server's answers and "Copied" show as small pop-ups instead of a line at the bottom.
+  - On a narrow window the details replace the list, with a Back button.
+- **Settings screen** (⚙ in the menu, or Mod Menu): turn the mod off, pause only the Xaero sync, hide the Esc-menu
+  button, pick the default sort, remember the last view, and change the menu key. The same settings can appear on
+  the Alloy Hub page.
+- All menu text can now be translated.
+- Needs nothing new: Alloy UI is inside the jar. Servers and 2.8 clients still talk to 2.9.
+
 ## 2.8.0 — 2026-10-17
 
 - **Renamed to Alloy Waypoints**, with the new Alloy logo. The jar is now `alloy-waypoints-<version>.jar`

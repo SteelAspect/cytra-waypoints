@@ -5,7 +5,9 @@ import io.github.steelaspect.sharedwaypoints.client.AddWaypointScreen;
 import io.github.steelaspect.sharedwaypoints.client.ClientWaypoints;
 import io.github.steelaspect.sharedwaypoints.client.RoutesScreen;
 import io.github.steelaspect.sharedwaypoints.client.SharedWaypointsClient;
+import io.github.steelaspect.sharedwaypoints.client.SettingsScreen;
 import io.github.steelaspect.sharedwaypoints.client.WaypointMenuScreen;
+import io.github.steelaspect.sharedwaypoints.client.WaypointsScreen;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
@@ -14,7 +16,6 @@ import io.github.steelaspect.sharedwaypoints.waypoint.ProjectStatus;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsList;
 import net.minecraft.client.gui.screens.options.controls.KeyBindsScreen;
@@ -39,6 +40,15 @@ public class MenuClientGameTest implements FabricClientGameTest {
 		});
 		context.waitTicks(1);
 		System.out.println("[Alloy Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-" + name));
+	}
+
+	/** Presses an Alloy UI button (or a ⋯ menu item) on the open waypoint screen by its label. */
+	private static void press(ClientGameTestContext context, String label) {
+		boolean pressed = context.computeOnClient(client -> client.screen instanceof WaypointsScreen screen && screen.pressForTest(label));
+		if (!pressed) {
+			throw new AssertionError("No enabled \"" + label + "\" on " + context.computeOnClient(client ->
+					client.screen == null ? "no screen" : client.screen.getClass().getSimpleName()));
+		}
 	}
 
 	private static Optional<SyncPayload.RouteData> farmRun() {
@@ -141,12 +151,12 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			System.out.println("[Alloy Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-menu"));
 
 			// Add a waypoint through the form.
-			context.clickScreenButton("+ Add");
+			press(context, "+ Add");
 			context.waitForScreen(AddWaypointScreen.class);
 			context.getInput().typeChars("Test Spot");
 			context.waitTicks(2);
 			System.out.println("[Alloy Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-add"));
-			context.clickScreenButton("Add");
+			press(context, "Add");
 			context.waitForScreen(WaypointMenuScreen.class);
 			context.waitFor(client -> ClientWaypoints.waypoints().stream().anyMatch(w -> w.name().equals("Test Spot")));
 			boolean onServer = world.getServer().computeOnServer(server ->
@@ -158,7 +168,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			System.out.println("[Alloy Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-after-add"));
 
 			// Favourite the selected waypoint with the button, and check the server agrees.
-			context.clickScreenButton("☆ Favourite");
+			press(context, "☆ Favourite");
 			context.waitFor(client -> ClientWaypoints.waypoints().stream().anyMatch(w ->
 					ClientWaypoints.data(w.id()).map(data -> data.favorite()).orElse(false)));
 			context.waitTicks(5);
@@ -166,13 +176,13 @@ public class MenuClientGameTest implements FabricClientGameTest {
 
 			// Edit the player's own waypoint (Test Spot): select it, open Edit, change the description.
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Test Spot"));
-			context.clickScreenButton("Edit");
+			press(context, "Edit");
 			context.waitFor(client -> client.screen != null && client.screen.getClass().getSimpleName().equals("EditWaypointScreen"));
 			context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB);
 			context.getInput().typeChars("Near spawn");
 			context.waitTicks(2);
 			System.out.println("[Alloy Waypoints test] screenshot: " + context.takeScreenshot("sharedwaypoints-edit"));
-			context.clickScreenButton("Save");
+			press(context, "Save");
 			context.waitForScreen(WaypointMenuScreen.class);
 			context.waitFor(client -> ClientWaypoints.waypoints().stream()
 					.anyMatch(w -> w.name().equals("Test Spot") && "Near spawn".equals(w.description())));
@@ -181,11 +191,12 @@ public class MenuClientGameTest implements FabricClientGameTest {
 
 			// --- a tour of every screen, for the screenshots
 			// Remove asks for confirmation first ("No" keeps it).
-			context.clickScreenButton("Remove");
-			context.waitForScreen(ConfirmScreen.class);
+			press(context, "Remove");
+			context.waitFor(client -> client.screen instanceof WaypointsScreen screen && screen.overlayOpenForTest());
+			context.waitTicks(5);
 			shot(context, "remove-confirm");
-			context.clickScreenButton("No");
-			context.waitForScreen(WaypointMenuScreen.class);
+			press(context, "Cancel");
+			context.waitFor(client -> client.screen instanceof WaypointMenuScreen screen && !screen.overlayOpenForTest());
 			if (!world.getServer().computeOnServer(server -> SharedWaypoints.context().waypoints().contains("Test Spot"))) {
 				throw new AssertionError("\"No\" must keep the waypoint");
 			}
@@ -207,12 +218,12 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitFor(client -> ClientWaypoints.waypoints().stream().filter(w -> w.status() != null).count() == 2);
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Iron Farm"));
 			context.waitTicks(2);
-			context.clickScreenButton("Set status…");
+			press(context, "Set status…");
 			context.waitFor(client -> client.screen != null && client.screen.getClass().getSimpleName().equals("StatusScreen"));
 			context.getInput().typeChars("Out of bonemeal");
 			context.waitTicks(2);
 			shot(context, "status-screen");
-			context.clickScreenButton("⚠ Broken");
+			press(context, "⚠ Broken");
 			context.waitForScreen(WaypointMenuScreen.class);
 			context.waitFor(client -> ClientWaypoints.waypoints().stream().anyMatch(w -> w.name().equals("Iron Farm")
 					&& w.status() != null && w.status().state() == ProjectStatus.State.BROKEN
@@ -247,18 +258,18 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitForScreen(RoutesScreen.class);
 			context.waitTicks(3);
 			shot(context, "routes-empty");
-			context.clickScreenButton("+ New route");
+			press(context, "+ New route");
 			context.waitFor(client -> client.screen != null && client.screen.getClass().getSimpleName().equals("EditRouteScreen"));
 			context.getInput().typeChars("Farm Run");
 			context.waitTicks(2);
 			shot(context, "route-new");
-			context.clickScreenButton("Create");
+			press(context, "Create");
 			context.waitForScreen(RoutesScreen.class);
 			context.waitFor(client -> ClientWaypoints.routes().stream().anyMatch(route -> route.name().equals("Farm Run")));
 			for (String stop : List.of("Iron Farm", "Main Storage", "Spawn Base")) {
 				int before = stopCount();
 				context.waitTicks(3);
-				context.clickScreenButton("+ Stop");
+				press(context, "+ Stop");
 				context.waitFor(client -> client.screen != null
 						&& client.screen.getClass().getSimpleName().equals("WaypointPickerScreen"));
 				if (before == 0) {
@@ -272,7 +283,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			// Move stop 3 (Spawn Base) up to stop 2 with the ↑ button.
 			context.runOnClient(client -> ((RoutesScreen) client.screen).selectForTest("Farm Run", 2));
 			context.waitTicks(2);
-			context.clickScreenButton("↑");
+			press(context, "↑");
 			context.waitFor(client -> farmRun().map(route -> ClientWaypoints.stops(route).get(1).name().equals("Spawn Base"))
 					.orElse(false));
 			boolean movedOnServer = world.getServer().computeOnServer(server -> SharedWaypoints.context().routes()
@@ -301,7 +312,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitTicks(3);
 			context.runOnClient(client -> ((RoutesScreen) client.screen).selectForTest("Farm Run", 0));
 			context.waitTicks(2);
-			context.clickScreenButton("▶ Start");
+			press(context, "▶ Start");
 			context.waitFor(client -> client.screen == null && ClientWaypoints.onRoute() != null);
 			context.waitTicks(20);
 			shot(context, "route-compass");
@@ -324,9 +335,7 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitFor(client -> ClientWaypoints.canTeleport());
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Iron Farm"));
 			context.waitTicks(3);
-			if (!context.tryClickScreenButton("Teleport")) {
-				throw new AssertionError("Ops must see the Teleport button");
-			}
+			press(context, "Teleport");
 			context.waitFor(client -> client.screen == null); // Teleport closes the menu
 			context.waitFor(client -> Math.abs(client.player.getX() - 140.5) < 0.01 && Math.abs(client.player.getZ() - 210.5) < 0.01);
 			context.getInput().pressKey(SharedWaypointsClient.openMenuKey());
@@ -334,6 +343,24 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> ((WaypointMenuScreen) client.screen).selectForTest("Iron Farm"));
 			context.waitTicks(3);
 			shot(context, "op-view");
+
+			// Settings (⚙ in the header): the rows are there, and hiding the Esc-menu button works.
+			press(context, "⚙");
+			context.waitForScreen(SettingsScreen.class);
+			if (context.computeOnClient(client -> ((SettingsScreen) client.screen).rowForTest("pause_button") == null
+					|| ((SettingsScreen) client.screen).rowForTest("default_sort") == null)) {
+				throw new AssertionError("Settings rows missing");
+			}
+			context.waitTicks(5);
+			shot(context, "settings");
+			context.runOnClient(client -> io.github.steelaspect.sharedwaypoints.client.ClientSettings.setPauseButton(false));
+			context.setScreen(() -> null);
+			context.setScreen(() -> new PauseScreen(true));
+			context.waitTicks(3);
+			if (context.tryClickScreenButton("✦ Waypoints")) {
+				throw new AssertionError("The Esc-menu button should be hidden when switched off");
+			}
+			context.runOnClient(client -> io.github.steelaspect.sharedwaypoints.client.ClientSettings.setPauseButton(true));
 
 			// No keybind needed: the Esc menu has a "✦ Waypoints" button in the top-right corner.
 			context.setScreen(() -> null);

@@ -58,12 +58,13 @@ To use a different key, go to **Options → Controls → Key Binds**. The settin
 far away it is and in which direction. A ⟳ means it's in another dimension, so the distance is the portal-side
 distance.
 
-**Top bar.**
-- **Search** by name, description or who added it.
-- **All / ★ Favourites / Projects / a status / a category:** click to cycle through the filters. **Projects**
-  shows everything with a status; **⚠ Broken** only what's broken.
-- **By category / By name / By distance:** click to change the sort order.
-- **+ Add:** add a new waypoint.
+**Header.** **Search** by name, description or who added it; **+ Add** adds a new waypoint; **⚙** opens the
+[settings](#settings).
+
+**Above the list.**
+- **All / ★ / Projects:** the filter chips. **Projects** shows everything with a status.
+- **Any category:** pick one category. Under **Projects** this becomes **Any status**, e.g. only **⚠ Broken**.
+- **By category / By name / By distance:** the sort order.
 
 **Right: the selected waypoint.** You see its coordinates, the matching Nether or Overworld coordinates (at your own
 height), its
@@ -76,16 +77,17 @@ project status (if it has one), its description, and who added it and when.
 | Button | What it does |
 |---|---|
 | **▶ Go** / **■ Stop** | Turns the boss bar into a compass pointing at the waypoint. You get an "Arrived!" title when you reach it. |
-| **Add to Xaero** | Opens Xaero's Minimap's add-waypoint screen with everything filled in. Only works if you have Xaero's Minimap installed. |
+| **Add to Xaero** (in ⋯) | Opens Xaero's Minimap's add-waypoint screen with everything filled in. Only works if you have Xaero's Minimap installed. |
 | **Copy coords** | Copies `X Y Z` to your clipboard. |
 | **☆ Favourite** | Marks it with ★ just for you. Use the ★ Favourites filter to see only yours. |
-| **Edit** | Change the name or description. Available for waypoints you added (and for admins). |
-| **Remove** | Deletes it for everyone, after asking you first. Available for waypoints you added (and for admins). |
-| **Teleport** | Only shown to server admins. |
-| **Set status…** / **Status: …** | Mark it Planned, WIP, Done or Broken, with a note. See [Project status](#project-status). |
+| **⋯** | More: **Add to Xaero**, **Edit**, **Set status…**, **Teleport** (admins only) and **Remove**. |
+| **Edit** (in ⋯) | Change the name or description. Available for waypoints you added (and for admins). |
+| **Set status…** (in ⋯) | Mark it Planned, WIP, Done or Broken, with a note. See [Project status](#project-status). |
+| **Teleport** (in ⋯) | Only shown to server admins. |
+| **Remove** (in ⋯) | Deletes it for everyone, after asking you first. Available for waypoints you added (and for admins). |
 
-A greyed-out button means you aren't allowed to use it; hover it to see why. The line at the bottom left shows
-the server's answer to your last action, e.g. "Teleported to Iron Farm".
+A greyed-out button means you aren't allowed to use it. The server's answer to your last action, e.g.
+"Teleported to Iron Farm", pops up in the top-right corner.
 
 ![What an admin sees](images/guide/op-view.png)
 
@@ -110,7 +112,7 @@ Favourites are per player: yours don't change what anyone else sees.
 ## Project status
 
 Tell everyone where a build stands: **✎ Planned**, **⚒ WIP**, **✔ Done** or **⚠ Broken**, with an optional note
-such as "out of bonemeal". Select the waypoint, click **Set status…**, type the note, and pick a status.
+such as "out of bonemeal". Select the waypoint, click **⋯ → Set status…**, type the note, and pick a status.
 **Clear status** removes it.
 
 ![Setting a status](images/guide/status-screen.png)
@@ -148,8 +150,8 @@ route's stops, with their distance from you.
 | **+ Stop** | Pick a waypoint to add as the last stop. |
 | **− Stop** | Remove the selected stop from the route. The waypoint itself stays. |
 | **↑ / ↓** | Move the selected stop earlier or later. |
-| **Edit** | Change the route's name or description. |
-| **Delete** | Delete the route for everyone, after asking you first. Its waypoints stay. |
+| **⋯ → Edit route** | Change the route's name or description. |
+| **⋯ → Delete route** | Delete the route for everyone, after asking you first. Its waypoints stay. |
 | **+ New route** | Create a route (top right), then add stops with **+ Stop**. |
 
 Anyone can create a route. Only its creator and admins can change or delete it, but everyone can follow it.
@@ -192,3 +194,20 @@ fine.
   works as normal.
 - The list updates by itself when anyone adds, renames or removes a waypoint.
 - Everything in the menu also works in chat. See the [command list](../README.md#commands).
+
+## Settings
+
+Click **⚙** in the menu (or the settings button in Mod Menu).
+
+| Setting | What it does |
+|---|---|
+| **Enabled** | Off: the menu key and the Esc-menu button do nothing, and the Xaero sync pauses. |
+| **Sync into Xaero's Minimap** | Keep the server's waypoints in Xaero's "Shared" set. |
+| **Esc-menu button** | Show **✦ Waypoints** in the Esc menu. |
+| **Default sort** | How the list is sorted when the menu opens. |
+| **Remember last view** | Reopen the menu on your last search, filter and selection. |
+| **Menu key** | The key that opens the menu (J by default). |
+
+They're saved in `config/sharedwaypoints/client.json`. The server's own settings are in its config file.
+
+![Settings](images/guide/settings.png)

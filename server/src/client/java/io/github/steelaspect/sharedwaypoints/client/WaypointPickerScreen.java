@@ -1,56 +1,72 @@
 package io.github.steelaspect.sharedwaypoints.client;
 
+import dev.steelaspect.alloyui.UiContext;
+import dev.steelaspect.alloyui.render.Draw;
+import dev.steelaspect.alloyui.widget.Button;
+import dev.steelaspect.alloyui.widget.TextField;
 import io.github.steelaspect.sharedwaypoints.network.ActionPayload.Action;
 import io.github.steelaspect.sharedwaypoints.network.SyncPayload;
+import io.github.steelaspect.sharedwaypoints.util.Dimensions;
 import io.github.steelaspect.sharedwaypoints.waypoint.Waypoint;
 import io.github.steelaspect.sharedwaypoints.waypoint.WaypointStore;
 import java.util.List;
 import java.util.Locale;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-/** Pick a waypoint to add as the last stop of a route: search, then double-click or press Add. */
-final class WaypointPickerScreen extends Screen {
-	private static final int MARGIN = 10;
-	private static final int TOP = 44;
-
-	private final Screen parent;
+/** Pick a waypoint to add as the last stop of a route: search, then double-click or press Add stop. */
+final class WaypointPickerScreen extends WaypointsScreen {
 	private final SyncPayload.RouteData route;
-	private WaypointList list;
-	private EditBox searchBox;
-	private Button addButton;
+	private final SelectList<Waypoint> list;
+	private final TextField searchField;
 	private String search = "";
 
 	WaypointPickerScreen(Screen parent, SyncPayload.RouteData route) {
-		super(Component.literal("Add a stop to " + route.name()));
-		this.parent = parent;
+		super(Ui.tr("picker.title", route.name()), parent);
 		this.route = route;
+		list = new SelectList<Waypoint>(24, Waypoint::id, WaypointPickerScreen::renderRow)
+				.onActivate(this::add)
+				.emptyText(() -> Ui.tr("menu.no_match"));
+		Frame frame = new Frame(Ui.tr("picker.title", route.name())).maxSize(380, 340);
+		searchField = frame.headerFill(new TextField(() -> search, value -> {
+			search = value;
+			refresh();
+		}).live().maxLength(64).placeholder(Ui.tr("menu.search")), 160);
+		frame.body(list);
+		frame.footer(new Button(Ui.tr("form.cancel"), this::onClose));
+		Button add = frame.footer(new Button(Ui.tr("picker.add"), () -> {
+			Waypoint selected = list.selected();
+			if (selected != null) {
+				add(selected);
+			}
+		}));
+		add.style(Button.Style.PRIMARY);
+		add.enabledWhen(() -> list.selected() != null);
+		setRoot(frame);
 	}
 
 	@Override
 	protected void init() {
-		int listWidth = Math.min(320, width - 2 * MARGIN);
-		int left = (width - listWidth) / 2;
-		searchBox = addRenderableWidget(new EditBox(font, left, 20, listWidth, 18, Component.literal("Search")));
-		searchBox.setHint(Component.literal("Search waypoints…"));
-		searchBox.setMaxLength(64);
-		searchBox.setValue(search);
-		searchBox.setResponder(value -> {
-			search = value;
-			refresh();
-		});
+		super.init();
+		refresh();
+		setFocus(searchField);
+	}
 
-		list = addRenderableWidget(new WaypointList(minecraft, waypoint -> updateButton(), this::add));
-		list.updateSizeAndPosition(listWidth, height - 32 - TOP, left, TOP);
+	private static void renderRow(UiContext ctx, Waypoint waypoint, float x, float y, float w, float h, boolean selected) {
+		var t = ctx.theme;
+		Draw.roundRect(ctx.g, x + 4, y + 4, 6, 6, 1, Ui.argb(waypoint.category()));
+		String distance = Ui.distanceLabel(waypoint);
+		float distanceW = distance == null ? 0 : Draw.textWidth(Component.literal(distance)) + 8;
+		Draw.textClipped(ctx.g, Component.literal(waypoint.name()), x + 14, y + 2, w - 14 - distanceW, t.color("text"), Draw.Role.STRONG);
+		if (distance != null) {
+			Draw.text(ctx.g, Component.literal(distance), x + w - distanceW + 4, y + 2, t.color("textMuted"));
+		}
+		Draw.textClipped(ctx.g, Component.literal(waypoint.coordinates() + "  ·  " + Dimensions.shortName(waypoint.dimension())),
+				x + 14, y + 12, w - 18, t.color("textMuted"));
+	}
 
-		addButton = addRenderableWidget(Button.builder(Component.literal("Add stop"),
-						button -> list.selectedWaypoint().ifPresent(this::add))
-				.bounds(width / 2 - 102, height - 26, 100, 20).build());
-		addRenderableWidget(Button.builder(Component.literal("Cancel"), button -> onClose())
-				.bounds(width / 2 + 2, height - 26, 100, 20).build());
+	@Override
+	protected void onServerUpdate() {
 		refresh();
 	}
 
@@ -61,17 +77,9 @@ final class WaypointPickerScreen extends Screen {
 						|| waypoint.category().displayName().toLowerCase(Locale.ROOT).contains(needle))
 				.sorted(WaypointStore.DISPLAY_ORDER)
 				.toList();
-		list.show(shown, null);
-		if (!shown.isEmpty()) {
-			list.setSelected(list.children().get(0));
-		}
-		updateButton();
-	}
-
-	private void updateButton() {
-		if (addButton != null) {
-			addButton.active = list.selectedWaypoint().isPresent();
-		}
+		Waypoint keep = list.selected();
+		list.show(shown);
+		list.selectQuietly(keep != null && shown.contains(keep) ? keep : shown.isEmpty() ? null : shown.get(0));
 	}
 
 	private void add(Waypoint waypoint) {
@@ -82,30 +90,5 @@ final class WaypointPickerScreen extends Screen {
 	/** Picks a waypoint by name (used by the client test). */
 	public void pickForTest(String name) {
 		ClientWaypoints.waypoints().stream().filter(waypoint -> waypoint.name().equals(name)).findFirst().ifPresent(this::add);
-	}
-
-	/** Always start in the text field (Minecraft would otherwise tab past it after keyboard input). */
-	@Override
-	protected void setInitialFocus() {
-		setInitialFocus(searchBox);
-	}
-
-	@Override
-	public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-		super.render(graphics, mouseX, mouseY, partialTick);
-		graphics.drawCenteredString(font, title, width / 2, 6, Colors.WHITE);
-		if (list.children().isEmpty()) {
-			graphics.drawCenteredString(font, "Nothing matches.", width / 2, TOP + 20, Colors.GRAY);
-		}
-	}
-
-	@Override
-	public void onClose() {
-		minecraft.setScreen(parent);
-	}
-
-	@Override
-	public boolean isPauseScreen() {
-		return false;
 	}
 }
