@@ -24,6 +24,21 @@ public final class AddWaypointScreen extends FormScreen {
 	private String dimension;
 
 	AddWaypointScreen(Screen parent) {
+		this(parent, null);
+	}
+
+	/** With {@code at} = {x, y, z} and {@code atDimension} set, starts at that spot instead of the player's. */
+	AddWaypointScreen(Screen parent, int @org.jspecify.annotations.Nullable [] at, String atDimension) {
+		this(parent, at);
+		if (at != null) {
+			x = Integer.toString(at[0]);
+			y = Integer.toString(at[1]);
+			z = Integer.toString(at[2]);
+			dimension = atDimension;
+		}
+	}
+
+	private AddWaypointScreen(Screen parent, int @org.jspecify.annotations.Nullable [] at) {
 		super(Ui.tr("add.title"), parent, 300, 220);
 		List<Category> categories = categories();
 		category = categories.get(0);
@@ -45,7 +60,9 @@ public final class AddWaypointScreen extends FormScreen {
 				() -> dimension, value -> dimension = value), 1);
 		where.add(new Button(Ui.tr("add.here"), this::useMyPosition), -1).tooltip(Ui.tr("add.here.tooltip"));
 		mainButton(Ui.tr("add.save"), this::save);
-		useMyPosition();
+		if (at == null) {
+			useMyPosition();
+		}
 	}
 
 	private TextField coordinate(String axis, java.util.function.Supplier<String> get, java.util.function.Consumer<String> set) {
@@ -100,6 +117,7 @@ public final class AddWaypointScreen extends FormScreen {
 			return;
 		}
 		SharedWaypointsClient.send(Action.ADD, trimmed, category.id(), x, y, z, dimension);
+		WaypointMenuScreen.selectWhenListed(trimmed);
 		minecraft.setScreen(parent);
 	}
 

@@ -48,7 +48,7 @@
 	"sharedwaypoints.action.favorite": "☆ Favourite",
 	"sharedwaypoints.action.unfavorite": "★ Unfavourite",
 	"sharedwaypoints.action.favorite.tooltip": "Only you see your favourites",
-	"sharedwaypoints.action.more": "More: Add to Xaero, edit, status, teleport, remove",
+	"sharedwaypoints.action.more": "More (or right-click a waypoint): Add to Xaero, edit, status, teleport, remove",
 	"sharedwaypoints.action.edit": "Edit",
 	"sharedwaypoints.action.status": "Set status…",
 	"sharedwaypoints.action.teleport": "Teleport",

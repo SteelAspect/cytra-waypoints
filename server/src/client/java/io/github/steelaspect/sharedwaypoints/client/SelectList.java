@@ -6,6 +6,7 @@ import dev.steelaspect.alloyui.theme.Theme;
 import dev.steelaspect.alloyui.widget.Widget;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -32,6 +33,7 @@ final class SelectList<T> extends Widget {
 	};
 	private Consumer<T> onActivate = item -> {
 	};
+	private @Nullable BiConsumer<T, double[]> onContext;
 	private Supplier<Component> emptyText = Component::empty;
 	private float scroll;
 	private long lastClickAt;
@@ -50,6 +52,12 @@ final class SelectList<T> extends Widget {
 
 	SelectList<T> onActivate(Consumer<T> onActivate) {
 		this.onActivate = onActivate;
+		return this;
+	}
+
+	/** Right-click on a row: selects it, then calls this with the mouse position {x, y}. */
+	SelectList<T> onContext(BiConsumer<T, double[]> onContext) {
+		this.onContext = onContext;
 		return this;
 	}
 
@@ -179,10 +187,18 @@ final class SelectList<T> extends Widget {
 
 	@Override
 	public boolean mouseClicked(UiContext ctx, double mx, double my, int button) {
-		if (button != 0 || !contains(mx, my) || !ctx.inClip(mx, my)) {
+		if ((button != 0 && button != 1) || !contains(mx, my) || !ctx.inClip(mx, my)) {
 			return false;
 		}
 		int i = rowAt(my);
+		if (button == 1) {
+			if (i >= 0 && onContext != null) {
+				select(items.get(i));
+				onContext.accept(items.get(i), new double[] {mx, my});
+				return true;
+			}
+			return false;
+		}
 		if (i < 0) {
 			return true;
 		}

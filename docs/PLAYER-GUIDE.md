@@ -86,6 +86,9 @@ project status (if it has one), its description, and who added it and when.
 | **Teleport** (in ⋯) | Only shown to server admins. |
 | **Remove** (in ⋯) | Deletes it for everyone, after asking you first. Available for waypoints you added (and for admins). |
 
+Right-click a waypoint for the same actions as **⋯**. Keys (when you're not typing in Search): **G** go/stop,
+**C** copy coords, **F** favourite, **E** edit, **S** status, **Delete** remove, **/** or **Ctrl+F** search.
+
 A greyed-out button means you aren't allowed to use it. The server's answer to your last action, e.g.
 "Teleported to Iron Farm", pops up in the top-right corner.
 

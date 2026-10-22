@@ -344,6 +344,26 @@ public class MenuClientGameTest implements FabricClientGameTest {
 			context.waitTicks(3);
 			shot(context, "op-view");
 
+			// Keys: C copies the selected waypoint's coordinates.
+			context.runOnClient(client -> client.keyboardHandler.setClipboard(""));
+			context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_C);
+			context.waitFor(client -> client.keyboardHandler.getClipboard().equals("140 -60 210"));
+
+			// For Alloy Map: open the Add form at a map spot, and open the menu on a waypoint.
+			context.setScreen(() -> null);
+			if (!context.computeOnClient(client -> io.github.steelaspect.sharedwaypoints.client.WaypointsApi.openAdd(
+					300, 64, -400, "minecraft:overworld", null))) {
+				throw new AssertionError("WaypointsApi.openAdd refused");
+			}
+			context.waitForScreen(AddWaypointScreen.class);
+			context.getInput().typeChars("Map Spot");
+			press(context, "Add");
+			context.waitFor(client -> ClientWaypoints.waypoints().stream()
+					.anyMatch(w -> w.name().equals("Map Spot") && w.x() == 300 && w.y() == 64 && w.z() == -400));
+			context.runOnClient(client -> io.github.steelaspect.sharedwaypoints.client.WaypointsApi.openWaypoint("Map Spot", null));
+			context.waitFor(client -> client.screen instanceof WaypointMenuScreen screen
+					&& "Map Spot".equals(screen.selectedNameForTest()));
+
 			// Settings (⚙ in the header): the rows are there, and hiding the Esc-menu button works.
 			press(context, "⚙");
 			context.waitForScreen(SettingsScreen.class);

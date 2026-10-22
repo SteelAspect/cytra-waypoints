@@ -51,6 +51,7 @@ public final class RoutesScreen extends WaypointsScreen {
 					refreshStops();
 				})
 				.onActivate(route -> go())
+				.onContext((route, at) -> openActions(at[0], at[1]))
 				.emptyText(() -> !ClientWaypoints.hasData() ? Ui.tr("menu.loading") : Ui.tr("routes.empty"));
 		stopList = new SelectList<Stop>(13, Stop::index, RoutesScreen::renderStop)
 				.onSelect(stop -> selectedStop = stop == null ? -1 : stop.index())
@@ -123,14 +124,7 @@ public final class RoutesScreen extends WaypointsScreen {
 		}
 
 		private void openMore() {
-			new Menu()
-					.item(Ui.tr("routes.edit"), RoutesScreen.this::edit)
-					.disabledWhen(() -> !canEdit())
-					.separator()
-					.item(Ui.tr("routes.delete"), RoutesScreen.this::delete)
-					.disabledWhen(() -> !selected().map(SyncPayload.RouteData::canRemove).orElse(false))
-					.danger()
-					.open(ctx, moreButton.x(), moreButton.y() + moreButton.h() + 2);
+			openActions(moreButton.x(), moreButton.y() + moreButton.h() + 2);
 		}
 
 		@Override
@@ -191,6 +185,18 @@ public final class RoutesScreen extends WaypointsScreen {
 			}
 			super.renderWidget(ctx);
 		}
+	}
+
+	/** The ⋯ menu (also on right-click in the route list): Edit route, Delete route. */
+	private void openActions(double x, double y) {
+		new Menu()
+				.item(Ui.tr("routes.edit"), this::edit)
+				.disabledWhen(() -> !canEdit())
+				.separator()
+				.item(Ui.tr("routes.delete"), this::delete)
+				.disabledWhen(() -> !selected().map(SyncPayload.RouteData::canRemove).orElse(false))
+				.danger()
+				.open(ctx, x, y);
 	}
 
 	private static void renderRoute(UiContext ctx, SyncPayload.RouteData route, float x, float y, float w, float h, boolean selected) {

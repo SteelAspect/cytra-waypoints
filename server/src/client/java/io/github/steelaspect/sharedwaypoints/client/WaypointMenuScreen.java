@@ -8,6 +8,7 @@ import dev.steelaspect.alloyui.widget.Container;
 import dev.steelaspect.alloyui.widget.Dialog;
 import dev.steelaspect.alloyui.widget.Dropdown;
 import dev.steelaspect.alloyui.widget.Menu;
+import dev.steelaspect.alloyui.widget.ScrollPanel;
 import dev.steelaspect.alloyui.widget.Segmented;
 import dev.steelaspect.alloyui.widget.TextField;
 import io.github.steelaspect.sharedwaypoints.nav.NavMath;
@@ -26,8 +27,10 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 /**
  * The waypoint menu: search, + Add and settings in the header; filter chips, a category (or status) choice and the
@@ -48,9 +51,12 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 	private static ClientSettings.Sort sort = ClientSettings.defaultSort();
 	private static @Nullable UUID selectedId;
 	private static boolean viewRemembered;
+	/** A waypoint to select once the server lists it (just added, or asked for by another mod). */
+	private static @Nullable String pendingSelectName;
 
 	private final SelectList<Waypoint> list;
 	private final Frame frame;
+	private final TextField searchField;
 	/** On a narrow window: true while the details are shown instead of the list. */
 	private boolean detailOpen;
 
@@ -72,11 +78,12 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 		list = new SelectList<Waypoint>(24, Waypoint::id, WaypointMenuScreen::renderRow)
 				.onSelect(this::onSelect)
 				.onActivate(waypoint -> go())
+				.onContext((waypoint, at) -> openActions(at[0], at[1]))
 				.emptyText(() -> !ClientWaypoints.hasData() ? Ui.tr("menu.loading")
 						: ClientWaypoints.waypoints().isEmpty() ? Ui.tr("menu.empty") : Ui.tr("menu.no_match"));
 
 		frame = new Frame(Ui.tr("menu.title"));
-		frame.headerFill(new TextField(() -> search, value -> {
+		searchField = frame.headerFill(new TextField(() -> search, value -> {
 			search = value;
 			refresh();
 		}).live().maxLength(64).placeholder(Ui.tr("menu.search")), 200);
@@ -185,14 +192,14 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 	/** The selected waypoint's details, with its actions at the bottom. */
 	private final class Details extends Container {
 		private static final float ROW = 16, GAP = 4;
-		private final TextLines text;
+		private final ScrollPanel text;
 		private final Button goButton;
 		private final Button copyButton;
 		private final Button favoriteButton;
 		private final Button moreButton;
 
 		Details() {
-			text = add(new TextLines(WaypointMenuScreen.this::detailLines));
+			text = add(new ScrollPanel(new TextLines(WaypointMenuScreen.this::detailLines)));
 			goButton = add(new Button(() -> isNavigating() ? Ui.tr("action.stop") : Ui.tr("action.go"), WaypointMenuScreen.this::go));
 			goButton.style(Button.Style.PRIMARY);
 			goButton.tooltip(Ui.tr("action.go.tooltip"));
@@ -218,23 +225,7 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 		}
 
 		private void openMore() {
-			var data = selectedData();
-			Menu menu = new Menu()
-					.item(Ui.tr("action.xaero"), WaypointMenuScreen.this::addToXaero)
-					.disabledWhen(() -> !Ui.xaeroInstalled())
-					.separator()
-					.item(Ui.tr("action.edit"), WaypointMenuScreen.this::edit)
-					.disabledWhen(() -> !data.map(d -> d.canEdit()).orElse(false))
-					.item(Ui.tr("action.status"), WaypointMenuScreen.this::status)
-					.disabledWhen(() -> !data.map(d -> d.canSetStatus()).orElse(false));
-			if (ClientWaypoints.canTeleport()) {
-				menu.item(Ui.tr("action.teleport"), WaypointMenuScreen.this::teleport);
-			}
-			menu.separator()
-					.item(Ui.tr("action.remove"), WaypointMenuScreen.this::remove)
-					.disabledWhen(() -> !data.map(d -> d.canRemove()).orElse(false))
-					.danger();
-			menu.open(ctx, moreButton.x(), moreButton.y() + moreButton.h() + 2);
+			openActions(moreButton.x(), moreButton.y() + moreButton.h() + 2);
 		}
 
 		@Override
@@ -263,6 +254,77 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 			}
 			super.renderWidget(ctx);
 		}
+	}
+
+	/** The ⋯ menu (also on right-click in the list): Add to Xaero, Edit, Set status, Teleport, Remove. */
+	private void openActions(double x, double y) {
+		if (selected().isEmpty()) {
+			return;
+		}
+		var data = selectedData();
+		Menu menu = new Menu()
+				.item(Ui.tr("action.xaero"), this::addToXaero)
+				.disabledWhen(() -> !Ui.xaeroInstalled())
+				.separator()
+				.item(Ui.tr("action.edit"), this::edit)
+				.shortcut(Component.literal("E"))
+				.disabledWhen(() -> !data.map(d -> d.canEdit()).orElse(false))
+				.item(Ui.tr("action.status"), this::status)
+				.shortcut(Component.literal("S"))
+				.disabledWhen(() -> !data.map(d -> d.canSetStatus()).orElse(false));
+		if (ClientWaypoints.canTeleport()) {
+			menu.item(Ui.tr("action.teleport"), this::teleport);
+		}
+		menu.separator()
+				.item(Ui.tr("action.remove"), this::remove)
+				.shortcut(Component.literal("Del"))
+				.disabledWhen(() -> !data.map(d -> d.canRemove()).orElse(false))
+				.danger();
+		menu.open(ctx, x, y);
+	}
+
+	/**
+	 * Keys when no text field has focus: G go/stop, C copy, F favourite, E edit, S status, Delete remove, Ctrl+F or /
+	 * to search.
+	 */
+	@Override
+	protected boolean canvasKeyPressed(KeyEvent e) {
+		if (focused() instanceof TextField) {
+			return false;
+		}
+		int key = e.key();
+		if (key == GLFW.GLFW_KEY_SLASH || (key == GLFW.GLFW_KEY_F && e.hasControlDown())) {
+			setFocus(searchField);
+			return true;
+		}
+		if (selected().isEmpty() || e.hasControlDown() || e.hasAltDown()) {
+			return false;
+		}
+		var data = selectedData();
+		switch (key) {
+			case GLFW.GLFW_KEY_G -> go();
+			case GLFW.GLFW_KEY_C -> copyCoordinates();
+			case GLFW.GLFW_KEY_F -> act(Action.FAVORITE);
+			case GLFW.GLFW_KEY_E -> {
+				if (data.map(d -> d.canEdit()).orElse(false)) {
+					edit();
+				}
+			}
+			case GLFW.GLFW_KEY_S -> {
+				if (data.map(d -> d.canSetStatus()).orElse(false)) {
+					status();
+				}
+			}
+			case GLFW.GLFW_KEY_DELETE -> {
+				if (data.map(d -> d.canRemove()).orElse(false)) {
+					remove();
+				}
+			}
+			default -> {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static void renderRow(UiContext ctx, Waypoint waypoint, float x, float y, float w, float h, boolean selected) {
@@ -377,6 +439,13 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 				.sorted(comparator())
 				.toList();
 		list.show(shown);
+		if (pendingSelectName != null) {
+			shown.stream().filter(waypoint -> waypoint.name().equals(pendingSelectName)).findFirst().ifPresent(waypoint -> {
+				selectedId = waypoint.id();
+				detailOpen = true;
+				pendingSelectName = null;
+			});
+		}
 		Waypoint keep = shown.stream().filter(waypoint -> waypoint.id().equals(selectedId)).findFirst().orElse(null);
 		if (keep == null && !shown.isEmpty() && selectedId == null) {
 			keep = shown.get(0);
@@ -489,6 +558,26 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 				Ui.tr("action.remove"), true, dialog -> act(Action.REMOVE))));
 	}
 
+	/** Selects the waypoint with this name as soon as it's listed (the form that just added it uses this). */
+	static void selectWhenListed(String name) {
+		pendingSelectName = name;
+	}
+
+	/**
+	 * Opens the menu on one waypoint (by name), clearing search and filters so it's listed. Used by other mods (Alloy
+	 * Map: click a shared pin) through {@link WaypointsApi}.
+	 */
+	static void openOn(String name, net.minecraft.client.gui.screens.@Nullable Screen parent) {
+		search = "";
+		chip = Chip.ALL;
+		refine = ANY;
+		viewRemembered = true;
+		pendingSelectName = name;
+		ClientWaypoints.waypoints().stream().filter(waypoint -> waypoint.name().equals(name)).findFirst()
+				.ifPresent(waypoint -> selectedId = waypoint.id());
+		Minecraft.getInstance().setScreen(new WaypointMenuScreen(parent));
+	}
+
 	// ---------------------------------------------------------------- test hooks
 
 	/**
@@ -527,6 +616,11 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 	/** Selects a waypoint by name (used by the client test). */
 	public void selectForTest(String name) {
 		list.items().stream().filter(waypoint -> waypoint.name().equals(name)).findFirst().ifPresent(list::select);
+	}
+
+	/** Name of the selected waypoint, or null (used by the client test). */
+	public @Nullable String selectedNameForTest() {
+		return selected().map(Waypoint::name).orElse(null);
 	}
 
 	/** Names of the listed waypoints, in order (used by the client test). */

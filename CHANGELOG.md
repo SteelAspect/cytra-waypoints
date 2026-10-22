@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.10.0 — 2026-10-22
+
+- **Alloy Map:** add a shared waypoint from the world map with the full Add form (spot filled in), and click a shared
+  pin to open it in the waypoint menu. (Needs the matching Alloy Map update.)
+- **Menu polish:**
+  - Right-click a waypoint or route for its actions (the same as **⋯**).
+  - Keys in the menu: **G** go/stop, **C** copy coords, **F** favourite, **E** edit, **S** status, **Delete** remove
+    (asks first), **/** or **Ctrl+F** search.
+  - The details panel scrolls, so long notes and "Added by" are never cut off.
+  - A waypoint you just added is selected when it appears.
+- For other mods: `WaypointsApi` (`openAdd`, `openWaypoint`, `canAdd`).
+
 ## 2.9.0 — 2026-10-20
 
 - **New look for the menu.** The waypoint menu, routes, add/edit forms, status and stop picker now use the Alloy
