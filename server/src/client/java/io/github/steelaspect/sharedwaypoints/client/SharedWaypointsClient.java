@@ -45,6 +45,13 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(SyncPayload.TYPE, (payload, context) -> ClientWaypoints.update(payload));
 		ClientPlayNetworking.registerGlobalReceiver(ResultPayload.TYPE, (payload, context) -> ClientWaypoints.result(payload));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientWaypoints.clear());
+		// Ask for the waypoints as soon as the server says it speaks the menu protocol, so the data is there right after
+		// joining (Alloy Hub's page and Alloy Map's pins use it) without opening the menu first.
+		net.fabricmc.fabric.api.client.networking.v1.C2SPlayChannelEvents.REGISTER.register((handler, sender, client, channels) -> {
+			if (channels.contains(ActionPayload.TYPE.id())) {
+				client.execute(() -> send(ActionPayload.Action.SYNC));
+			}
+		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenu.consumeClick()) {

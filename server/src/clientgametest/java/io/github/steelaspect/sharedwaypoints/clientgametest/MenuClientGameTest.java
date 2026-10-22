@@ -101,6 +101,8 @@ public class MenuClientGameTest implements FabricClientGameTest {
 				client.options.menuBackgroundBlurriness().set(5);
 			});
 			world.getClientWorld().waitForChunksRender();
+			// The waypoint data arrives right after joining, without opening the menu (Alloy Map and Alloy Hub use it).
+			context.waitFor(client -> ClientWaypoints.hasData());
 			// The mod is in this game (one jar) but Xaero's Minimap isn't: a few seconds after the first join the server
 			// suggests Xaero, and never the "install the mod" tip.
 			context.waitFor(client -> chatText(client).contains("Your Alloy Waypoints can't reach Xaero's Minimap."));

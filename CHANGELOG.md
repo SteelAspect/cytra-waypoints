@@ -10,6 +10,8 @@
     (asks first), **/** or **Ctrl+F** search.
   - The details panel scrolls, so long notes and "Added by" are never cut off.
   - A waypoint you just added is selected when it appears.
+- The waypoints load right after you join, not only once you open the menu, so Alloy Map's pins and Alloy Hub's
+  page show them straight away.
 - For other mods: `WaypointsApi` (`openAdd`, `openWaypoint`, `canAdd`).
 
 ## 2.9.0 — 2026-10-20
