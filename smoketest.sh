@@ -68,6 +68,9 @@ echo "--- client"
 grep -E 'WaypointsSmoke' server/build/run/smoke/logs/latest.log
 grep -E 'XaeroSync|Xaero sync|xaerosync' server/build/run/smoke/logs/latest.log | head -10
 grep -q '\[WaypointsSmoke\] PASS' server/build/run/smoke/logs/latest.log || exit 1
+if grep -q 'Cannot send packets when not in game' server/build/run/smoke/logs/latest.log; then
+    echo 'client sent a packet before the game was in play'; exit 1
+fi
 if [ -n "${WITH_XAERO:-}" ]; then
     grep -q "Syncing shared waypoints to .*Xaero's Minimap" build/smokeserver/console.log || { echo 'no Xaero sync'; exit 1; }
 fi

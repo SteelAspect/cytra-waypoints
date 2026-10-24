@@ -22,6 +22,14 @@ import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.Difficulty;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.LevelSettings;
+import net.minecraft.world.level.WorldDataConfiguration;
+import net.minecraft.world.level.levelgen.WorldOptions;
+import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
@@ -32,7 +40,8 @@ import org.slf4j.LoggerFactory;
  * {@code ./headless.sh ./smoketest.sh}: two dedicated 1.20.4 servers start, one with the built Alloy Waypoints jar and
  * one with only Fabric API. This client checks the settings screen on the title screen, joins the first server, waits
  * for the menu sync, adds a waypoint and a route through the menu protocol, checks WaypointsApi and opens every menu
- * screen and the Esc-menu button; then joins the server without the mod and checks the client stays quiet there.
+ * screen and the Esc-menu button; then joins the server without the mod and checks the client stays quiet there,
+ * and finally opens a singleplayer world and checks the menu works there.
  * Screenshots go to build/run/smoke/screenshots; logs {@code [WaypointsSmoke] PASS} or {@code FAIL: ...} and quits.
  */
 public class WaypointsSmokeTest implements ClientModInitializer {
@@ -202,7 +211,26 @@ public class WaypointsSmokeTest implements ClientModInitializer {
 				check(!hasPauseButton(mc.screen), "Waypoints button on the Esc menu of a server without the mod");
 				shot(mc, "pause-plain-server");
 				mc.setScreen(null);
-				wait = 20;
+				// Singleplayer: the channels arrive before the game is in play there (sending then used to throw).
+				disconnect(mc);
+				LevelSettings settings = new LevelSettings("waypoints-smoke", GameType.CREATIVE, false, Difficulty.PEACEFUL,
+						true, new GameRules(), WorldDataConfiguration.DEFAULT);
+				mc.createWorldOpenFlows().createFreshLevel("waypoints-smoke-" + System.currentTimeMillis(), settings,
+						new WorldOptions(1L, false, false), registries -> registries.registryOrThrow(Registries.WORLD_PRESET)
+								.getHolderOrThrow(WorldPresets.FLAT).value().createWorldDimensions(), new TitleScreen());
+				waitFor("the singleplayer world", () -> mc.player != null && mc.level != null && mc.screen == null);
+			}
+			case 21 -> waitFor("the menu data in singleplayer", ClientWaypoints::hasData);
+			case 22 -> {
+				check(WaypointsApi.canAdd(), "WaypointsApi.canAdd() is false in singleplayer");
+				SharedWaypointsClient.openMenu(mc);
+				wait = 10;
+			}
+			case 23 -> {
+				expect(mc, WaypointMenuScreen.class);
+				shot(mc, "menu-singleplayer");
+				mc.setScreen(null);
+				wait = 10;
 			}
 			default -> finish(mc);
 		}

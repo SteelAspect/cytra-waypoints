@@ -47,11 +47,14 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientWaypoints.clear());
 		// Ask for the waypoints as soon as the server says it speaks the menu protocol, so the data is there right after
 		// joining (Alloy Hub's page and Alloy Map's pins use it) without opening the menu first.
+		// 1.20.4: the channels can arrive before the game is in play (singleplayer), and sending then throws; JOIN
+		// covers that case.
 		net.fabricmc.fabric.api.client.networking.v1.C2SPlayChannelEvents.REGISTER.register((handler, sender, client, channels) -> {
 			if (channels.contains(ActionPayload.TYPE.getId())) {
-				client.execute(() -> send(ActionPayload.Action.SYNC));
+				client.execute(() -> requestSync(client));
 			}
 		});
+		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> requestSync(client));
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenu.consumeClick()) {
@@ -96,6 +99,13 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 			return;
 		}
 		client.setScreen(new WaypointMenuScreen());
+	}
+
+	/** Asks for the waypoints once the game is in play on a server that runs the mod. */
+	private static void requestSync(Minecraft client) {
+		if (client.player != null && client.getConnection() != null && ClientPlayNetworking.canSend(ActionPayload.TYPE)) {
+			send(ActionPayload.Action.SYNC);
+		}
 	}
 
 	/** Sends a menu action to the server. */
