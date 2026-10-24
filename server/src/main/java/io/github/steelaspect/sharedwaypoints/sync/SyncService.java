@@ -138,6 +138,7 @@ public final class SyncService {
 	/**
 	 * The whole list: a {@link FullSyncPayload} with the first {@link #FULL_SYNC_CHUNK} waypoints (it replaces what
 	 * the client had), then one {@link UpsertPayload} for each of the rest. Clients from 2.0.0 handle this unchanged.
+	 * On 1.20.4 the first packet also stops before {@link FullSyncPayload#MAX_SIZE} (no split packets there).
 	 */
 	public List<FabricPacket> fullSync() {
 		return fullSync(FULL_SYNC_CHUNK);
@@ -146,9 +147,18 @@ public final class SyncService {
 	/** {@link #fullSync()} with another first-packet size, so the GameTest can check the split with a few waypoints. */
 	public List<FabricPacket> fullSync(int chunk) {
 		List<SyncedWaypoint> all = mod.waypoints().all().stream().map(SyncService::toSynced).toList();
+		int first = 0;
+		int bytes = 0;
+		while (first < Math.min(all.size(), chunk)) {
+			bytes += encodedSize(new UpsertPayload(SyncProtocol.VERSION, all.get(first)));
+			if (bytes > FULL_SYNC_BUDGET) {
+				break;
+			}
+			first++;
+		}
 		List<FabricPacket> packets = new ArrayList<>();
-		packets.add(new FullSyncPayload(SyncProtocol.VERSION, all.subList(0, Math.min(all.size(), chunk))));
-		all.stream().skip(chunk).forEach(waypoint -> packets.add(new UpsertPayload(SyncProtocol.VERSION, waypoint)));
+		packets.add(new FullSyncPayload(SyncProtocol.VERSION, all.subList(0, first)));
+		all.stream().skip(first).forEach(waypoint -> packets.add(new UpsertPayload(SyncProtocol.VERSION, waypoint)));
 		return packets;
 	}
 
@@ -163,6 +173,19 @@ public final class SyncService {
 				clip(waypoint.category().id()), clip(waypoint.category().displayName()), waypoint.category().xaeroColorIndex(),
 				waypoint.x(), waypoint.y(), waypoint.z(), clip(waypoint.dimension()),
 				waypoint.description() == null ? null : clip(waypoint.description()));
+	}
+
+	/** What the first packet of a full sync may take, leaving room for the packet's own header. */
+	static final int FULL_SYNC_BUDGET = FullSyncPayload.MAX_SIZE - 16 * 1024;
+
+	private static int encodedSize(FabricPacket packet) {
+		net.minecraft.network.FriendlyByteBuf buf = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+		try {
+			packet.write(buf);
+			return buf.writerIndex();
+		} finally {
+			buf.release();
+		}
 	}
 
 	/** Xaero symbol of a waypoint marked Broken. */

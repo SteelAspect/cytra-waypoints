@@ -1,5 +1,6 @@
 package io.github.steelaspect.sharedwaypoints.network;
 
+import io.netty.buffer.Unpooled;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,8 +32,11 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 	 */
 	public static final PacketType<SyncPayload> TYPE =
 			PacketType.create(new ResourceLocation("sharedwaypoints", "sync3"), SyncPayload::read);
-	/** 1.20.4 caps a custom payload at 1 MiB (no split packets); a few thousand waypoints still fit. */
+	/** 1.20.4 caps a custom payload at 1 MiB (no split packets); a few thousand waypoints still fit, see {@link #fitted()}. */
 	public static final int MAX_SIZE = 1024 * 1024;
+
+	/** What a snapshot may take, leaving room for the packet's own header inside {@link #MAX_SIZE}. */
+	static final int BUDGET = MAX_SIZE - 16 * 1024;
 
 	/** A category: id, display name and chat colour id (0-15). */
 	public record CategoryData(String id, String name, int colorId) {
@@ -69,6 +73,44 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 
 	/** The route a player is following and the 0-based index of the stop they're heading to. */
 	public record RouteProgressData(UUID routeId, int stopIndex) {
+	}
+
+	/** Bytes this snapshot takes on the wire. */
+	public int encodedSize() {
+		FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+		try {
+			write(buf, this);
+			return buf.writerIndex();
+		} finally {
+			buf.release();
+		}
+	}
+
+	/**
+	 * This snapshot, small enough to send on 1.20.4 (a bigger one would fail to encode and disconnect the player).
+	 * Over {@link #BUDGET} it first leaves out descriptions and status notes, then the last waypoints and routes.
+	 * Returns this snapshot unchanged when it already fits.
+	 */
+	public SyncPayload fitted() {
+		if (encodedSize() <= BUDGET) {
+			return this;
+		}
+		List<WaypointData> slim = waypoints.stream().map(w -> new WaypointData(w.id(), w.name(), w.categoryId(), w.x(),
+				w.y(), w.z(), w.dimension(), null, w.creatorName(), w.createdEpochSecond(), w.canEdit(), w.canRemove(),
+				w.favorite(), w.status() == null ? null
+						: new StatusData(w.status().state(), null, w.status().setByName(), w.status().setAtEpochSecond()),
+				w.canSetStatus())).toList();
+		List<RouteData> slimRoutes = routes.stream().map(r -> new RouteData(r.id(), r.name(), r.stops(), null,
+				r.creatorName(), r.canEdit(), r.canRemove())).toList();
+		SyncPayload fitted = new SyncPayload(categories, slim, canAdd, canTeleport, navigatingTo, slimRoutes,
+				canAddRoute, onRoute);
+		while (fitted.encodedSize() > BUDGET && !(fitted.waypoints.isEmpty() && fitted.routes.isEmpty())) {
+			List<WaypointData> fewer = fitted.waypoints.subList(0, fitted.waypoints.size() * 9 / 10);
+			List<RouteData> fewerRoutes = fitted.routes.subList(0, fitted.routes.size() * 9 / 10);
+			fitted = new SyncPayload(categories, List.copyOf(fewer), canAdd, canTeleport, navigatingTo,
+					List.copyOf(fewerRoutes), canAddRoute, onRoute);
+		}
+		return fitted;
 	}
 
 	@Override

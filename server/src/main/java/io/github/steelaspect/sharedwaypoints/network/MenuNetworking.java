@@ -38,6 +38,8 @@ public final class MenuNetworking {
 
 	private final ModContext mod;
 	private MinecraftServer server;
+	/** The "menu data too big" warning is logged once per server run. */
+	private boolean trimWarned;
 
 	public MenuNetworking(ModContext mod) {
 		this.mod = mod;
@@ -62,7 +64,15 @@ public final class MenuNetworking {
 	/** Sends a fresh snapshot to one player, if their client has the menu. */
 	public void pushTo(ServerPlayer player) {
 		if (ServerPlayNetworking.canSend(player, SyncPayload.TYPE)) {
-			ServerPlayNetworking.send(player, snapshot(player));
+			SyncPayload snapshot = snapshot(player);
+			SyncPayload fitted = snapshot.fitted();
+			if (fitted != snapshot && !trimWarned) {
+				trimWarned = true;
+				SharedWaypoints.LOGGER.warn("The waypoint menu data is over 1.20.4's 1 MiB packet limit ({} waypoints, {} routes); "
+						+ "menus get them without descriptions and only the first {} waypoints / {} routes",
+						snapshot.waypoints().size(), snapshot.routes().size(), fitted.waypoints().size(), fitted.routes().size());
+			}
+			ServerPlayNetworking.send(player, fitted);
 		}
 	}
 

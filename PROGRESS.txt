@@ -231,3 +231,4 @@
 [2026-10-22 19:39] TESTED | :server:runClientGametest headless (kwin virtual): data before opening the menu + full menu tour PASSED; build PASSED | - | none
 [2026-10-22 19:58] RELEASED | 2.10.0 via cytra-releases (sharedwaypoints-v2.10.0, sha256 98d8c868…), together with Alloy Map 0.29.0; live manifest + download checked | - | CI secret ALLOY_PACKAGES_TOKEN still missing
 [2026-10-24 01:30] PORT | 1.20.4 port on mc1.20.4: alloy-waypoints-2.10.0+1.20.4.jar; 101 unit + server GameTest + smoke (with/without mod on server, with Xaero 26.6.0) PASS | Alloy Map port next | client GameTests not on 1.20.4 (smoke test instead)
+[2026-10-24 01:32] FIX | menu snapshot and first full-sync packet kept under 1.20.4's 1 MiB cap (drop descriptions, then trim; split by bytes) | - | -
