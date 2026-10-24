@@ -11,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.slf4j.Logger;
@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Everything that touches Xaero's Minimap, in one place. Xaero has no public API for adding waypoints, so this uses
- * Xaero's own classes through reflection. Checked against Xaero's Minimap 26.5.0 for Fabric 1.21.11; when Xaero
+ * Xaero's own classes through reflection. Checked against Xaero's Minimap 26.6.0 for Fabric 1.20.4 (26.5.0 on 1.21.11); when Xaero
  * changes, this is the only class to update. See docs/DEVELOPMENT.md ("Xaero's Minimap auto-sync") for how each
  * step maps to Xaero's code.
  *
@@ -147,7 +147,7 @@ final class XaeroBridge {
 		try {
 			return Optional.of(new XaeroBridge());
 		} catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
-			LOGGER.warn("This version of Xaero's Minimap ({}) isn't supported by Alloy Waypoints' Xaero sync (tested with 26.5.0), "
+			LOGGER.warn("This version of Xaero's Minimap ({}) isn't supported by Alloy Waypoints' Xaero sync (tested with 26.6.0), "
 					+ "so waypoint sync is off: {}", xaeroVersion(), e.toString());
 			return Optional.empty();
 		}
@@ -282,7 +282,7 @@ final class XaeroBridge {
 	}
 
 	private static ResourceKey<Level> dimensionKey(String dimension) {
-		return ResourceKey.create(Registries.DIMENSION, Identifier.parse(dimension));
+		return ResourceKey.create(Registries.DIMENSION, new ResourceLocation(dimension));
 	}
 
 	/** Xaero wants 1-3 characters; the server sends the same initials as its chat share line. */
@@ -298,7 +298,7 @@ final class XaeroBridge {
 		if (!broken) {
 			broken = true;
 			LOGGER.warn("Stopped syncing shared waypoints into Xaero's Minimap ({}) after an error while {}. "
-					+ "This version may not be supported (tested with 26.5.0). The server's chat buttons still work.",
+					+ "This version may not be supported (tested with 26.6.0). The server's chat buttons still work.",
 					xaeroVersion(), what, e);
 		}
 	}

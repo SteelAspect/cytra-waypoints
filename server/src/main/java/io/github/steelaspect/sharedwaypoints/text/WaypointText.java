@@ -80,7 +80,7 @@ public final class WaypointText {
 			if (target.viaPortal()) {
 				prefix.append(Component.literal("⟳ ").withStyle(style -> style
 						.withColor(ChatFormatting.LIGHT_PURPLE)
-						.withHoverEvent(new HoverEvent.ShowText(Component.literal("Other side of a Nether portal: "
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Other side of a Nether portal: "
 								+ target.x() + " " + target.y() + " " + target.z())))));
 			}
 		});
@@ -112,7 +112,7 @@ public final class WaypointText {
 		lines.add(field("Dimension", Component.literal(Dimensions.shortName(waypoint.dimension()))
 				.withStyle(style -> style
 						.withColor(ChatFormatting.WHITE)
-						.withHoverEvent(new HoverEvent.ShowText(Component.literal(waypoint.dimension()))))));
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(waypoint.dimension()))))));
 		// The other side at the reader's own height ("~" for the console: copied into /tp it means "stay level").
 		Integer readerY = viewer.position() == null ? null : (int) Math.floor(viewer.position().y);
 		NavMath.portalEquivalent(waypoint, readerY == null ? 0 : readerY).ifPresent(other -> {
@@ -125,8 +125,8 @@ public final class WaypointText {
 		lines.add(field("Created by", Component.literal(waypoint.creatorName())
 				.withStyle(style -> style
 						.withColor(ChatFormatting.WHITE)
-						.withHoverEvent(new HoverEvent.ShowText(Component.literal(waypoint.creatorUuid().toString())))
-						.withClickEvent(new ClickEvent.CopyToClipboard(waypoint.creatorUuid().toString())))));
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(waypoint.creatorUuid().toString())))
+						.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, waypoint.creatorUuid().toString())))));
 		lines.add(field("Created on", Component.literal(DATE_FORMAT.format(waypoint.created()))
 				.withStyle(ChatFormatting.WHITE)
 				.append(Component.literal(" (" + Formats.relativeAge(waypoint.created(), Instant.now()) + ")")
@@ -142,16 +142,16 @@ public final class WaypointText {
 		}
 		if (viewer.canTeleport()) {
 			buttons.append(" ").append(button("[Teleport]", ChatFormatting.LIGHT_PURPLE,
-					new ClickEvent.RunCommand(command("tp", waypoint.name())), "Teleport there (op)"));
+					new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("tp", waypoint.name())), "Teleport there (op)"));
 		}
 		if (canEdit) {
 			buttons.append(" ").append(button("[Describe]", ChatFormatting.GRAY,
-					new ClickEvent.SuggestCommand(command("describe", waypoint.name()) + " "),
+					new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command("describe", waypoint.name()) + " "),
 					"Write a short note for this waypoint"));
 		}
 		if (canSetStatus) {
 			buttons.append(" ").append(button("[Status]", ChatFormatting.AQUA,
-					new ClickEvent.RunCommand(command("status", waypoint.name())),
+					new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("status", waypoint.name())),
 					"Mark it planned, WIP, done or broken"));
 		}
 		lines.add(buttons);
@@ -180,8 +180,8 @@ public final class WaypointText {
 		return Component.literal("[" + status.state().symbol() + " " + status.state().displayName() + "]")
 				.withStyle(style -> style
 						.withColor(status.state().color())
-						.withClickEvent(new ClickEvent.RunCommand("/cway projects " + status.state().id()))
-						.withHoverEvent(new HoverEvent.ShowText(hover)));
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway projects " + status.state().id()))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover)));
 	}
 
 	/** {@code /cway status <name>}: "Gold Farm: [⚠ Broken] out of bonemeal (Dxvid, 2 h ago)" or "has no status". */
@@ -206,12 +206,12 @@ public final class WaypointText {
 		MutableComponent buttons = Component.literal("  Set: ").withStyle(ChatFormatting.GRAY);
 		for (ProjectStatus.State state : ProjectStatus.State.values()) {
 			buttons.append(button("[" + state.symbol() + " " + state.displayName() + "]", state.color(),
-					new ClickEvent.SuggestCommand(command("status", waypoint.name()) + " " + state.id() + " "),
+					new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, command("status", waypoint.name()) + " " + state.id() + " "),
 					"Mark it " + state.displayName() + ". Type an optional note, then press Enter.")).append(" ");
 		}
 		if (waypoint.status() != null) {
 			buttons.append(button("[Clear]", ChatFormatting.DARK_GRAY,
-					new ClickEvent.RunCommand(command("status", waypoint.name()) + " clear"), "Remove the status"));
+					new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("status", waypoint.name()) + " clear"), "Remove the status"));
 		}
 		return buttons;
 	}
@@ -242,7 +242,7 @@ public final class WaypointText {
 			int count = counts.getOrDefault(state, 0);
 			filters.append(button("[" + state.symbol() + " " + state.displayName() + " " + count + "]",
 					count > 0 ? state.color() : ChatFormatting.DARK_GRAY,
-					new ClickEvent.RunCommand("/cway projects " + state.id()),
+					new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway projects " + state.id()),
 					"Only " + state.displayName().toLowerCase(java.util.Locale.ROOT) + " projects")).append(" ");
 		}
 		return filters;
@@ -275,7 +275,7 @@ public final class WaypointText {
 		return Component.literal("➜ Navigating to ").withStyle(ChatFormatting.GREEN)
 				.append(Component.literal(waypoint.name()).withStyle(waypoint.category().color()))
 				.append(Component.literal(" — follow the compass at the top of your screen. ").withStyle(ChatFormatting.GRAY))
-				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/cway stop"), "Stop navigating"));
+				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway stop"), "Stop navigating"));
 	}
 
 	// ----------------------------------------------------------------- routes
@@ -301,16 +301,16 @@ public final class WaypointText {
 		MutableComponent line = Component.literal("[Route] ").withStyle(ChatFormatting.GOLD)
 				.append(Component.literal(route.name()).withStyle(style -> style
 						.withColor(ChatFormatting.WHITE)
-						.withClickEvent(new ClickEvent.RunCommand(routeCommand("info", route.name())))
-						.withHoverEvent(new HoverEvent.ShowText(hover))))
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("info", route.name())))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hover))))
 				.append(Component.literal(" — ").withStyle(ChatFormatting.DARK_GRAY))
 				.append(Component.literal(routeSummary(stops)).withStyle(ChatFormatting.GRAY));
 		if (isPlayer && !stops.isEmpty()) {
 			line.append(" ").append(button("[Go]", ChatFormatting.GREEN,
-					new ClickEvent.RunCommand(routeCommand("go", route.name())), "Follow this route stop by stop"));
+					new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("go", route.name())), "Follow this route stop by stop"));
 		}
 		return line.append(" ").append(button("[Info]", ChatFormatting.AQUA,
-				new ClickEvent.RunCommand(routeCommand("info", route.name())), "Show every stop"));
+				new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("info", route.name())), "Show every stop"));
 	}
 
 	/** "5 stops · 1.2km", "1 stop", "no stops yet". */
@@ -351,17 +351,17 @@ public final class WaypointText {
 							.withStyle(ChatFormatting.DARK_GRAY));
 			if (viewer.isPlayer()) {
 				line.append(" ").append(button("[Go from here]", ChatFormatting.GREEN,
-						new ClickEvent.RunCommand(routeCommand("go", route.name()) + " " + number),
+						new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("go", route.name()) + " " + number),
 						"Follow the route starting at stop " + number));
 			}
 			if (canEdit) {
 				if (i > 0) {
 					line.append(" ").append(button("[↑]", ChatFormatting.GRAY,
-							new ClickEvent.RunCommand(routeCommand("move", route.name()) + " " + number + " " + (number - 1)),
+							new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("move", route.name()) + " " + number + " " + (number - 1)),
 							"Move this stop up"));
 				}
 				line.append(" ").append(button("[✕]", ChatFormatting.RED,
-						new ClickEvent.RunCommand(routeCommand("drop", route.name()) + " " + number),
+						new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("drop", route.name()) + " " + number),
 						"Remove this stop from the route (the waypoint stays)"));
 			}
 			lines.add(line);
@@ -370,19 +370,19 @@ public final class WaypointText {
 		MutableComponent buttons = Component.literal("  ");
 		if (viewer.isPlayer() && !stops.isEmpty()) {
 			buttons.append(button("[Go]", ChatFormatting.GREEN,
-					new ClickEvent.RunCommand(routeCommand("go", route.name())), "Follow this route stop by stop")).append(" ");
+					new ClickEvent(ClickEvent.Action.RUN_COMMAND, routeCommand("go", route.name())), "Follow this route stop by stop")).append(" ");
 		}
 		if (canEdit) {
 			buttons.append(button("[+ Stop]", ChatFormatting.YELLOW,
-					new ClickEvent.SuggestCommand(routeCommand("add", route.name()) + " "),
+					new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, routeCommand("add", route.name()) + " "),
 					"Add a waypoint as the last stop")).append(" ");
 			buttons.append(button("[Describe]", ChatFormatting.GRAY,
-					new ClickEvent.SuggestCommand(routeCommand("describe", route.name()) + " "),
+					new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, routeCommand("describe", route.name()) + " "),
 					"Write a short note for this route")).append(" ");
 		}
 		if (canRemove) {
 			buttons.append(button("[Delete]", ChatFormatting.RED,
-					new ClickEvent.SuggestCommand(routeCommand("delete", route.name())),
+					new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, routeCommand("delete", route.name())),
 					"Delete this route (its waypoints stay). Press Enter to confirm."));
 		}
 		lines.add(buttons);
@@ -397,10 +397,10 @@ public final class WaypointText {
 						.withStyle(ChatFormatting.GRAY))
 				.append(Component.literal(firstStop.name()).withStyle(firstStop.category().color()))
 				.append(" ")
-				.append(button("[Skip stop]", ChatFormatting.YELLOW, new ClickEvent.RunCommand("/cway route skip"),
+				.append(button("[Skip stop]", ChatFormatting.YELLOW, new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway route skip"),
 						"Go straight to the next stop"))
 				.append(" ")
-				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent.RunCommand("/cway stop"), "Stop navigating"));
+				.append(button("[Stop]", ChatFormatting.RED, new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway stop"), "Stop navigating"));
 	}
 
 	// ---------------------------------------------------------------- headers
@@ -411,8 +411,8 @@ public final class WaypointText {
 				.withStyle(style -> style
 						.withColor(category.color())
 						.withBold(true)
-						.withClickEvent(new ClickEvent.RunCommand("/cway " + category.id()))
-						.withHoverEvent(new HoverEvent.ShowText(
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway " + category.id()))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
 								Component.literal("Show only " + category.displayName().toLowerCase()))));
 	}
 
@@ -433,11 +433,11 @@ public final class WaypointText {
 	public static Component pageFooter(Page<?> page, String commandPrefix) {
 		MutableComponent footer = Component.empty();
 		footer.append(page.hasPrevious()
-				? button("« Prev", ChatFormatting.YELLOW, new ClickEvent.RunCommand(commandPrefix + " " + (page.number() - 1)), "Previous page")
+				? button("« Prev", ChatFormatting.YELLOW, new ClickEvent(ClickEvent.Action.RUN_COMMAND, commandPrefix + " " + (page.number() - 1)), "Previous page")
 				: Component.literal("« Prev").withStyle(ChatFormatting.DARK_GRAY));
 		footer.append(Component.literal("   Page " + page.number() + "/" + page.count() + "   ").withStyle(ChatFormatting.GRAY));
 		footer.append(page.hasNext()
-				? button("Next »", ChatFormatting.YELLOW, new ClickEvent.RunCommand(commandPrefix + " " + (page.number() + 1)), "Next page")
+				? button("Next »", ChatFormatting.YELLOW, new ClickEvent(ClickEvent.Action.RUN_COMMAND, commandPrefix + " " + (page.number() + 1)), "Next page")
 				: Component.literal("Next »").withStyle(ChatFormatting.DARK_GRAY));
 		return footer;
 	}
@@ -447,8 +447,8 @@ public final class WaypointText {
 		return Component.literal("[" + category.displayName() + "]")
 				.withStyle(style -> style
 						.withColor(category.color())
-						.withClickEvent(new ClickEvent.RunCommand("/cway " + category.id()))
-						.withHoverEvent(new HoverEvent.ShowText(
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway " + category.id()))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
 								Component.literal("Click to list " + category.displayName().toLowerCase()))));
 	}
 
@@ -475,8 +475,8 @@ public final class WaypointText {
 		return Component.literal(waypoint.name())
 				.withStyle(style -> style
 						.withColor(ChatFormatting.WHITE)
-						.withClickEvent(new ClickEvent.RunCommand(command("info", waypoint.name())))
-						.withHoverEvent(new HoverEvent.ShowText(hoverCard(waypoint, viewer))));
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("info", waypoint.name())))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, hoverCard(waypoint, viewer))));
 	}
 
 	/** The card shown when hovering a waypoint name. */
@@ -523,27 +523,27 @@ public final class WaypointText {
 		return Component.literal("[Add to Xaero]")
 				.withStyle(style -> style
 						.withColor(ChatFormatting.YELLOW)
-						.withClickEvent(new ClickEvent.RunCommand(command("xaero", waypoint.name())))
-						.withHoverEvent(new HoverEvent.ShowText(Component.literal("Share to Xaero's Minimap\n")
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("xaero", waypoint.name())))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Share to Xaero's Minimap\n")
 								.append(Component.literal("Xaero then shows its own [Add] button.\n"
 										+ "Needs Xaero's Minimap on your client.").withStyle(ChatFormatting.GRAY)))));
 	}
 
 	/** {@code [Copy coords]}: copies {@code "X Y Z"} to the clipboard. */
 	private static MutableComponent copyCoordsButton(String coordinates) {
-		return button("[Copy coords]", ChatFormatting.GRAY, new ClickEvent.CopyToClipboard(coordinates),
+		return button("[Copy coords]", ChatFormatting.GRAY, new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, coordinates),
 				"Copy \"" + coordinates + "\" to clipboard");
 	}
 
 	/** {@code [Go]}: starts boss-bar navigation. */
 	private static MutableComponent goButton(Waypoint waypoint) {
-		return button("[Go]", ChatFormatting.GREEN, new ClickEvent.RunCommand(command("go", waypoint.name())),
+		return button("[Go]", ChatFormatting.GREEN, new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("go", waypoint.name())),
 				"Navigate here: live compass + beacon");
 	}
 
 	private static MutableComponent favoriteButton(Waypoint waypoint, boolean favorite) {
 		return button(favorite ? "[" + STAR + " Unfavourite]" : "[☆ Favourite]", ChatFormatting.GOLD,
-				new ClickEvent.RunCommand(command("favorite", waypoint.name())),
+				new ClickEvent(ClickEvent.Action.RUN_COMMAND, command("favorite", waypoint.name())),
 				favorite ? "Remove from your favourites" : "Add to your favourites");
 	}
 
@@ -551,7 +551,7 @@ public final class WaypointText {
 		return Component.literal(label).withStyle(style -> style
 				.withColor(color)
 				.withClickEvent(click)
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal(hover))));
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(hover))));
 	}
 
 	private static Component field(String label, Component value) {

@@ -255,8 +255,8 @@ public final class WaypointCommand {
 					.withStyle(ChatFormatting.GRAY)
 					.append(Component.literal("[Add one]").withStyle(style -> style
 							.withColor(ChatFormatting.YELLOW)
-							.withClickEvent(new ClickEvent.SuggestCommand("/cway add "))
-							.withHoverEvent(new HoverEvent.ShowText(
+							.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/cway add "))
+							.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
 									Component.literal("/cway add <name> <category> [x y z]"))))));
 			return 0;
 		}
@@ -400,7 +400,7 @@ public final class WaypointCommand {
 				.map(key -> source.getServer().getLevel(key))
 				.orElseThrow(() -> DIMENSION_MISSING.create(waypoint.dimension()));
 		player.teleportTo(level, waypoint.x() + 0.5, waypoint.y(), waypoint.z() + 0.5, Set.of(),
-				player.getYRot(), player.getXRot(), true);
+				player.getYRot(), player.getXRot());
 		reply(source, WaypointText.success("Teleported to " + waypoint.name()));
 		return 1;
 	}
@@ -416,7 +416,7 @@ public final class WaypointCommand {
 						.append(WaypointText.success(waypoint.name() + " added to your favourites. "))
 						.append(Component.literal("[View favourites]").withStyle(style -> style
 								.withColor(ChatFormatting.YELLOW)
-								.withClickEvent(new ClickEvent.RunCommand("/cway favorites"))))
+								.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway favorites"))))
 				: WaypointText.muted("☆ " + waypoint.name() + " removed from your favourites."));
 		return 1;
 	}
@@ -471,7 +471,7 @@ public final class WaypointCommand {
 
 		ServerPlayer player = source.getPlayer();
 		UUID creatorUuid = player != null ? player.getUUID() : Waypoint.SERVER_UUID;
-		String creatorName = player != null ? player.getGameProfile().name() : source.getTextName();
+		String creatorName = player != null ? player.getGameProfile().getName() : source.getTextName();
 
 		Waypoint waypoint = new Waypoint(UUID.randomUUID(), name, category, pos.getX(), pos.getY(), pos.getZ(),
 				Dimensions.id(level.dimension()), null, creatorUuid, creatorName,
@@ -592,7 +592,7 @@ public final class WaypointCommand {
 		ServerPlayer player = source.getPlayer();
 		ProjectStatus status = new ProjectStatus(state, note.isEmpty() ? null : note,
 				player != null ? player.getUUID() : Waypoint.SERVER_UUID,
-				player != null ? player.getGameProfile().name() : source.getTextName(),
+				player != null ? player.getGameProfile().getName() : source.getTextName(),
 				Instant.now().truncatedTo(ChronoUnit.SECONDS));
 		Waypoint updated = mod.waypoints().update(waypoint.withStatus(status));
 		reply(source, WaypointText.success("Marked " + waypoint.name() + " as " + state.displayName())
@@ -704,8 +704,8 @@ public final class WaypointCommand {
 			reply(source, WaypointText.muted("No routes yet. ")
 					.copy().append(Component.literal("[Create one]").withStyle(style -> style
 							.withColor(ChatFormatting.YELLOW)
-							.withClickEvent(new ClickEvent.SuggestCommand("/cway route create "))
-							.withHoverEvent(new HoverEvent.ShowText(Component.literal(
+							.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/cway route create "))
+							.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(
 									"/cway route create <name>, then /cway route add <route> <waypoint>"))))));
 			return 0;
 		}
@@ -754,14 +754,14 @@ public final class WaypointCommand {
 		ServerPlayer player = source.getPlayer();
 		Route route = new Route(UUID.randomUUID(), name, List.of(), null,
 				player != null ? player.getUUID() : Waypoint.SERVER_UUID,
-				player != null ? player.getGameProfile().name() : source.getTextName(),
+				player != null ? player.getGameProfile().getName() : source.getTextName(),
 				Instant.now().truncatedTo(ChronoUnit.SECONDS));
 		mod.routes().add(route);
 		reply(source, WaypointText.success("Created route " + name + ". ")
 				.copy().append(Component.literal("[+ Add a stop]").withStyle(style -> style
 						.withColor(ChatFormatting.YELLOW)
-						.withClickEvent(new ClickEvent.SuggestCommand(WaypointText.routeCommand("add", name) + " "))
-						.withHoverEvent(new HoverEvent.ShowText(Component.literal("Add a waypoint as the next stop"))))));
+						.withClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, WaypointText.routeCommand("add", name) + " "))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Add a waypoint as the next stop"))))));
 		warnIfRoutesUnsaved(source);
 		return 1;
 	}
@@ -994,7 +994,7 @@ public final class WaypointCommand {
 	 */
 	private static void reply(CommandSourceStack source, Component message) {
 		ServerPlayer player = source.getPlayer();
-		if (player != null && !source.isSilent() && !player.commandSource().acceptsSuccess()) {
+		if (player != null && !source.isSilent() && !player.acceptsSuccess()) {
 			player.sendSystemMessage(message);
 		} else {
 			source.sendSuccess(() -> message, false);

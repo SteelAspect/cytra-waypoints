@@ -27,7 +27,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.input.KeyEvent;
+import dev.steelaspect.alloyui.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -528,7 +528,7 @@ public final class WaypointMenuScreen extends WaypointsScreen {
 					waypoint.category().xaeroColorIndex(), waypoint.dimension());
 			minecraft.setScreen(null);
 			if (minecraft.getConnection() != null) {
-				minecraft.getConnection().sendUnattendedCommand(command, null);
+				minecraft.getConnection().sendCommand(command);
 			}
 		});
 	}

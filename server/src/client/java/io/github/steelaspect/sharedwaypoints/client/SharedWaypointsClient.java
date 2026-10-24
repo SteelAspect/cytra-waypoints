@@ -18,7 +18,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -27,12 +27,12 @@ import org.lwjgl.glfw.GLFW;
  * client only shows what the server sends and asks the server to act.
  */
 public final class SharedWaypointsClient implements ClientModInitializer {
-	private static final KeyMapping.Category CATEGORY =
-			KeyMapping.Category.register(Identifier.fromNamespaceAndPath("sharedwaypoints", "main"));
+	/** 1.20.4 key categories are translation keys. */
+	private static final String CATEGORY = "key.category.sharedwaypoints.main";
 	/** Action channels of older menu protocol versions (1.4.x, then 1.5.0 to 2.1.x). */
-	private static final java.util.Set<Identifier> OLD_ACTION_CHANNELS = java.util.Set.of(
-			Identifier.fromNamespaceAndPath("sharedwaypoints", "action"),
-			Identifier.fromNamespaceAndPath("sharedwaypoints", "action2"));
+	private static final java.util.Set<ResourceLocation> OLD_ACTION_CHANNELS = java.util.Set.of(
+			new ResourceLocation("sharedwaypoints", "action"),
+			new ResourceLocation("sharedwaypoints", "action2"));
 	private static final int PAUSE_BUTTON_WIDTH = 80;
 	private static final int PAUSE_BUTTON_MARGIN = 5;
 	private static KeyMapping openMenu;
@@ -42,13 +42,13 @@ public final class SharedWaypointsClient implements ClientModInitializer {
 		openMenu = KeyBindingHelper.registerKeyBinding(new KeyMapping(
 				"key.sharedwaypoints.open_menu", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, CATEGORY));
 
-		ClientPlayNetworking.registerGlobalReceiver(SyncPayload.TYPE, (payload, context) -> ClientWaypoints.update(payload));
-		ClientPlayNetworking.registerGlobalReceiver(ResultPayload.TYPE, (payload, context) -> ClientWaypoints.result(payload));
+		ClientPlayNetworking.registerGlobalReceiver(SyncPayload.TYPE, (payload, player, responseSender) -> ClientWaypoints.update(payload));
+		ClientPlayNetworking.registerGlobalReceiver(ResultPayload.TYPE, (payload, player, responseSender) -> ClientWaypoints.result(payload));
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ClientWaypoints.clear());
 		// Ask for the waypoints as soon as the server says it speaks the menu protocol, so the data is there right after
 		// joining (Alloy Hub's page and Alloy Map's pins use it) without opening the menu first.
 		net.fabricmc.fabric.api.client.networking.v1.C2SPlayChannelEvents.REGISTER.register((handler, sender, client, channels) -> {
-			if (channels.contains(ActionPayload.TYPE.id())) {
+			if (channels.contains(ActionPayload.TYPE.getId())) {
 				client.execute(() -> send(ActionPayload.Action.SYNC));
 			}
 		});

@@ -31,7 +31,6 @@ public final class SharedWaypoints implements ModInitializer {
 		context = new ModContext(FabricLoader.getInstance().getConfigDir().resolve(MOD_ID));
 
 		// Optional client menu: payload types must be registered on both sides; only modded clients use them.
-		MenuNetworking.registerPayloads();
 		context.menus().registerReceiver();
 		// Optional Xaero's Minimap sync for players with Cytra Waypoints on their game (handshake first; see SyncService).
 		context.sync().registerReceiver();

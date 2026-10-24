@@ -23,7 +23,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.fabricmc.fabric.api.networking.v1.FabricPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -44,7 +44,7 @@ public final class SyncService {
 	public static final int FULL_SYNC_CHUNK = 1000;
 
 	/** Subscribed players and how to send to them. Only touched on the server thread. */
-	private final Map<UUID, Consumer<CustomPacketPayload>> subscribers = new LinkedHashMap<>();
+	private final Map<UUID, Consumer<FabricPacket>> subscribers = new LinkedHashMap<>();
 	/** Players whose client said hello this session, whatever its protocol version. */
 	private final Set<UUID> greeted = new HashSet<>();
 	/** Whether a subscribed player may still see the waypoints. Replaceable so the GameTest can revoke access. */
@@ -56,10 +56,9 @@ public final class SyncService {
 
 	/** Registers the payload types and the hello receiver. Called once from the mod initializer. */
 	public void registerReceiver() {
-		SyncProtocol.register();
-		ServerPlayNetworking.registerGlobalReceiver(HelloPayload.TYPE, (payload, context) -> {
-			UUID playerId = context.player().getUUID();
-			onHello(context.player(), payload, out -> send(playerId, out));
+		ServerPlayNetworking.registerGlobalReceiver(HelloPayload.TYPE, (payload, player, responseSender) -> {
+			UUID playerId = player.getUUID();
+			onHello(player, payload, out -> send(playerId, out));
 		});
 	}
 
@@ -75,8 +74,8 @@ public final class SyncService {
 	 * Handles a client's hello. Public so the GameTest can drive it with a recording {@code sender} instead of a
 	 * real network connection.
 	 */
-	public void onHello(ServerPlayer player, HelloPayload hello, Consumer<CustomPacketPayload> sender) {
-		String name = player.getGameProfile().name();
+	public void onHello(ServerPlayer player, HelloPayload hello, Consumer<FabricPacket> sender) {
+		String name = player.getGameProfile().getName();
 		greeted.add(player.getUUID());
 		if (hello.protocolVersion() != SyncProtocol.VERSION) {
 			SharedWaypoints.LOGGER.info("{} has Alloy Waypoints {} on their game (sync protocol {}); this server speaks protocol {}, "
@@ -140,14 +139,14 @@ public final class SyncService {
 	 * The whole list: a {@link FullSyncPayload} with the first {@link #FULL_SYNC_CHUNK} waypoints (it replaces what
 	 * the client had), then one {@link UpsertPayload} for each of the rest. Clients from 2.0.0 handle this unchanged.
 	 */
-	public List<CustomPacketPayload> fullSync() {
+	public List<FabricPacket> fullSync() {
 		return fullSync(FULL_SYNC_CHUNK);
 	}
 
 	/** {@link #fullSync()} with another first-packet size, so the GameTest can check the split with a few waypoints. */
-	public List<CustomPacketPayload> fullSync(int chunk) {
+	public List<FabricPacket> fullSync(int chunk) {
 		List<SyncedWaypoint> all = mod.waypoints().all().stream().map(SyncService::toSynced).toList();
-		List<CustomPacketPayload> packets = new ArrayList<>();
+		List<FabricPacket> packets = new ArrayList<>();
 		packets.add(new FullSyncPayload(SyncProtocol.VERSION, all.subList(0, Math.min(all.size(), chunk))));
 		all.stream().skip(chunk).forEach(waypoint -> packets.add(new UpsertPayload(SyncProtocol.VERSION, waypoint)));
 		return packets;
@@ -174,7 +173,7 @@ public final class SyncService {
 		return text.length() <= SyncedWaypoint.MAX_TEXT ? text : text.substring(0, SyncedWaypoint.MAX_TEXT);
 	}
 
-	private void broadcast(CustomPacketPayload payload) {
+	private void broadcast(FabricPacket payload) {
 		if (!mod.config().syncToClientMod) {
 			return;
 		}
@@ -201,10 +200,10 @@ public final class SyncService {
 		}
 	}
 
-	private void send(UUID playerId, CustomPacketPayload payload) {
+	private void send(UUID playerId, FabricPacket payload) {
 		// Look the player up every time: respawning creates a new ServerPlayer object.
 		ServerPlayer player = server == null ? null : server.getPlayerList().getPlayer(playerId);
-		if (player != null && ServerPlayNetworking.canSend(player, payload.type())) {
+		if (player != null && ServerPlayNetworking.canSend(player, payload.getType())) {
 			ServerPlayNetworking.send(player, payload);
 		}
 	}

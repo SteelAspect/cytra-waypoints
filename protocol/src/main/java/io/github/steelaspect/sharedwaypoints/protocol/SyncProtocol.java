@@ -1,7 +1,5 @@
 package io.github.steelaspect.sharedwaypoints.protocol;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-
 /**
  * The sync protocol between the Cytra Waypoints server and players' games running Cytra Waypoints (or the old
  * sharedwaypoints-client jar, 2.2 and earlier).
@@ -22,24 +20,6 @@ public final class SyncProtocol {
 	/** Namespace of the channel ids. */
 	public static final String NAMESPACE = "sharedwaypoints";
 
-	private static boolean registered;
-
 	private SyncProtocol() {
-	}
-
-	/**
-	 * Registers the payload types. Both mods call this before registering their receivers; only the first call does
-	 * anything, because a payload type may only be registered once (a player can have both mods installed).
-	 */
-	public static synchronized void register() {
-		if (registered) {
-			return;
-		}
-		registered = true;
-		PayloadTypeRegistry.playC2S().register(HelloPayload.TYPE, HelloPayload.CODEC);
-		PayloadTypeRegistry.playS2C().register(WelcomePayload.TYPE, WelcomePayload.CODEC);
-		PayloadTypeRegistry.playS2C().registerLarge(FullSyncPayload.TYPE, FullSyncPayload.CODEC, FullSyncPayload.MAX_SIZE);
-		PayloadTypeRegistry.playS2C().register(UpsertPayload.TYPE, UpsertPayload.CODEC);
-		PayloadTypeRegistry.playS2C().register(DeletePayload.TYPE, DeletePayload.CODEC);
 	}
 }

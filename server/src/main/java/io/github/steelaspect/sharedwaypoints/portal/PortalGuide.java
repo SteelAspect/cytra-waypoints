@@ -1,5 +1,6 @@
 package io.github.steelaspect.sharedwaypoints.portal;
 
+import net.minecraft.util.Mth;
 import io.github.steelaspect.sharedwaypoints.nav.NavMath;
 import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
@@ -115,7 +116,7 @@ public final class PortalGuide {
 	public static Optional<BlockPos> lookedAt(ServerPlayer player) {
 		HitResult hit = player.pick(LOOK_RANGE, 0f, false);
 		if (hit.getType() == HitResult.Type.BLOCK && hit instanceof BlockHitResult block
-				&& player.level().getBlockState(block.getBlockPos()).is(Blocks.NETHER_PORTAL)) {
+				&& player.serverLevel().getBlockState(block.getBlockPos()).is(Blocks.NETHER_PORTAL)) {
 			return Optional.of(block.getBlockPos());
 		}
 		return Optional.empty();
@@ -127,7 +128,7 @@ public final class PortalGuide {
 	 * GameTest can call it without aiming a player.
 	 */
 	public Optional<String> start(ServerPlayer player, BlockPos pos, int serverTick) {
-		ServerLevel level = player.level();
+		ServerLevel level = player.serverLevel();
 		String dimension = Dimensions.id(level.dimension());
 		BlockState state = level.getBlockState(pos);
 		if (!state.is(Blocks.NETHER_PORTAL)) {
@@ -182,7 +183,7 @@ public final class PortalGuide {
 		Optional<Guide> guide = mine == null ? Optional.empty() : mine.numbered(number);
 		guide.ifPresent(stopped -> {
 			mine.guides.remove(stopped);
-			update(player, mine, player.level().getServer().getTickCount(), true);
+			update(player, mine, player.serverLevel().getServer().getTickCount(), true);
 		});
 		return guide.map(Guide::where);
 	}
@@ -194,7 +195,7 @@ public final class PortalGuide {
 			return List.of(Component.literal("You don't have a portal guide running. Look at a Nether portal and type "
 					+ "/cway portal.").withStyle(ChatFormatting.GRAY));
 		}
-		String dimension = Dimensions.id(player.level().dimension());
+		String dimension = Dimensions.id(player.serverLevel().dimension());
 		List<Guide> sorted = new ArrayList<>(mine.guides);
 		sorted.sort(Comparator.<Guide, Boolean>comparing(guide -> !guide.toDimension.equals(dimension))
 				.thenComparingDouble(guide -> guide.distance(player)));
@@ -219,8 +220,8 @@ public final class PortalGuide {
 		if (sorted.size() > 1) {
 			lines.add(Component.literal("[Stop all]").withStyle(style -> style
 					.withColor(ChatFormatting.RED)
-					.withClickEvent(new ClickEvent.RunCommand("/cway portal stop"))
-					.withHoverEvent(new HoverEvent.ShowText(Component.literal("Stop all your portal guides")))));
+					.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway portal stop"))
+					.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Stop all your portal guides")))));
 		}
 		return lines;
 	}
@@ -229,7 +230,7 @@ public final class PortalGuide {
 	public void refreshGhosts(ServerPlayer player) {
 		PlayerGuides mine = players.get(player.getUUID());
 		if (mine != null) {
-			update(player, mine, player.level().getServer().getTickCount(), true);
+			update(player, mine, player.serverLevel().getServer().getTickCount(), true);
 		}
 	}
 
@@ -279,8 +280,8 @@ public final class PortalGuide {
 					player.sendSystemMessage(Component.literal("Portal guide #" + guide.number + " (" + guide.where()
 							+ ") ended after 30 minutes. Look at the portal and run /cway portal again to restart it.")
 							.withStyle(ChatFormatting.GRAY));
-				} else if (now % BUILT_CHECK_INTERVAL == 0 && player.level() == levelOf(server, guide)
-						&& isBuilt(player.level(), guide.to)) {
+				} else if (now % BUILT_CHECK_INTERVAL == 0 && player.serverLevel() == levelOf(server, guide)
+						&& isBuilt(player.serverLevel(), guide.to)) {
 					iterator.remove();
 					player.sendSystemMessage(Component.literal("✦ Portal built at " + coordinates(guide.to) + ". Guide #"
 							+ guide.number + " finished." + (mine.guides.isEmpty() ? "" : " " + stillRunning(mine.guides.size())))
@@ -298,7 +299,7 @@ public final class PortalGuide {
 			if (!level.isLoaded(column)) {
 				continue;
 			}
-			for (int y = level.getMinY(); y < level.getMaxY(); y++) {
+			for (int y = level.getMinBuildHeight(); y < level.getMaxBuildHeight() - 1; y++) {
 				if (level.getBlockState(new BlockPos(column.getX(), y, column.getZ())).is(Blocks.NETHER_PORTAL)) {
 					return true;
 				}
@@ -317,7 +318,7 @@ public final class PortalGuide {
 	 * {@code ghostsNow}) the ghosts of every spot within {@link #SHOW_RANGE}. Nothing when they have none here.
 	 */
 	private static void update(ServerPlayer player, PlayerGuides mine, int now, boolean ghostsNow) {
-		String dimension = Dimensions.id(player.level().dimension());
+		String dimension = Dimensions.id(player.serverLevel().dimension());
 		List<Guide> here = mine.guides.stream().filter(guide -> guide.toDimension.equals(dimension)).toList();
 		if (here.isEmpty()) {
 			// Only shown on the side you're building on.
@@ -341,7 +342,7 @@ public final class PortalGuide {
 		if (nearest.startDistance < 0) {
 			nearest.startDistance = Math.max(distance, 1.0);
 		}
-		bar.setProgress((float) Math.clamp(1.0 - distance / nearest.startDistance, 0.0, 1.0));
+		bar.setProgress((float) Mth.clamp(1.0 - distance / nearest.startDistance, 0.0, 1.0));
 		String size = size(nearest.to);
 		Component more = Component.literal(here.size() > 1 ? "  +" + (here.size() - 1) + " more" : "")
 				.withStyle(ChatFormatting.GRAY);
@@ -364,7 +365,7 @@ public final class PortalGuide {
 	 * they land, so jumping doesn't make it flicker. Where two spots overlap, the opening wins.
 	 */
 	private static void updateGhosts(ServerPlayer player, PlayerGuides mine, List<Guide> here) {
-		ServerLevel level = player.level();
+		ServerLevel level = player.serverLevel();
 		Predicate<BlockPos> placed = cell -> {
 			BlockState state = level.getBlockState(cell);
 			return state.is(Blocks.OBSIDIAN) || state.is(Blocks.CRYING_OBSIDIAN);
@@ -408,15 +409,15 @@ public final class PortalGuide {
 		String coordinates = coordinates(spot);
 		return Component.literal("[Copy coords]").withStyle(style -> style
 				.withColor(ChatFormatting.YELLOW)
-				.withClickEvent(new ClickEvent.CopyToClipboard(coordinates))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Copy " + coordinates + " (~ = your height)"))));
+				.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, coordinates))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Copy " + coordinates + " (~ = your height)"))));
 	}
 
 	private static MutableComponent stopButton(int number) {
 		return Component.literal("[Stop]").withStyle(style -> style
 				.withColor(ChatFormatting.RED)
-				.withClickEvent(new ClickEvent.RunCommand("/cway portal stop " + number))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Stop portal guide #" + number))));
+				.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway portal stop " + number))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Stop portal guide #" + number))));
 	}
 
 	private static List<Component> started(Guide guide, PortalShape from, int running, boolean restarted) {
@@ -434,8 +435,8 @@ public final class PortalGuide {
 			lines.add(Component.literal("  Guide #" + guide.number + ", " + running + " running. ").withStyle(ChatFormatting.GRAY)
 					.append(Component.literal("[List]").withStyle(style -> style
 							.withColor(ChatFormatting.YELLOW)
-							.withClickEvent(new ClickEvent.RunCommand("/cway portal list"))
-							.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show all your portal guides"))))));
+							.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway portal list"))
+							.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Show all your portal guides"))))));
 		}
 		return lines;
 	}

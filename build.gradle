@@ -20,16 +20,18 @@ if (gitBranch == 'HEAD') {
 	// Detached checkout (typical in CI): use the CI's branch name if it has one.
 	gitBranch = providers.environmentVariable('GITHUB_REF_NAME').getOrElse('')
 }
-def isRelease = project.hasProperty('release') ? project.property('release').toString().toBoolean() : gitBranch == 'main'
+// mc1.20.4 is the 1.20.4 port's release branch.
+def isRelease = project.hasProperty('release') ? project.property('release').toString().toBoolean() : gitBranch in ['main', 'mc1.20.4']
 
 subprojects {
 	version = rootProject.mod_version
 	group = rootProject.maven_group
 	ext.isRelease = isRelease
-	ext.modVersion = isRelease ? rootProject.mod_version : "${rootProject.mod_version}+dev"
+	def base = rootProject.mod_version.toString()
+	ext.modVersion = isRelease ? base : (base.contains("+") ? "${base}.dev" : "${base}+dev")
 
 	tasks.withType(JavaCompile).configureEach {
-		it.options.release = 21
+		it.options.release = 17
 		it.options.encoding = "UTF-8"
 	}
 }

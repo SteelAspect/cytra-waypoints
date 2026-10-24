@@ -1,5 +1,6 @@
 package io.github.steelaspect.sharedwaypoints.util;
 
+import net.minecraft.util.Mth;
 import java.util.List;
 
 /**
@@ -12,7 +13,7 @@ import java.util.List;
 public record Page<T>(List<T> items, int number, int count) {
 	public static <T> Page<T> of(List<T> all, int requestedPage, int pageSize) {
 		int count = Math.max(1, (all.size() + pageSize - 1) / pageSize);
-		int number = Math.clamp(requestedPage, 1, count);
+		int number = Mth.clamp(requestedPage, 1, count);
 		int from = (number - 1) * pageSize;
 		return new Page<>(all.subList(Math.min(from, all.size()), Math.min(from + pageSize, all.size())), number, count);
 	}

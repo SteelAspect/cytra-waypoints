@@ -7,7 +7,6 @@ import java.util.function.Predicate;
 import me.lucko.fabric.api.permissions.v0.Permissions;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.PermissionLevel;
 
 /**
  * Permission nodes, checked through fabric-permissions-api.
@@ -37,7 +36,7 @@ public final class WaypointPermissions {
 	public static final String RELOAD = "sharedwaypoints.reload";
 
 	/** Op level 2 ("gamemasters"), the level vanilla uses for commands like /tp and /give. */
-	private static final PermissionLevel MODERATE_DEFAULT = PermissionLevel.GAMEMASTERS;
+	private static final int MODERATE_DEFAULT = 2;
 
 	private WaypointPermissions() {
 	}

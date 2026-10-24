@@ -3,9 +3,9 @@ plugins {
 }
 
 // Tests only, never released. The mod itself (one jar for the server and players) is built by :server.
-//  - runClientGametest:       the Xaero's Minimap sync in a real game, with the real Xaero's Minimap installed.
-//  - runInstalledClientTest:  the built jar in a production game, installed like a player's mods folder.
 //  - runInstalledServerTest:  the built jar on a production dedicated server (Fabric API only, no Xaero's Minimap).
+// 1.20.4: the client tests (Xaero sync game test, installed-client test) need fabric-client-gametest-api-v1, which
+// starts at 1.21.4; ../smoketest.sh covers a client joining a dedicated server instead.
 
 repositories {
 	mavenCentral()
@@ -21,65 +21,6 @@ repositories {
 		}
 		content { includeModule "dev.steelaspect", "alloy-ui" }
 	}
-	// Xaero's Minimap, only at runtime in the client GameTest (never compiled against or bundled).
-	exclusiveContent {
-		forRepository {
-			maven {
-				name = "Modrinth"
-				url = "https://api.modrinth.com/maven"
-			}
-		}
-		filter { includeGroup "maven.modrinth" }
-	}
-}
-
-// Real-client test: singleplayer with Alloy Waypoints and the real Xaero's Minimap, checking what ends up in Xaero's
-// "Shared" set. Needs a display (xvfb-run in CI).
-evaluationDependsOn(':server')
-def serverProject = project(':server')
-
-sourceSets {
-	clientgametest {
-		compileClasspath += main.compileClasspath + serverProject.sourceSets.main.output + serverProject.sourceSets.client.output
-		runtimeClasspath += main.runtimeClasspath
-	}
-}
-
-loom {
-	mods {
-		// The mod from :server, so the singleplayer game runs it (both its server and its client side).
-		"sharedwaypoints" {
-			sourceSet("main", ":server")
-			sourceSet("client", ":server")
-		}
-		"sharedwaypoints-client-gametest" {
-			sourceSet sourceSets.clientgametest
-		}
-	}
-	runs {
-		clientGametest {
-			client()
-			name = "Client Game Test (Xaero sync)"
-			vmArg "-Dfabric.client.gametest"
-			// Xaero's Minimap talks to the network below Fabric's packet hooks, which made the synchronizer fail at
-			// random when the world closed for the rejoin step. The test waits for its own conditions instead.
-			vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer"
-			runDir "build/clientgametest"
-			source sourceSets.clientgametest
-		}
-	}
-}
-
-tasks.named("runClientGametest") {
-	// Fresh config, saves and Xaero data every run.
-	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
-	doFirst {
-		["config/sharedwaypoints", "saves", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }		// Test clients run muted.
-		def options = new File(runDirectory.get().asFile, "options.txt")
-		options.parentFile.mkdirs()
-		def lines = options.exists() ? options.readLines().findAll { !it.startsWith("soundCategory_master:") } : []
-		options.text = (lines + "soundCategory_master:0.0").join("\n") + "\n"
-	}
 }
 
 dependencies {
@@ -87,102 +28,18 @@ dependencies {
 	mappings loom.officialMojangMappings()
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-	implementation project(path: ':protocol', configuration: 'namedElements')
-
-	// The client GameTest runs the mod's classes (and its bundled permissions library) and Xaero.
-	clientgametestRuntimeOnly serverProject.sourceSets.main.output
-	clientgametestRuntimeOnly serverProject.sourceSets.client.output
-	modLocalRuntime "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
-	modLocalRuntime "dev.steelaspect:alloy-ui:${project.alloyui_version}"
 }
 
-configurations {
-	// Mod jars dropped unchanged into the test game's mods/ folder, like a player installs them. Xaero's Minimap
-	// bundles XaeroLib (jar-in-jar), which only loads this way; Fabric Loader remaps the jar at runtime.
-	clientTestMods {
-		transitive = false
-	}
-}
-
-dependencies {
-	clientTestMods "maven.modrinth:xaeros-minimap:${project.xaero_minimap_modrinth_version}"
-}
-
-def copyClientTestMods = tasks.register("copyClientTestMods", Sync) {
-	from configurations.clientTestMods
-	into layout.buildDirectory.dir("clientgametest/mods")
-}
-
-tasks.named("runClientGametest") {
-	dependsOn copyClientTestMods
-	// Never run two game clients at once: on a 2-vCPU CI runner, software rendering for both starves world loading.
-	mustRunAfter ":server:runClientGametest"
-}
-
-// Install test: a production game (real Fabric Loader, remapped jars) whose mods folder holds only what a player
-// installs: the built Alloy Waypoints jar, Fabric API and Xaero's Minimap. Catches packaging mistakes the dev-run
-// tests can't, like the menu or the Xaero sync missing from the jar.
-// Run with `xvfb-run -a ./gradlew :tests:runInstalledClientTest`.
-sourceSets {
-	prodtest {
-		compileClasspath += main.compileClasspath
-	}
-}
-
-configurations {
-	installedTestMods {
-		transitive = false
-	}
-}
-
-dependencies {
-	installedTestMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	// Not part of the Fabric API jar players download; only here to drive the test.
-	installedTestMods fabricApi.module("fabric-client-gametest-api-v1", project.fabric_api_version)
-}
-
-def prodTestJar = tasks.register("prodTestJar", Jar) {
-	from sourceSets.prodtest.output
-	archiveClassifier = "prodtest-named"
-	destinationDirectory = layout.buildDirectory.dir("prodtest")
-}
-
-def remapProdTestJar = tasks.register("remapProdTestJar", net.fabricmc.loom.task.RemapJarTask) {
-	inputFile = prodTestJar.flatMap { it.archiveFile }
-	archiveClassifier = "prodtest"
-	destinationDirectory = layout.buildDirectory.dir("prodtest")
-	addNestedDependencies = false
-}
-
-tasks.register("runInstalledClientTest", net.fabricmc.loom.task.prod.ClientProductionRunTask) {
-	description = "Runs the built Alloy Waypoints jar in a production game, like a player's mods folder."
-	mods.from(serverProject.tasks.named("remapJar"))
-	mods.from(configurations.installedTestMods)
-	// -PwithoutXaero: no Xaero's Minimap, to check the menu still works and the player is told to add Xaero.
-	if (!project.hasProperty("withoutXaero")) {
-		mods.from(configurations.clientTestMods)
-	}
-	mods.from(remapProdTestJar)
-	jvmArgs.add("-Dfabric.client.gametest")
-	useXVFB = false // CI and local runs already wrap Gradle in xvfb-run
-	timeout = java.time.Duration.ofMinutes(15) // a game that never starts the test would otherwise wait forever
-	def runDirectory = layout.buildDirectory.dir("installedtest")
-	runDir = runDirectory
-	doFirst {
-		["saves", "config", "xaero"].each { new File(runDirectory.get().asFile, it).deleteDir() }
-	}
-	// One game client at a time on the 2-vCPU CI runner.
-	mustRunAfter ":server:runClientGametest", "runClientGametest"
-}
+evaluationDependsOn(':server')
+def serverProject = project(':server')
 
 // Nothing here is a mod of its own: no jar to build or publish.
 tasks.named("jar") { enabled = false }
 tasks.named("remapJar") { enabled = false }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 // Server install test: a production dedicated server whose mods folder holds the same built jar and Fabric API, and

@@ -1,5 +1,6 @@
 package io.github.steelaspect.sharedwaypoints.nav;
 
+import net.minecraft.util.Mth;
 import io.github.steelaspect.sharedwaypoints.ModContext;
 import io.github.steelaspect.sharedwaypoints.text.WaypointText;
 import io.github.steelaspect.sharedwaypoints.util.Dimensions;
@@ -242,7 +243,7 @@ public final class NavigationManager {
 		}
 		session.bar.setColor(barColor(waypoint.category()));
 
-		String here = Dimensions.id(player.level().dimension());
+		String here = Dimensions.id(player.serverLevel().dimension());
 		Optional<NavMath.Target> projected = NavMath.project(waypoint, here, player.getBlockY());
 		if (projected.isEmpty()) {
 			session.measuredIn = null;
@@ -270,7 +271,7 @@ public final class NavigationManager {
 			return false;
 		}
 
-		session.bar.setProgress((float) Math.clamp(1.0 - distance / session.startDistance, 0.0, 1.0));
+		session.bar.setProgress((float) Mth.clamp(1.0 - distance / session.startDistance, 0.0, 1.0));
 		session.bar.setName(Component.literal(stopLabel).withStyle(ChatFormatting.GRAY)
 				.append(compassText(player, waypoint, target, distance, heightDifference)));
 
@@ -387,15 +388,15 @@ public final class NavigationManager {
 
 	/** A column of end-rod sparks with a category-coloured base, visible only to the navigating player. */
 	private static void beacon(ServerPlayer player, Waypoint waypoint, NavMath.Target target) {
-		ServerLevel level = player.level();
+		ServerLevel level = player.serverLevel();
 		double x = target.x() + 0.5;
 		double z = target.z() + 0.5;
 		for (int i = 0; i < BEACON_HEIGHT; i++) {
-			level.sendParticles(player, ParticleTypes.END_ROD, true, true, x, target.y() + 0.5 + i * 1.5, z,
+			level.sendParticles(player, ParticleTypes.END_ROD, true, x, target.y() + 0.5 + i * 1.5, z,
 					1, 0.05, 0.3, 0.05, 0.0);
 		}
 		Integer rgb = waypoint.category().color().getColor();
-		level.sendParticles(player, new DustParticleOptions(rgb != null ? rgb : 0xFFFFFF, 2.0f), true, true,
+		level.sendParticles(player, new DustParticleOptions(Vec3.fromRGB24(rgb != null ? rgb : 0xFFFFFF).toVector3f(), 2.0f), true,
 				x, target.y() + 0.3, z, 10, 0.6, 0.2, 0.6, 0.0);
 	}
 

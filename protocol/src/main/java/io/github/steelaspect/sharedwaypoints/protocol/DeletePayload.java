@@ -2,9 +2,9 @@ package io.github.steelaspect.sharedwaypoints.protocol;
 
 import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.fabricmc.fabric.api.networking.v1.FabricPacket;
+import net.fabricmc.fabric.api.networking.v1.PacketType;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Server → client: a waypoint was removed.
@@ -12,18 +12,22 @@ import net.minecraft.resources.Identifier;
  * @param protocolVersion the server's {@link SyncProtocol#VERSION}
  * @param id              id of the removed waypoint
  */
-public record DeletePayload(int protocolVersion, UUID id) implements CustomPacketPayload {
-	public static final Type<DeletePayload> TYPE =
-			new Type<>(Identifier.fromNamespaceAndPath(SyncProtocol.NAMESPACE, "sync_delete"));
-	public static final StreamCodec<FriendlyByteBuf, DeletePayload> CODEC = StreamCodec.of(
-			(buf, payload) -> {
-				buf.writeVarInt(payload.protocolVersion);
-				buf.writeUUID(payload.id);
-			},
-			buf -> new DeletePayload(buf.readVarInt(), buf.readUUID()));
+public record DeletePayload(int protocolVersion, UUID id) implements FabricPacket {
+	public static final PacketType<DeletePayload> TYPE =
+			PacketType.create(new ResourceLocation(SyncProtocol.NAMESPACE, "sync_delete"), DeletePayload::read);
 
 	@Override
-	public Type<? extends CustomPacketPayload> type() {
+	public PacketType<DeletePayload> getType() {
 		return TYPE;
+	}
+
+	@Override
+	public void write(FriendlyByteBuf buf) {
+		buf.writeVarInt(protocolVersion);
+		buf.writeUUID(id);
+	}
+
+	public static DeletePayload read(FriendlyByteBuf buf) {
+		return new DeletePayload(buf.readVarInt(), buf.readUUID());
 	}
 }

@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.fabricmc.fabric.api.networking.v1.FabricPacket;
+import net.fabricmc.fabric.api.networking.v1.PacketType;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Server → client: everything the optional client menu shows, already filtered and personalised for that player
@@ -23,16 +23,16 @@ import net.minecraft.resources.Identifier;
  */
 public record SyncPayload(List<CategoryData> categories, List<WaypointData> waypoints, boolean canAdd,
 		boolean canTeleport, UUID navigatingTo, List<RouteData> routes, boolean canAddRoute, RouteProgressData onRoute)
-		implements CustomPacketPayload {
+		implements FabricPacket {
 
 	/**
 	 * The channel names carry the menu protocol version ({@code sync3} since project status in 2.2.0), so a
 	 * client and server with different versions never try to read each other's data: the menu just isn't offered.
 	 */
-	public static final Type<SyncPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "sync3"));
-	public static final StreamCodec<FriendlyByteBuf, SyncPayload> CODEC = StreamCodec.of(SyncPayload::write, SyncPayload::read);
-	/** Largest payload accepted (a few thousand waypoints fit easily). */
-	public static final int MAX_SIZE = 4 * 1024 * 1024;
+	public static final PacketType<SyncPayload> TYPE =
+			PacketType.create(new ResourceLocation("sharedwaypoints", "sync3"), SyncPayload::read);
+	/** 1.20.4 caps a custom payload at 1 MiB (no split packets); a few thousand waypoints still fit. */
+	public static final int MAX_SIZE = 1024 * 1024;
 
 	/** A category: id, display name and chat colour id (0-15). */
 	public record CategoryData(String id, String name, int colorId) {
@@ -72,8 +72,13 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 	}
 
 	@Override
-	public Type<? extends CustomPacketPayload> type() {
+	public PacketType<SyncPayload> getType() {
 		return TYPE;
+	}
+
+	@Override
+	public void write(FriendlyByteBuf buf) {
+		write(buf, this);
 	}
 
 	private static void write(FriendlyByteBuf buf, SyncPayload payload) {
@@ -124,7 +129,7 @@ public record SyncPayload(List<CategoryData> categories, List<WaypointData> wayp
 		});
 	}
 
-	private static SyncPayload read(FriendlyByteBuf buf) {
+	public static SyncPayload read(FriendlyByteBuf buf) {
 		int categoryCount = buf.readVarInt();
 		List<CategoryData> categories = new ArrayList<>(categoryCount);
 		for (int i = 0; i < categoryCount; i++) {

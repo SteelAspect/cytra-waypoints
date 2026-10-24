@@ -1,5 +1,6 @@
 package io.github.steelaspect.sharedwaypoints.config;
 
+import net.minecraft.util.Mth;
 import io.github.steelaspect.sharedwaypoints.SharedWaypoints;
 import io.github.steelaspect.sharedwaypoints.util.Gsons;
 import io.github.steelaspect.sharedwaypoints.util.JsonFiles;
@@ -64,9 +65,9 @@ public final class ModConfig {
 
 	/** Keeps hand-edited values sensible. */
 	private void clamp() {
-		arrivalRadius = Math.clamp(arrivalRadius, 1, 64);
-		pageSize = Math.clamp(pageSize, 3, 30);
-		nearRadius = Math.clamp(nearRadius, 16, 30_000_000);
+		arrivalRadius = Mth.clamp(arrivalRadius, 1, 64);
+		pageSize = Mth.clamp(pageSize, 3, 30);
+		nearRadius = Mth.clamp(nearRadius, 16, 30_000_000);
 		if (clientModUrl == null) {
 			clientModUrl = "";
 		}

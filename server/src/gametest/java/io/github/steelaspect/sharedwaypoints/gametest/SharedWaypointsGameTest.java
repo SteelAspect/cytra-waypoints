@@ -30,23 +30,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import net.fabricmc.fabric.api.gametest.v1.GameTest;
+import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestAssertException;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.LevelBasedPermissionSet;
 
 /**
- * End-to-end test on a real (headless) 1.21.11 server: runs the /cway commands as two ordinary players and
+ * End-to-end test on a real (headless) 1.20.4 server: runs the /cway commands as two ordinary players and
  * a moderator, and checks chat output, click events, tab completion, permissions, navigation, favourites, routes,
  * the client menu's network handler and the JSON files.
  */
-public class SharedWaypointsGameTest {
+public class SharedWaypointsGameTest implements FabricGameTest {
 	/** Collects everything a command sends back to its source. */
 	private static final class Recorder implements CommandSource {
 		final List<Component> messages = new ArrayList<>();
@@ -86,8 +87,7 @@ public class SharedWaypointsGameTest {
 	private record Source(CommandSourceStack stack, Recorder out) {
 	}
 
-	@GameTest
-	@SuppressWarnings("removal") // makeMockServerPlayerInLevel is the only ServerPlayer mock in the 1.21.11 GameTest API
+	@GameTest(template = EMPTY_STRUCTURE)
 	public void commandsWorkEndToEnd(GameTestHelper helper) {
 		MinecraftServer server = helper.getLevel().getServer();
 		CommandDispatcher<CommandSourceStack> dispatcher = server.getCommands().getDispatcher();
@@ -98,12 +98,12 @@ public class SharedWaypointsGameTest {
 		helper.assertFalse(aliceEntity.getUUID().equals(bobEntity.getUUID()), "mock players must differ");
 		aliceEntity.teleportTo(0.5, 64, 0.5); // a known spot, so distances are predictable
 		// Two ordinary players (no op level) and a level-2 moderator.
-		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
-		Source bob = source(bobEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
-		Source moderator = source(server.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER));
+		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(0));
+		Source bob = source(bobEntity.createCommandSourceStack().withPermission(0));
+		Source moderator = source(server.createCommandSourceStack().withPermission(2));
 
 		// --- add
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway add \"Main Storage\" storage"), 1, "add here");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway add \"Main Storage\" storage"), 1, "add here");
 		helper.assertTrue(alice.out.take().contains("Added waypoint Main Storage"), "add confirmation");
 		run(helper, dispatcher, alice, "cway add Hub portals 10 70 -20 minecraft:the_nether");
 		run(helper, dispatcher, bob, "cway add Iron-Farm farms 100 64 200");
@@ -114,7 +114,7 @@ public class SharedWaypointsGameTest {
 
 		// --- list all: grouped by category, each line in the required format with working buttons
 		alice.out.take();
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway"), 3, "list all");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway"), 3, "list all");
 		String listing = alice.out.text();
 		helper.assertTrue(listing.contains("[Portals] Hub — 10 70 -20 (the_nether) [Add to Xaero] [Copy coords] [Go]"), listing);
 		helper.assertTrue(listing.contains("[Farms] Iron-Farm — 100 64 200 (overworld) [Add to Xaero] [Copy coords] [Go]"), listing);
@@ -122,17 +122,17 @@ public class SharedWaypointsGameTest {
 				&& listing.indexOf("[Farms]") < listing.indexOf("[Portals]"), "grouped in category order:\n" + listing);
 		Component hubLine = alice.out.messages.stream()
 				.filter(line -> line.getString().startsWith("[Portals] Hub")).findFirst().orElseThrow();
-		helper.assertValueEqual(clickOf(hubLine, "[Add to Xaero]"),
-				Optional.of(new ClickEvent.RunCommand("/cway xaero Hub")), "Add to Xaero click");
-		helper.assertValueEqual(clickOf(hubLine, "[Copy coords]"),
-				Optional.of(new ClickEvent.CopyToClipboard("10 70 -20")), "Copy coords click");
-		helper.assertValueEqual(clickOf(hubLine, "[Go]"),
-				Optional.of(new ClickEvent.RunCommand("/cway go Hub")), "Go click");
+		assertValueEqual(helper, clickOf(hubLine, "[Add to Xaero]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway xaero Hub")), "Add to Xaero click");
+		assertValueEqual(helper, clickOf(hubLine, "[Copy coords]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, "10 70 -20")), "Copy coords click");
+		assertValueEqual(helper, clickOf(hubLine, "[Go]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway go Hub")), "Go click");
 		helper.assertTrue(!listing.contains("xaero-waypoint:"), "listing must not trigger Xaero's parser");
 		alice.out.take();
 
 		// --- one category, categories, info, xaero
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway storage"), 1, "list storage");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway storage"), 1, "list storage");
 		helper.assertTrue(alice.out.take().contains("[Storage] Main Storage"), "storage listing");
 		expectError(helper, dispatcher, alice, "cway shops", "Unknown category");
 		run(helper, dispatcher, alice, "cway categories");
@@ -148,7 +148,7 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(consoleInfo.contains("Overworld side: 80 ~ -160"), "no position (console): Y is ~\n" + consoleInfo);
 		helper.assertTrue(hubInfo.contains("via Nether portal"), "distance through the portal:\n" + hubInfo);
 		helper.assertTrue(!hubInfo.contains("[Teleport]"), "no teleport button for ordinary players");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway xaero \"Main Storage\""), 1, "xaero share");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway xaero \"Main Storage\""), 1, "xaero share");
 		expectError(helper, dispatcher, moderator, "cway xaero Hub", "player");
 
 		// --- around you (alice stands at 0 64 0)
@@ -157,15 +157,15 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, alice, "cway nearest farms");
 		String nearestFarm = alice.out.take();
 		helper.assertTrue(nearestFarm.contains("224m SE") && nearestFarm.contains("Iron-Farm"), nearestFarm);
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway near 150"), 1, "only Main Storage within 150m");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway near"), 3, "Hub counts via its portal spot");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway near 150"), 1, "only Main Storage within 150m");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway near"), 3, "Hub counts via its portal spot");
 		helper.assertTrue(alice.out.take().contains("⟳"), "portal marker in near list");
 
 		// --- search, descriptions
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway search iron"), 1, "search by name");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway search iron"), 1, "search by name");
 		run(helper, dispatcher, alice, "cway describe \"Main Storage\" Sorted chests, bring shulkers");
 		expectError(helper, dispatcher, bob, "cway describe \"Main Storage\" mine now", "only edit waypoints you created");
-		helper.assertValueEqual(run(helper, dispatcher, bob, "cway search shulkers"), 1, "search by description");
+		assertValueEqual(helper, run(helper, dispatcher, bob, "cway search shulkers"), 1, "search by description");
 		alice.out.take();
 		run(helper, dispatcher, alice, "cway info \"Main Storage\"");
 		helper.assertTrue(alice.out.take().contains("“Sorted chests, bring shulkers”"), "description in info");
@@ -173,7 +173,7 @@ public class SharedWaypointsGameTest {
 		// --- favourites (by id, so they survive renames)
 		run(helper, dispatcher, alice, "cway favorite Hub");
 		helper.assertTrue(alice.out.take().contains("added to your favourites"), "favourite added");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway favorites"), 1, "one favourite");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway favorites"), 1, "one favourite");
 		run(helper, dispatcher, alice, "cway portals");
 		helper.assertTrue(alice.out.take().contains("Hub ★"), "star next to favourites");
 		run(helper, dispatcher, bob, "cway portals");
@@ -183,16 +183,16 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, moderator, "cway add Spawn other 300 64 300");
 		int pageSize = mod.config().pageSize;
 		mod.config().pageSize = 3;
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway"), 3, "page 1 holds 3");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway"), 3, "page 1 holds 3");
 		helper.assertTrue(alice.out.take().contains("Page 1/2"), "page footer");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway page 2"), 1, "page 2 holds the rest");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway page 2"), 1, "page 2 holds the rest");
 		mod.config().pageSize = pageSize;
 
 		// --- navigation
 		run(helper, dispatcher, alice, "cway go Iron-Farm");
 		Waypoint ironFarm = mod.waypoints().get("Iron-Farm").orElseThrow();
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(ironFarm.id()), "navigating");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway stop"), 1, "stop");
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(ironFarm.id()), "navigating");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway stop"), 1, "stop");
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty(), "stopped");
 		run(helper, dispatcher, alice, "cway go \"Main Storage\"");
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty(), "already there -> arrived at once");
@@ -202,7 +202,7 @@ public class SharedWaypointsGameTest {
 		Waypoint hub = mod.waypoints().get("Hub").orElseThrow();
 		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
 			helper.assertTrue(SquaremapProbe.layerRegistered(), "our squaremap layer is registered");
-			helper.assertValueEqual(SquaremapProbe.layerLabel(), "Alloy Waypoints", "layer name");
+			assertValueEqual(helper, SquaremapProbe.layerLabel(), "Alloy Waypoints", "layer name");
 			helper.assertTrue(SquaremapProbe.hasMarker("wp-" + ironFarm.id()), "Iron-Farm on the overworld map");
 			helper.assertTrue(!SquaremapProbe.hasMarker("wp-" + hub.id()), "Hub is in the Nether, not on the overworld map");
 			String popup = SquaremapProbe.clickTooltip("wp-" + ironFarm.id());
@@ -214,14 +214,14 @@ public class SharedWaypointsGameTest {
 				"name suggestions are quoted when needed");
 		helper.assertTrue(suggestions(dispatcher, alice, "cway add X ").containsAll(
 				List.of("storage", "farms", "bases", "portals", "other")), "category suggestions");
-		helper.assertValueEqual(suggestions(dispatcher, bob, "cway remove "), List.of("Iron-Farm"),
+		assertValueEqual(helper, suggestions(dispatcher, bob, "cway remove "), List.of("Iron-Farm"),
 				"remove only suggests your own waypoints");
 
 		// --- permissions: players can only change their own; op level 2 can change any, and teleport
 		expectError(helper, dispatcher, bob, "cway remove \"Main Storage\"", "only remove waypoints you created");
 		expectError(helper, dispatcher, bob, "cway rename Hub Nope", "only edit waypoints you created");
 		expectError(helper, dispatcher, alice, "cway tp Hub", "");
-		Source aliceOp = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER));
+		Source aliceOp = source(aliceEntity.createCommandSourceStack().withPermission(2));
 		run(helper, dispatcher, aliceOp, "cway info Spawn");
 		helper.assertTrue(aliceOp.out.take().contains("[Teleport]"), "teleport button for ops");
 		run(helper, dispatcher, aliceOp, "cway tp Spawn");
@@ -233,7 +233,7 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, moderator, "cway remove Hub");
 		run(helper, dispatcher, moderator, "cway remove Spawn");
 		expectError(helper, dispatcher, alice, "cway info Hub", "No waypoint named");
-		helper.assertValueEqual(mod.favorites().of(aliceEntity.getUUID()), java.util.Set.<UUID>of(), "removed waypoint left favourites");
+		assertValueEqual(helper, mod.favorites().of(aliceEntity.getUUID()), java.util.Set.<UUID>of(), "removed waypoint left favourites");
 		for (int i = 0; i < 5; i++) {
 			mod.navigation().tick(server);
 		}
@@ -245,13 +245,13 @@ public class SharedWaypointsGameTest {
 
 		// --- the JSON file follows every change
 		JsonArray saved = readSavedWaypoints(helper);
-		helper.assertValueEqual(saved.size(), 1, "one waypoint left on disk");
+		assertValueEqual(helper, saved.size(), 1, "one waypoint left on disk");
 		JsonObject entry = saved.get(0).getAsJsonObject();
-		helper.assertValueEqual(entry.get("name").getAsString(), "Sorting Room", "renamed on disk");
-		helper.assertValueEqual(entry.get("category").getAsString(), "storage", "category on disk");
-		helper.assertValueEqual(entry.get("dimension").getAsString(), "minecraft:overworld", "dimension on disk");
-		helper.assertValueEqual(entry.get("description").getAsString(), "Sorted chests, bring shulkers", "description on disk");
-		helper.assertValueEqual(entry.get("creatorUuid").getAsString(), aliceEntity.getUUID().toString(), "creator");
+		assertValueEqual(helper, entry.get("name").getAsString(), "Sorting Room", "renamed on disk");
+		assertValueEqual(helper, entry.get("category").getAsString(), "storage", "category on disk");
+		assertValueEqual(helper, entry.get("dimension").getAsString(), "minecraft:overworld", "dimension on disk");
+		assertValueEqual(helper, entry.get("description").getAsString(), "Sorted chests, bring shulkers", "description on disk");
+		assertValueEqual(helper, entry.get("creatorUuid").getAsString(), aliceEntity.getUUID().toString(), "creator");
 		helper.assertTrue(entry.has("id") && entry.has("created"), "id and timestamp on disk");
 
 		// --- custom categories from config.json, picked up by /cway reload
@@ -271,7 +271,7 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, moderator, "cway reload");
 		helper.assertTrue(moderator.out.take().contains("Reloaded Alloy Waypoints: 1 waypoints, 0 routes, 6 categories"), "reload summary");
 		run(helper, dispatcher, moderator, "cway add Market shops 5 64 5");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway shops"), 1, "list the new category");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway shops"), 1, "list the new category");
 		String shopsList = alice.out.take();
 		helper.assertTrue(shopsList.contains("[Shops] Market — 5 64 5"), shopsList);
 		helper.assertTrue(suggestions(dispatcher, alice, "cway add X ").contains("shops"), "new category suggested");
@@ -281,7 +281,7 @@ public class SharedWaypointsGameTest {
 		// --- the optional client menu's network handler (driven directly, no real client needed)
 		MenuNetworking menus = mod.menus();
 		SyncPayload aliceView = menus.snapshot(aliceEntity);
-		helper.assertValueEqual(aliceView.categories().stream().map(SyncPayload.CategoryData::id).toList(),
+		assertValueEqual(helper, aliceView.categories().stream().map(SyncPayload.CategoryData::id).toList(),
 				List.of("storage", "farms", "bases", "portals", "other", "shops"), "menu categories in config order");
 		SyncPayload.WaypointData sorting = aliceView.waypoints().stream()
 				.filter(data -> data.name().equals("Sorting Room")).findFirst().orElseThrow();
@@ -296,21 +296,21 @@ public class SharedWaypointsGameTest {
 				"Menu \"Spot\" x", "farms", "7", "65", "-8", "minecraft:overworld"));
 		helper.assertTrue(added.success() && added.message().contains("Added waypoint"), "menu add: " + added.message());
 		Waypoint menuSpot = mod.waypoints().get("Menu \"Spot\" x").orElseThrow();
-		helper.assertValueEqual(menuSpot.coordinates(), "7 65 -8", "menu add coordinates");
+		assertValueEqual(helper, menuSpot.coordinates(), "7 65 -8", "menu add coordinates");
 		String spotId = menuSpot.id().toString();
 
 		ResultPayload injected = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.RENAME, spotId,
 				"Nice\nwaypoints remove Hub"));
 		helper.assertTrue(injected.success(), "a newline can't start a second command: " + injected.message());
 		helper.assertTrue(mod.waypoints().contains("Sorting Room"), "Sorting Room still exists");
-		helper.assertValueEqual(mod.waypoints().get(menuSpot.id()).orElseThrow().name(), "Nice waypoints remove Hub",
+		assertValueEqual(helper, mod.waypoints().get(menuSpot.id()).orElseThrow().name(), "Nice waypoints remove Hub",
 				"renamed as one plain line");
 
 		menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.FAVORITE, spotId));
 		helper.assertTrue(menus.snapshot(aliceEntity).waypoints().stream()
 				.anyMatch(data -> data.id().equals(menuSpot.id()) && data.favorite()), "menu favourite");
 		menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.DESCRIBE, spotId, "From the menu"));
-		helper.assertValueEqual(mod.waypoints().get(menuSpot.id()).orElseThrow().description(), "From the menu", "menu describe");
+		assertValueEqual(helper, mod.waypoints().get(menuSpot.id()).orElseThrow().description(), "From the menu", "menu describe");
 
 		ResultPayload denied = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.REMOVE, spotId));
 		helper.assertTrue(!denied.success() && denied.message().contains("only remove waypoints you created"),
@@ -349,7 +349,7 @@ public class SharedWaypointsGameTest {
 	private static void routes(GameTestHelper helper, MinecraftServer server, CommandDispatcher<CommandSourceStack> dispatcher,
 			ModContext mod, ServerPlayer aliceEntity, ServerPlayer bobEntity, Source alice, Source bob, Source moderator) {
 		alice.out.take();
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway route"), 0, "no routes yet");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway route"), 0, "no routes yet");
 		helper.assertTrue(alice.out.take().contains("No routes yet"), "empty route list");
 
 		// Stops: three in the overworld along +X, one in the Nether in between.
@@ -383,12 +383,12 @@ public class SharedWaypointsGameTest {
 				"anyone may follow it");
 
 		// --- list and info
-		helper.assertValueEqual(run(helper, dispatcher, bob, "cway route list"), 1, "one route");
+		assertValueEqual(helper, run(helper, dispatcher, bob, "cway route list"), 1, "one route");
 		Component routeLine = bob.out.messages.stream()
 				.filter(line -> line.getString().startsWith("[Route] Grand Tour")).findFirst().orElseThrow();
 		helper.assertTrue(routeLine.getString().contains("5 stops ·"), "stop count and length: " + routeLine.getString());
-		helper.assertValueEqual(clickOf(routeLine, "[Go]"),
-				Optional.of(new ClickEvent.RunCommand("/cway route go \"Grand Tour\"")), "route Go click");
+		assertValueEqual(helper, clickOf(routeLine, "[Go]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway route go \"Grand Tour\"")), "route Go click");
 		bob.out.take();
 		run(helper, dispatcher, bob, "cway route info \"Grand Tour\"");
 		String info = bob.out.take();
@@ -403,12 +403,12 @@ public class SharedWaypointsGameTest {
 
 		// --- move and drop
 		run(helper, dispatcher, alice, "cway route move \"Grand Tour\" 5 1");
-		helper.assertValueEqual(route(mod).stops(), List.of(market.id(), r1.id(), r2.id(), r3.id(), r4.id()), "moved to the front");
+		assertValueEqual(helper, route(mod).stops(), List.of(market.id(), r1.id(), r2.id(), r3.id(), r4.id()), "moved to the front");
 		run(helper, dispatcher, alice, "cway route drop \"Grand Tour\" 1");
-		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r2.id(), r3.id(), r4.id()), "dropped");
+		assertValueEqual(helper, route(mod).stops(), List.of(r1.id(), r2.id(), r3.id(), r4.id()), "dropped");
 		helper.assertTrue(mod.waypoints().get(market.id()).isPresent(), "dropping a stop keeps the waypoint");
 		run(helper, dispatcher, alice, "cway route describe \"Grand Tour\" Bring fire resistance");
-		helper.assertValueEqual(route(mod).description(), "Bring fire resistance", "route description");
+		assertValueEqual(helper, route(mod).description(), "Bring fire resistance", "route description");
 
 		// --- web map: R1 -> R2 is an overworld stretch, drawn as a line
 		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
@@ -421,16 +421,16 @@ public class SharedWaypointsGameTest {
 		// --- following the route: arrive, skip, finish
 		aliceEntity.teleportTo(0.5, 64, 0.5);
 		run(helper, dispatcher, alice, "cway route go \"Grand Tour\"");
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r1.id()), "heading to stop 1");
-		helper.assertValueEqual(mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(0), "stop index 0");
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r1.id()), "heading to stop 1");
+		assertValueEqual(helper, mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(0), "stop index 0");
 		aliceEntity.teleportTo(20.5, 64, 0.5);
 		tick(mod, server);
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r2.id()),
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r2.id()),
 				"arriving at stop 1 moves on to stop 2");
 		run(helper, dispatcher, alice, "cway route skip");
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "skipped to stop 3");
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "skipped to stop 3");
 		run(helper, dispatcher, alice, "cway route skip");
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r4.id()), "skipped to stop 4");
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r4.id()), "skipped to stop 4");
 		aliceEntity.teleportTo(60.5, 64, 0.5);
 		tick(mod, server);
 		helper.assertTrue(mod.navigation().destinationOf(aliceEntity.getUUID()).isEmpty()
@@ -439,18 +439,18 @@ public class SharedWaypointsGameTest {
 
 		// Start from a later stop.
 		run(helper, dispatcher, alice, "cway route go \"Grand Tour\" 3");
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "go from stop 3");
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()), "go from stop 3");
 		run(helper, dispatcher, alice, "cway stop");
 
 		// Deleting the waypoint you're heading to moves on to the next stop (the list shifts under the session).
 		aliceEntity.teleportTo(0.5, 64, 0.5);
 		run(helper, dispatcher, alice, "cway route go \"Grand Tour\" 2");
 		run(helper, dispatcher, moderator, "cway remove R2");
-		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "deleted waypoint left the route");
+		assertValueEqual(helper, route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "deleted waypoint left the route");
 		tick(mod, server);
-		helper.assertValueEqual(mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()),
+		assertValueEqual(helper, mod.navigation().destinationOf(aliceEntity.getUUID()), Optional.of(r3.id()),
 				"deleted stop is skipped, not the one after it");
-		helper.assertValueEqual(mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(1),
+		assertValueEqual(helper, mod.navigation().routeOf(aliceEntity.getUUID()).map(p -> p.index()), Optional.of(1),
 				"index follows the shorter route");
 		run(helper, dispatcher, alice, "cway stop");
 
@@ -459,7 +459,7 @@ public class SharedWaypointsGameTest {
 		SyncPayload aliceView = menus.snapshot(aliceEntity);
 		SyncPayload.RouteData tour = aliceView.routes().stream().filter(r -> r.name().equals("Grand Tour")).findFirst().orElseThrow();
 		helper.assertTrue(tour.canEdit() && tour.canRemove() && aliceView.canAddRoute(), "creator's rights in the menu");
-		helper.assertValueEqual(tour.stops(), List.of(r1.id(), r3.id(), r4.id()), "menu sees the stops");
+		assertValueEqual(helper, tour.stops(), List.of(r1.id(), r3.id(), r4.id()), "menu sees the stops");
 		SyncPayload.RouteData tourForBob = menus.snapshot(bobEntity).routes().stream()
 				.filter(r -> r.name().equals("Grand Tour")).findFirst().orElseThrow();
 		helper.assertTrue(!tourForBob.canEdit() && !tourForBob.canRemove(), "others may not change it");
@@ -471,27 +471,27 @@ public class SharedWaypointsGameTest {
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_ADD, loopId, r4.id().toString()));
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_ADD, loopId, r1.id().toString()));
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_MOVE, loopId, "2", "1"));
-		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().stops(), List.of(r1.id(), r4.id()), "menu add + move");
+		assertValueEqual(helper, mod.routes().get(loop.id()).orElseThrow().stops(), List.of(r1.id(), r4.id()), "menu add + move");
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_RENAME, loopId, "Loop\nroute delete Grand"));
-		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().name(), "Loop route delete Grand",
+		assertValueEqual(helper, mod.routes().get(loop.id()).orElseThrow().name(), "Loop route delete Grand",
 				"a newline can't start a second command");
 		helper.assertTrue(mod.routes().contains("Grand Tour"), "Grand Tour untouched");
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DESCRIBE, loopId, "Quick one"));
-		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().description(), "Quick one", "menu describe");
+		assertValueEqual(helper, mod.routes().get(loop.id()).orElseThrow().description(), "Quick one", "menu describe");
 		ResultPayload go = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_GO, loopId, "1"));
 		helper.assertTrue(go.success(), "menu go: " + go.message());
 		SyncPayload.RouteProgressData onRoute = menus.snapshot(bobEntity).onRoute();
 		helper.assertTrue(onRoute != null && onRoute.routeId().equals(loop.id()) && onRoute.stopIndex() == 0,
 				"menu shows the route being followed");
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_SKIP));
-		helper.assertValueEqual(mod.navigation().destinationOf(bobEntity.getUUID()), Optional.of(r4.id()), "menu skip");
+		assertValueEqual(helper, mod.navigation().destinationOf(bobEntity.getUUID()), Optional.of(r4.id()), "menu skip");
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.STOP));
 		ResultPayload dropDenied = menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DROP,
 				tour.id().toString(), "1"));
 		helper.assertTrue(!dropDenied.success() && dropDenied.message().contains("only change routes you created"),
 				"permissions apply to routes: " + dropDenied.message());
 		menus.handle(bobEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DROP, loopId, "2"));
-		helper.assertValueEqual(mod.routes().get(loop.id()).orElseThrow().stops(), List.of(r1.id()), "menu drop");
+		assertValueEqual(helper, mod.routes().get(loop.id()).orElseThrow().stops(), List.of(r1.id()), "menu drop");
 
 		// --- saved to routes.json, and survives a reload
 		try {
@@ -503,14 +503,14 @@ public class SharedWaypointsGameTest {
 		}
 		run(helper, dispatcher, moderator, "cway reload");
 		helper.assertTrue(moderator.out.take().contains("2 routes"), "routes reloaded");
-		helper.assertValueEqual(route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "stops survive a reload");
+		assertValueEqual(helper, route(mod).stops(), List.of(r1.id(), r3.id(), r4.id()), "stops survive a reload");
 
 		// --- delete: creators and ops only; the waypoints stay
 		ResultPayload deleteDenied = menus.handle(aliceEntity, ActionPayload.of(ActionPayload.Action.ROUTE_DELETE, loopId));
 		helper.assertTrue(!deleteDenied.success(), "alice can't delete bob's route");
 		run(helper, dispatcher, moderator, "cway route delete \"Loop route delete Grand\"");
 		run(helper, dispatcher, alice, "cway route delete \"Grand Tour\"");
-		helper.assertValueEqual(mod.routes().size(), 0, "both routes deleted");
+		assertValueEqual(helper, mod.routes().size(), 0, "both routes deleted");
 		helper.assertTrue(mod.waypoints().get(r1.id()).isPresent(), "deleting a route keeps its waypoints");
 		if (FabricLoader.getInstance().isModLoaded("squaremap")) {
 			helper.assertTrue(!SquaremapProbe.hasMarker("route-" + loop.id() + "-0"), "route lines removed from the map");
@@ -528,7 +528,7 @@ public class SharedWaypointsGameTest {
 		run(helper, dispatcher, alice, "cway add \"Gold Farm\" farms 50 64 50");
 		run(helper, dispatcher, alice, "cway add Base bases 10 64 10");
 		alice.out.take();
-		helper.assertValueEqual(run(helper, dispatcher, bob, "cway projects"), 0, "no projects yet");
+		assertValueEqual(helper, run(helper, dispatcher, bob, "cway projects"), 0, "no projects yet");
 		helper.assertTrue(bob.out.take().contains("No waypoint has a status yet"), "empty project list explains how");
 
 		// Anyone may set a status (sharedwaypoints.status defaults to everyone), not only the creator.
@@ -536,7 +536,7 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(suggestions(dispatcher, bob, "cway status Base ").containsAll(
 				List.of("broken", "wip", "planned", "done", "clear")), "status suggests the states");
 		run(helper, dispatcher, bob, "cway status \"Gold Farm\" broken out of bonemeal");
-		String bobName = bobEntity.getGameProfile().name();
+		String bobName = bobEntity.getGameProfile().getName();
 		helper.assertTrue(bob.out.take().contains("Marked Gold Farm as Broken [⚠ Broken]"), "set reply");
 		ProjectStatus broken = mod.waypoints().get("Gold Farm").orElseThrow().status();
 		helper.assertTrue(broken != null && broken.state() == ProjectStatus.State.BROKEN
@@ -552,51 +552,51 @@ public class SharedWaypointsGameTest {
 		Component farmLine = alice.out.messages.stream().filter(line -> line.getString().contains("Gold Farm"))
 				.findFirst().orElseThrow();
 		helper.assertTrue(farmLine.getString().contains("Gold Farm [⚠ Broken] — 50 64 50"), farmLine.getString());
-		helper.assertValueEqual(clickOf(farmLine, "[⚠ Broken]"),
-				Optional.of(new ClickEvent.RunCommand("/cway projects broken")), "tag lists everything broken");
+		assertValueEqual(helper, clickOf(farmLine, "[⚠ Broken]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway projects broken")), "tag lists everything broken");
 		alice.out.take();
 
 		run(helper, dispatcher, alice, "cway info \"Gold Farm\"");
 		String info = alice.out.text();
 		helper.assertTrue(info.contains("Status: [⚠ Broken] out of bonemeal (" + bobName + ", just now)"), info);
 		Component infoButtons = alice.out.messages.get(alice.out.messages.size() - 1);
-		helper.assertValueEqual(clickOf(infoButtons, "[Status]"),
-				Optional.of(new ClickEvent.RunCommand("/cway status \"Gold Farm\"")), "info has a [Status] button");
+		assertValueEqual(helper, clickOf(infoButtons, "[Status]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway status \"Gold Farm\"")), "info has a [Status] button");
 		alice.out.take();
 
 		run(helper, dispatcher, alice, "cway status \"Gold Farm\"");
 		String shown = alice.out.text();
 		helper.assertTrue(shown.contains("Gold Farm: [⚠ Broken] out of bonemeal (" + bobName + ", just now)"), shown);
 		helper.assertTrue(shown.contains("Set: [⚠ Broken] [⚒ WIP] [✎ Planned] [✔ Done] [Clear]"), shown);
-		helper.assertValueEqual(clickOf(alice.out.messages.get(1), "[⚒ WIP]"),
-				Optional.of(new ClickEvent.SuggestCommand("/cway status \"Gold Farm\" wip ")), "buttons fill in the command");
+		assertValueEqual(helper, clickOf(alice.out.messages.get(1), "[⚒ WIP]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/cway status \"Gold Farm\" wip ")), "buttons fill in the command");
 		alice.out.take();
 
 		run(helper, dispatcher, alice, "cway status Base done");
 		alice.out.take();
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway projects"), 2, "two projects");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway projects"), 2, "two projects");
 		String projects = alice.out.take();
 		helper.assertTrue(projects.contains("=== Projects (2) ===")
 				&& projects.contains("Show: [⚠ Broken 1] [⚒ WIP 0] [✎ Planned 0] [✔ Done 1]"), projects);
 		helper.assertTrue(projects.indexOf("Gold Farm") < projects.indexOf("Base"), "broken first: " + projects);
 		helper.assertTrue(projects.contains("[Farms] Gold Farm [⚠ Broken] out of bonemeal · " + bobName + ", just now [Go]"),
 				projects);
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway projects broken"), 1, "filter by status");
-		helper.assertValueEqual(run(helper, dispatcher, alice, "cway projects planned"), 0, "nothing planned");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway projects broken"), 1, "filter by status");
+		assertValueEqual(helper, run(helper, dispatcher, alice, "cway projects planned"), 0, "nothing planned");
 		alice.out.take();
 		expectError(helper, dispatcher, alice, "cway projects fixed", "Unknown status \"fixed\"");
-		helper.assertValueEqual(run(helper, dispatcher, bob, "cway search bonemeal"), 1, "search finds status notes");
+		assertValueEqual(helper, run(helper, dispatcher, bob, "cway search bonemeal"), 1, "search finds status notes");
 		bob.out.take();
 		expectError(helper, dispatcher, alice, "cway status Base wip " + "x".repeat(ProjectStatus.MAX_NOTE_LENGTH + 1),
 				"Note is too long");
 
 		// Xaero: a broken build gets "!" as its symbol; web maps show the status next to the name.
 		Waypoint farm = mod.waypoints().get("Gold Farm").orElseThrow();
-		helper.assertValueEqual(io.github.steelaspect.sharedwaypoints.sync.SyncService.toSynced(farm).initials(), "!",
+		assertValueEqual(helper, io.github.steelaspect.sharedwaypoints.sync.SyncService.toSynced(farm).initials(), "!",
 				"broken -> ! in Xaero");
-		helper.assertValueEqual(io.github.steelaspect.sharedwaypoints.sync.SyncService.toSynced(
+		assertValueEqual(helper, io.github.steelaspect.sharedwaypoints.sync.SyncService.toSynced(
 				mod.waypoints().get("Base").orElseThrow()).initials(), "B", "other statuses keep their initials");
-		helper.assertValueEqual(io.github.steelaspect.sharedwaypoints.map.MapMarker.of(farm).label(),
+		assertValueEqual(helper, io.github.steelaspect.sharedwaypoints.map.MapMarker.of(farm).label(),
 				"Gold Farm (⚠ Broken)", "map label");
 
 		// Menu: the status and the right to change it are in the snapshot, and STATUS runs /cway status.
@@ -658,8 +658,8 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(text.contains("[Farms] New Farm — 30 64 30 (overworld) [Add to Xaero] [Copy coords] [Go]"), text);
 		helper.assertTrue(text.contains("[Bases] New Base"), text);
 		Component farmLine = lines.stream().filter(line -> line.getString().contains("New Farm")).findFirst().orElseThrow();
-		helper.assertValueEqual(clickOf(farmLine, "[Add to Xaero]"),
-				Optional.of(new ClickEvent.RunCommand("/cway xaero \"New Farm\"")), "the usual Xaero add button");
+		assertValueEqual(helper, clickOf(farmLine, "[Add to Xaero]"),
+				Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway xaero \"New Farm\"")), "the usual Xaero add button");
 
 		// First visit: no "new" list, just a pointer to the waypoints.
 		List<Component> first = mod.joinSummary().lines(Optional.empty(), viewer);
@@ -673,7 +673,7 @@ public class SharedWaypointsGameTest {
 			extra.add("Extra" + i);
 		}
 		List<Component> many = mod.joinSummary().lines(Optional.of(leftAt), viewer);
-		helper.assertValueEqual(many.size(), 1 + 8 + 1, "header, 8 lines, and the rest");
+		assertValueEqual(helper, many.size(), 1 + 8 + 1, "header, 8 lines, and the rest");
 		helper.assertTrue(many.get(9).getString().equals("…and 2 more. [Show all]"), many.get(9).getString());
 
 		clientModTip(helper, dispatcher, mod, aliceEntity);
@@ -706,41 +706,41 @@ public class SharedWaypointsGameTest {
 	 */
 	private static void clientModSync(GameTestHelper helper, CommandDispatcher<CommandSourceStack> dispatcher,
 			ModContext mod, ServerPlayer aliceEntity, ServerPlayer bobEntity, Source alice, Source moderator) {
-		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toAlice = new ArrayList<>();
-		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toBob = new ArrayList<>();
+		List<net.fabricmc.fabric.api.networking.v1.FabricPacket> toAlice = new ArrayList<>();
+		List<net.fabricmc.fabric.api.networking.v1.FabricPacket> toBob = new ArrayList<>();
 
 		// Alice has the mod on her game: welcome, then the full list.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toAlice::add);
-		helper.assertValueEqual(toAlice.get(0), new WelcomePayload(SyncProtocol.VERSION, true), "welcome, sync on");
+		assertValueEqual(helper, toAlice.get(0), new WelcomePayload(SyncProtocol.VERSION, true), "welcome, sync on");
 		FullSyncPayload full = (FullSyncPayload) toAlice.get(1);
-		helper.assertValueEqual(full.waypoints().size(), mod.waypoints().size(), "full list sent");
+		assertValueEqual(helper, full.waypoints().size(), mod.waypoints().size(), "full list sent");
 		SyncedWaypoint sorting = full.waypoints().stream().filter(w -> w.name().equals("Sorting Room")).findFirst().orElseThrow();
-		helper.assertValueEqual(sorting.categoryId(), "storage", "category id");
-		helper.assertValueEqual(sorting.colorIndex(), 11, "storage is Xaero colour 11 (aqua)");
-		helper.assertValueEqual(sorting.initials(), "S", "Xaero initials, as in the chat share line");
-		helper.assertValueEqual(sorting.dimension(), "minecraft:overworld", "dimension");
+		assertValueEqual(helper, sorting.categoryId(), "storage", "category id");
+		assertValueEqual(helper, sorting.colorIndex(), 11, "storage is Xaero colour 11 (aqua)");
+		assertValueEqual(helper, sorting.initials(), "S", "Xaero initials, as in the chat share line");
+		assertValueEqual(helper, sorting.dimension(), "minecraft:overworld", "dimension");
 		helper.assertTrue(mod.sync().isSubscribed(aliceEntity.getUUID()), "alice subscribed");
 
 		// Bob's mod speaks another protocol version: told so, never subscribed.
 		mod.sync().onHello(bobEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), toBob::add);
-		helper.assertValueEqual(toBob, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "version mismatch");
+		assertValueEqual(helper, toBob, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "version mismatch");
 		helper.assertTrue(!mod.sync().isSubscribed(bobEntity.getUUID()), "bob not subscribed");
 
 		// Live: add, edit, delete.
 		toAlice.clear();
 		run(helper, dispatcher, moderator, "cway add \"Sync Test\" farms 1 64 2");
 		Waypoint syncTest = mod.waypoints().get("Sync Test").orElseThrow();
-		helper.assertValueEqual(toAlice.size(), 1, "one update for an add");
-		helper.assertValueEqual(((UpsertPayload) toAlice.get(0)).waypoint().id(), syncTest.id(), "add sent as upsert");
-		helper.assertValueEqual(((UpsertPayload) toAlice.get(0)).waypoint().colorIndex(), 10, "farms is Xaero colour 10");
+		assertValueEqual(helper, toAlice.size(), 1, "one update for an add");
+		assertValueEqual(helper, ((UpsertPayload) toAlice.get(0)).waypoint().id(), syncTest.id(), "add sent as upsert");
+		assertValueEqual(helper, ((UpsertPayload) toAlice.get(0)).waypoint().colorIndex(), 10, "farms is Xaero colour 10");
 		run(helper, dispatcher, moderator, "cway rename \"Sync Test\" \"Sync Renamed\"");
 		UpsertPayload renamed = (UpsertPayload) toAlice.get(1);
 		helper.assertTrue(renamed.waypoint().id().equals(syncTest.id()) && renamed.waypoint().name().equals("Sync Renamed"),
 				"rename keeps the id");
 		run(helper, dispatcher, moderator, "cway describe \"Sync Renamed\" A note");
-		helper.assertValueEqual(((UpsertPayload) toAlice.get(2)).waypoint().description(), "A note", "describe sent");
+		assertValueEqual(helper, ((UpsertPayload) toAlice.get(2)).waypoint().description(), "A note", "describe sent");
 		run(helper, dispatcher, moderator, "cway remove \"Sync Renamed\"");
-		helper.assertValueEqual(toAlice.get(3), new DeletePayload(SyncProtocol.VERSION, syncTest.id()), "delete sent");
+		assertValueEqual(helper, toAlice.get(3), new DeletePayload(SyncProtocol.VERSION, syncTest.id()), "delete sent");
 		helper.assertTrue(toBob.size() == 1, "bob (not subscribed) got nothing more");
 
 		// Reload resends everything (categories or colours may have changed).
@@ -754,9 +754,9 @@ public class SharedWaypointsGameTest {
 		toAlice.clear();
 		run(helper, dispatcher, moderator, "cway add Quiet other 3 64 3");
 		helper.assertTrue(toAlice.isEmpty(), "no updates while sync is off");
-		List<net.minecraft.network.protocol.common.custom.CustomPacketPayload> toLate = new ArrayList<>();
+		List<net.fabricmc.fabric.api.networking.v1.FabricPacket> toLate = new ArrayList<>();
 		mod.sync().onHello(bobEntity, new HelloPayload(SyncProtocol.VERSION, "test"), toLate::add);
-		helper.assertValueEqual(toLate, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "sync off at hello");
+		assertValueEqual(helper, toLate, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)), "sync off at hello");
 		mod.config().syncToClientMod = true;
 		run(helper, dispatcher, moderator, "cway remove Quiet");
 
@@ -765,15 +765,15 @@ public class SharedWaypointsGameTest {
 		var parts = mod.sync().fullSync(2);
 		helper.assertTrue(parts.get(0) instanceof FullSyncPayload first && first.waypoints().size() == 2,
 				"first part: a full sync of 2");
-		helper.assertValueEqual(parts.size(), 1 + Math.max(0, mod.waypoints().size() - 2), "one upsert per other waypoint");
+		assertValueEqual(helper, parts.size(), 1 + Math.max(0, mod.waypoints().size() - 2), "one upsert per other waypoint");
 		helper.assertTrue(parts.stream().skip(1).allMatch(part -> part instanceof UpsertPayload), "the rest are upserts");
-		helper.assertValueEqual(mod.sync().fullSync().size(), 1, "a normal-sized list is one packet");
+		assertValueEqual(helper, mod.sync().fullSync().size(), 1, "a normal-sized list is one packet");
 
 		// Access taken away while online (e.g. with LuckPerms): told sync is off, then nothing more.
 		mod.sync().setViewCheckForTest(player -> !player.getUUID().equals(aliceEntity.getUUID()));
 		toAlice.clear();
 		run(helper, dispatcher, moderator, "cway add Secret other 5 64 5");
-		helper.assertValueEqual(toAlice, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)),
+		assertValueEqual(helper, toAlice, List.<Object>of(new WelcomePayload(SyncProtocol.VERSION, false)),
 				"lost access: sync turned off, and the new waypoint isn't sent");
 		helper.assertFalse(mod.sync().isSubscribed(aliceEntity.getUUID()), "lost access: unsubscribed");
 		mod.sync().setViewCheckForTest(null);
@@ -793,7 +793,7 @@ public class SharedWaypointsGameTest {
 	private static void portalGuide(GameTestHelper helper, MinecraftServer server, CommandDispatcher<CommandSourceStack> dispatcher,
 			ModContext mod, ServerPlayer aliceEntity) {
 		var guide = mod.portalGuide();
-		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
+		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(0));
 		expectError(helper, dispatcher, alice, "cway portal", "Look at a Nether portal");
 
 		// A 2 wide × 3 tall portal (walked through north–south) in the Overworld. Flag 18 = update clients, and
@@ -808,14 +808,14 @@ public class SharedWaypointsGameTest {
 		}
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1041, 101, -312), server.getTickCount()).isEmpty(),
 				"guide starts from any block of the portal");
-		var target = guide.targetsOf(aliceEntity.getUUID()).getFirst();
-		helper.assertValueEqual(target, new io.github.steelaspect.sharedwaypoints.portal.PortalShape(130, 0, -39,
+		var target = guide.targetsOf(aliceEntity.getUUID()).get(0);
+		assertValueEqual(helper, target, new io.github.steelaspect.sharedwaypoints.portal.PortalShape(130, 0, -39,
 				net.minecraft.core.Direction.Axis.X, 2, 3), "Nether side: ÷8, same size and facing");
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1045, 101, -312), server.getTickCount())
 				.orElse("").contains("Look at a Nether portal"), "not a portal block");
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1040, 100, -312), server.getTickCount()).isEmpty(),
 				"the same portal again");
-		helper.assertValueEqual(guide.targetsOf(aliceEntity.getUUID()).size(), 1, "the same spot again restarts its guide");
+		assertValueEqual(helper, guide.targetsOf(aliceEntity.getUUID()).size(), 1, "the same spot again restarts its guide");
 
 		// A second portal, 3 × 3, guided at the same time: Nether side 138 ~ -39, next to the first.
 		for (int x = 1104; x <= 1106; x++) {
@@ -825,7 +825,7 @@ public class SharedWaypointsGameTest {
 		}
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1105, 101, -312), server.getTickCount()).isEmpty(),
 				"a second guide");
-		helper.assertValueEqual(guide.targetsOf(aliceEntity.getUUID()), java.util.List.of(target,
+		assertValueEqual(helper, guide.targetsOf(aliceEntity.getUUID()), java.util.List.of(target,
 				new io.github.steelaspect.sharedwaypoints.portal.PortalShape(138, 0, -39, net.minecraft.core.Direction.Axis.X, 3, 3)),
 				"both guides run at once");
 
@@ -840,24 +840,24 @@ public class SharedWaypointsGameTest {
 		// Ghost blocks: none in the Overworld; in the Nether near the spots, both together: the 2 × 3 opening and its
 		// 14 frame blocks, and the 3 × 3 opening and its 16.
 		guide.refreshGhosts(aliceEntity);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 0, "no ghosts on the side you came from");
-		aliceEntity.teleportTo(nether, 131.5, 70, -35.5, java.util.Set.of(), 180, 0, true);
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 0, "no ghosts on the side you came from");
+		aliceEntity.teleportTo(nether, 131.5, 70, -35.5, java.util.Set.of(), 180, 0);
 		guide.tick(server);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 20 + 25, "ghosts for both spots");
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 20 + 25, "ghosts for both spots");
 		// Placing obsidian in the frame removes that block's ghost.
 		// The bottom frame row is at the player's feet (Y 70), not in the ground under them.
 		var frameBlock = new net.minecraft.core.BlockPos(129, 70, -39);
 		nether.setBlock(frameBlock, net.minecraft.world.level.block.Blocks.OBSIDIAN.defaultBlockState(), 18);
 		guide.refreshGhosts(aliceEntity);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 44, "placed obsidian loses its ghost");
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 44, "placed obsidian loses its ghost");
 		nether.setBlock(frameBlock, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 18);
 		// Too far away: hidden.
-		aliceEntity.teleportTo(nether, 131.5 + 200, 70, -35.5, java.util.Set.of(), 180, 0, true);
+		aliceEntity.teleportTo(nether, 131.5 + 200, 70, -35.5, java.util.Set.of(), 180, 0);
 		guide.refreshGhosts(aliceEntity);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 0, "no ghosts from 200 blocks away");
-		aliceEntity.teleportTo(nether, 131.5, 70, -35.5, java.util.Set.of(), 180, 0, true);
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 0, "no ghosts from 200 blocks away");
+		aliceEntity.teleportTo(nether, 131.5, 70, -35.5, java.util.Set.of(), 180, 0);
 		guide.refreshGhosts(aliceEntity);
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 45, "back in range: shown again");
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 45, "back in range: shown again");
 
 		run(helper, dispatcher, alice, "cway portal list");
 		String list = alice.out.take();
@@ -866,12 +866,12 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(list.contains("#2 Nether side: 138 ~ -39 (3×3, north–south)"), "list #2: " + list);
 		run(helper, dispatcher, alice, "cway portal stop 1");
 		helper.assertTrue(alice.out.take().contains("Portal guide #1 stopped (Nether side: 130 ~ -39)."), "stop one");
-		helper.assertValueEqual(guide.targetsOf(aliceEntity.getUUID()).size(), 1, "the other guide keeps running");
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 25, "its ghosts stay, the stopped one's go at once");
+		assertValueEqual(helper, guide.targetsOf(aliceEntity.getUUID()).size(), 1, "the other guide keeps running");
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 25, "its ghosts stay, the stopped one's go at once");
 		expectError(helper, dispatcher, alice, "cway portal stop 1", "You don't have a portal guide #1");
 
 		// Numbers aren't reused: guiding the first portal again makes it #3.
-		aliceEntity.teleportTo(overworld, 1040.5, 100, -309.5, java.util.Set.of(), 180, 0, true);
+		aliceEntity.teleportTo(overworld, 1040.5, 100, -309.5, java.util.Set.of(), 180, 0);
 		helper.assertTrue(guide.start(aliceEntity, new net.minecraft.core.BlockPos(1040, 100, -312), server.getTickCount()).isEmpty(),
 				"guide the first portal again");
 		run(helper, dispatcher, alice, "cway portal list");
@@ -882,10 +882,10 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(guide.targetsOf(aliceEntity.getUUID()).isEmpty(), "no guides after stop");
 		run(helper, dispatcher, alice, "cway portal stop");
 		helper.assertTrue(alice.out.take().contains("You don't have a portal guide running."), "nothing to stop");
-		helper.assertValueEqual(guide.ghostCount(aliceEntity.getUUID()), 0, "stopping removes the ghosts");
+		assertValueEqual(helper, guide.ghostCount(aliceEntity.getUUID()), 0, "stopping removes the ghosts");
 		run(helper, dispatcher, alice, "cway portal list");
 		helper.assertTrue(alice.out.take().contains("You don't have a portal guide running."), "empty list");
-		aliceEntity.teleportTo(overworld, 0.5, 64, 0.5, java.util.Set.of(), 0, 0, true);
+		aliceEntity.teleportTo(overworld, 0.5, 64, 0.5, java.util.Set.of(), 0, 0);
 		for (int x = 1040; x <= 1106; x++) {
 			for (int y = 100; y <= 102; y++) {
 				overworld.setBlock(new net.minecraft.core.BlockPos(x, y, -312),
@@ -913,12 +913,11 @@ public class SharedWaypointsGameTest {
 		helper.assertTrue(tip.getString().startsWith("✦ Want these waypoints in Xaero's Minimap automatically? "
 				+ "Install Alloy Waypoints on your game too, the same jar as the server. [Download] [How it works]"),
 				tip.getString());
-		helper.assertValueEqual(clickOf(tip, "[How it works]"), Optional.of(new ClickEvent.RunCommand("/cway sync")),
+		assertValueEqual(helper, clickOf(tip, "[How it works]"), Optional.of(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway sync")),
 				"How it works runs /cway sync");
-		helper.assertValueEqual(clickOf(tip, "[Download]"), Optional.of(new ClickEvent.OpenUrl(
-				java.net.URI.create("https://github.com/SteelAspect/cytra-waypoints/releases/latest"))), "Download link");
+		assertValueEqual(helper, clickOf(tip, "[Download]"), Optional.of(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://github.com/SteelAspect/cytra-waypoints/releases/latest")), "Download link");
 
-		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(LevelBasedPermissionSet.ALL));
+		Source alice = source(aliceEntity.createCommandSourceStack().withPermission(0));
 		run(helper, dispatcher, alice, "cway sync");
 		String steps = alice.out.take();
 		helper.assertTrue(steps.contains("Automatic Xaero's Minimap sync")
@@ -926,7 +925,7 @@ public class SharedWaypointsGameTest {
 				&& steps.contains(".jar (the same jar as the server) in your .minecraft/mods folder.")
 				&& steps.contains("It replaces any old sharedwaypoints jar.")
 				&& steps.contains("2. Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
-						+ net.minecraft.SharedConstants.getCurrentVersion().name() + ").")
+						+ net.minecraft.SharedConstants.getCurrentVersion().getName() + ").")
 				&& steps.contains("3. Rejoin.") && steps.contains("[Download]"), steps);
 
 		// No link configured (or not a web link): no button, ask an admin instead.
@@ -940,8 +939,7 @@ public class SharedWaypointsGameTest {
 		Component xaeroTip = tips.followUp(aliceEntity).orElseThrow();
 		helper.assertTrue(xaeroTip.getString().startsWith("✦ Your Alloy Waypoints can't reach Xaero's Minimap. ")
 				&& xaeroTip.getString().endsWith("[Get Xaero's Minimap] [How it works]"), xaeroTip.getString());
-		helper.assertValueEqual(clickOf(xaeroTip, "[Get Xaero's Minimap]"), Optional.of(new ClickEvent.OpenUrl(
-				java.net.URI.create("https://modrinth.com/mod/xaeros-minimap"))), "link to Xaero's Minimap");
+		assertValueEqual(helper, clickOf(xaeroTip, "[Get Xaero's Minimap]"), Optional.of(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://modrinth.com/mod/xaeros-minimap")), "link to Xaero's Minimap");
 		// Said hello with another protocol version: update the mod on their game.
 		mod.sync().onHello(aliceEntity, new HelloPayload(SyncProtocol.VERSION + 1, "future"), payload -> { });
 		String update = tips.followUp(aliceEntity).orElseThrow().getString();
@@ -978,6 +976,13 @@ public class SharedWaypointsGameTest {
 	}
 
 	// ------------------------------------------------------------------ helpers
+
+	/** 1.20.4's GameTestHelper has no {@code assertValueEqual}; same check and message as the 1.21.11 one. */
+	private static void assertValueEqual(GameTestHelper helper, Object actual, Object expected, String name) {
+		if (!java.util.Objects.equals(actual, expected)) {
+			throw new GameTestAssertException("Expected " + name + " to be " + expected + ", but was " + actual);
+		}
+	}
 
 	private static Source source(CommandSourceStack stack) {
 		Recorder recorder = new Recorder();

@@ -10,7 +10,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.client.input.KeyEvent;
+import dev.steelaspect.alloyui.input.KeyEvent;
 import net.minecraft.network.chat.Component;
 import org.jspecify.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;

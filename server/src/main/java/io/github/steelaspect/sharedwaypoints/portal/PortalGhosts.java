@@ -17,8 +17,6 @@ import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityProcessor;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
 
@@ -77,7 +75,7 @@ final class PortalGhosts {
 
 	/** Makes the player's game show exactly {@code wanted}: adds what's missing, removes what's no longer wanted. */
 	void show(ServerPlayer player, Map<BlockPos, Kind> wanted) {
-		ServerLevel level = player.level();
+		ServerLevel level = player.serverLevel();
 		if (shownTo != player || shownIn != level) {
 			// A new level (or a respawned player) means a fresh client world: whatever was sent is gone already.
 			shown.clear();
@@ -92,7 +90,7 @@ final class PortalGhosts {
 			gone.add(entry.getValue().getId());
 			return true;
 		});
-		List<Packet<? super ClientGamePacketListener>> packets = new ArrayList<>();
+		List<Packet<ClientGamePacketListener>> packets = new ArrayList<>();
 		if (!gone.isEmpty()) {
 			packets.add(new ClientboundRemoveEntitiesPacket(gone.stream().mapToInt(Integer::intValue).toArray()));
 		}
@@ -116,7 +114,7 @@ final class PortalGhosts {
 
 	/** Removes every ghost from the player's game (if they're still in the level they were sent to). */
 	void hide() {
-		if (!shown.isEmpty() && shownTo != null && shownTo.level() == shownIn && !shownTo.hasDisconnected()) {
+		if (!shown.isEmpty() && shownTo != null && shownTo.serverLevel() == shownIn && !shownTo.hasDisconnected()) {
 			shownTo.connection.send(new ClientboundRemoveEntitiesPacket(
 					shown.values().stream().mapToInt(Entity::getId).toArray()));
 		}
@@ -144,7 +142,7 @@ final class PortalGhosts {
 		brightness.putInt("sky", 15);
 		brightness.putInt("block", 15);
 		tag.put("brightness", brightness);
-		Entity ghost = EntityType.loadEntityRecursive(tag, level, EntitySpawnReason.COMMAND, EntityProcessor.NOP);
+		Entity ghost = EntityType.loadEntityRecursive(tag, level, entity -> entity);
 		if (ghost == null) {
 			throw new IllegalStateException("Couldn't create a block display");
 		}

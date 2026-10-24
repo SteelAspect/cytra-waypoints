@@ -44,7 +44,7 @@ public final class JoinSummary {
 			lines(previous, Viewer.of(player, mod.favorites())).forEach(player::sendSystemMessage);
 		}
 		if (previous.isEmpty()) {
-			mod.clientModTip().onFirstVisit(player, player.level().getServer().getTickCount());
+			mod.clientModTip().onFirstVisit(player, player.serverLevel().getServer().getTickCount());
 		}
 	}
 
@@ -97,14 +97,14 @@ public final class JoinSummary {
 				.withStyle(ChatFormatting.RED)
 				.append(Component.literal("[Show]").withStyle(style -> style
 						.withColor(ChatFormatting.YELLOW)
-						.withClickEvent(new ClickEvent.RunCommand("/cway projects broken"))
-						.withHoverEvent(new HoverEvent.ShowText(Component.literal("List the broken builds"))))));
+						.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway projects broken"))
+						.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("List the broken builds"))))));
 	}
 
 	private static Component showAllButton() {
 		return Component.literal("[Show all]").withStyle(style -> style
 				.withColor(ChatFormatting.YELLOW)
-				.withClickEvent(new ClickEvent.RunCommand("/cway"))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("List every shared waypoint"))));
+				.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway"))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("List every shared waypoint"))));
 	}
 }

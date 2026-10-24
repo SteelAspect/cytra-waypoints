@@ -17,7 +17,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
@@ -44,19 +43,12 @@ public final class MenuNetworking {
 		this.mod = mod;
 	}
 
-	/** Registers the payload types. Must run on both sides, from the common entrypoint. */
-	public static void registerPayloads() {
-		PayloadTypeRegistry.playS2C().registerLarge(SyncPayload.TYPE, SyncPayload.CODEC, SyncPayload.MAX_SIZE);
-		PayloadTypeRegistry.playS2C().register(ResultPayload.TYPE, ResultPayload.CODEC);
-		PayloadTypeRegistry.playC2S().register(ActionPayload.TYPE, ActionPayload.CODEC);
-	}
-
 	/** Registers the server receiver for menu actions (handlers run on the server thread). */
 	public void registerReceiver() {
-		ServerPlayNetworking.registerGlobalReceiver(ActionPayload.TYPE, (payload, context) -> {
-			ResultPayload result = handle(context.player(), payload);
-			if (result != null && ServerPlayNetworking.canSend(context.player(), ResultPayload.TYPE)) {
-				ServerPlayNetworking.send(context.player(), result);
+		ServerPlayNetworking.registerGlobalReceiver(ActionPayload.TYPE, (payload, player, responseSender) -> {
+			ResultPayload result = handle(player, payload);
+			if (result != null && ServerPlayNetworking.canSend(player, ResultPayload.TYPE)) {
+				ServerPlayNetworking.send(player, result);
 			}
 		});
 	}
@@ -199,7 +191,7 @@ public final class MenuNetworking {
 		Collector replies = new Collector();
 		CommandSourceStack source = player.createCommandSourceStack().withSource(replies);
 		try {
-			int result = player.level().getServer().getCommands().getDispatcher().execute(command, source);
+			int result = player.serverLevel().getServer().getCommands().getDispatcher().execute(command, source);
 			String message = replies.first != null ? replies.first : "Done";
 			return new ResultPayload(result > 0, message);
 		} catch (CommandSyntaxException e) {

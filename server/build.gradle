@@ -87,10 +87,11 @@ loom {
 	}
 }
 
+// No client game tests on 1.20.4 (fabric-client-gametest-api-v1 starts at 1.21.4). Instead src/smoketest is a small
+// client mod run by ../smoketest.sh (through ../headless.sh): it joins a dedicated 1.20.4 server running the built jar,
+// checks the waypoint sync and WaypointsApi, opens every menu screen and logs [WaypointsSmoke] PASS/FAIL.
 sourceSets {
-	// Real-client test (Fabric client GameTest): opens the menu in a singleplayer world and takes screenshots.
-	// Needs a display; in CI or a container run it under xvfb-run. Not part of the released jar.
-	clientgametest {
+	smoketest {
 		compileClasspath += main.compileClasspath + main.output + client.compileClasspath + client.output
 		runtimeClasspath += main.runtimeClasspath + main.output + client.runtimeClasspath + client.output
 	}
@@ -98,30 +99,46 @@ sourceSets {
 
 loom {
 	mods {
-		"sharedwaypoints-clientgametest" {
-			sourceSet sourceSets.clientgametest
+		"sharedwaypoints-smoke" {
+			sourceSet sourceSets.smoketest
 		}
 	}
 	runs {
-		clientGametest {
+		smokeTest {
 			client()
-			name = "Client Game Test"
-			vmArg "-Dfabric.client.gametest"
-			// The portal guide sends its ghost blocks as raw packets, which made the synchronizer fail at random; the
-			// test waits for its own conditions instead.
-			vmArg "-Dfabric.client.gametest.disableNetworkSynchronizer"
-			runDir "build/clientgametest"
-			source sourceSets.clientgametest
+			name = "Smoke test"
+			runDir "build/run/smoke"
+			source sourceSets.smoketest
+			vmArg "-Dsharedwaypoints.smoke=true"
+			ideConfigGenerated false
 		}
 	}
 }
 
-tasks.named("runClientGametest") {
-	// Fresh config and saves every run.
-	def runDirectory = project.layout.buildDirectory.dir("clientgametest")
+configurations {
+	// -PwithXaero: Xaero's Minimap in the smoke client's mods/ folder (Fabric Loader remaps it at runtime), to check
+	// the Xaero sync for real. Modrinth version QU2hvkUg = xaerominimap-fabric-1.20.4-26.6.0.
+	smokeClientMods {
+		transitive = false
+	}
+}
+
+dependencies {
+	smokeClientMods "maven.modrinth:xaeros-minimap:${project.xaero_minimap_modrinth_version}"
+}
+
+def copySmokeClientMods = tasks.register("copySmokeClientMods", Sync) {
+	from(project.hasProperty("withXaero") ? configurations.smokeClientMods : files())
+	into layout.buildDirectory.dir("run/smoke/mods")
+}
+
+tasks.matching { it.name == "runSmokeTest" }.configureEach {
+	dependsOn copySmokeClientMods
+	// Fresh config and Xaero data every run; test clients run muted.
+	def runDirectory = project.layout.buildDirectory.dir("run/smoke")
 	doFirst {
 		new File(runDirectory.get().asFile, "config/sharedwaypoints").deleteDir()
-		new File(runDirectory.get().asFile, "saves").deleteDir()		// Test clients run muted.
+		new File(runDirectory.get().asFile, "xaero").deleteDir()
 		def options = new File(runDirectory.get().asFile, "options.txt")
 		options.parentFile.mkdirs()
 		def lines = options.exists() ? options.readLines().findAll { !it.startsWith("soundCategory_master:") } : []
@@ -164,7 +181,11 @@ dependencies {
 	include "me.lucko:fabric-permissions-api:${project.permissions_api_version}"
 
 	// Optional web-map integrations: compiled against, never bundled. Used only when the server has them.
-	compileOnly "de.bluecolored:bluemap-api:${project.bluemap_api_version}"
+	// The BlueMap API (2.7, BlueMap 5.x) is published for Java 21; it's only interfaces, compiled against here and called
+	// only when BlueMap is installed (BlueMap 5 needs a Java 21 server anyway).
+	compileOnly("de.bluecolored:bluemap-api:${project.bluemap_api_version}") {
+		attributes { attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 21) }
+	}
 	compileOnly "xyz.jpenilla:squaremap-api:${project.squaremap_api_version}"
 
 	// The GameTest server also runs squaremap 1.3.12, to check the web-map layer for real (see copyGametestMods).
@@ -174,7 +195,8 @@ dependencies {
 	modImplementation "dev.steelaspect:alloy-ui:${project.alloyui_version}"
 	include "dev.steelaspect:alloy-ui:${project.alloyui_version}"
 	// Mod Menu: optional, only for the settings button there.
-	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	// 9.2.0 (1.20.4) pulls a placeholder-api build no repo serves, so no transitive dependencies.
+	modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}") { transitive = false }
 
 	// The sync messages. Bundled (jar-in-jar).
 	implementation project(path: ':protocol', configuration: 'namedElements')
@@ -214,7 +236,8 @@ jar {
 
 // The README's download badge and the changelog are written by hand; fail the build if they miss a version bump.
 def checkDocs = tasks.register("checkDocs") {
-	def version = project.version.toString()
+	// The docs name the base version; the 1.20.4 port's "+1.20.4" suffix isn't repeated there.
+	def version = project.version.toString() - "+1.20.4"
 	def readme = rootProject.file("README.md")
 	def changelog = rootProject.file("CHANGELOG.md")
 	inputs.property "version", version
@@ -236,8 +259,8 @@ tasks.named("check") {
 java {
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
 }
 
 // Modrinth upload: `./gradlew :server:modrinth` with the MODRINTH_TOKEN environment variable set (a Modrinth token

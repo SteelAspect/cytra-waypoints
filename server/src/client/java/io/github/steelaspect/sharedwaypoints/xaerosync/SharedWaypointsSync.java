@@ -36,7 +36,6 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
-		SyncProtocol.register();
 		bridge = XaeroBridge.create();
 		String version = FabricLoader.getInstance().getModContainer("sharedwaypoints")
 				.map(mod -> mod.getMetadata().getVersion().getFriendlyString()).orElse("?");
@@ -52,7 +51,7 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> reset());
 
-		ClientPlayNetworking.registerGlobalReceiver(WelcomePayload.TYPE, (payload, context) -> {
+		ClientPlayNetworking.registerGlobalReceiver(WelcomePayload.TYPE, (payload, player, responseSender) -> {
 			active = payload.protocolVersion() == SyncProtocol.VERSION && payload.syncEnabled();
 			if (payload.protocolVersion() != SyncProtocol.VERSION && !mismatchLogged) {
 				mismatchLogged = true;
@@ -63,17 +62,17 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 				XaeroBridge.LOGGER.info("This server has waypoint sync turned off");
 			}
 		});
-		ClientPlayNetworking.registerGlobalReceiver(FullSyncPayload.TYPE, (payload, context) -> {
+		ClientPlayNetworking.registerGlobalReceiver(FullSyncPayload.TYPE, (payload, player, responseSender) -> {
 			if (accepts(payload.protocolVersion())) {
-				STATE.acceptFull(payload.waypoints(), serverDimensions(context.client()));
+				STATE.acceptFull(payload.waypoints(), serverDimensions(net.minecraft.client.Minecraft.getInstance()));
 			}
 		});
-		ClientPlayNetworking.registerGlobalReceiver(UpsertPayload.TYPE, (payload, context) -> {
+		ClientPlayNetworking.registerGlobalReceiver(UpsertPayload.TYPE, (payload, player, responseSender) -> {
 			if (accepts(payload.protocolVersion())) {
 				STATE.upsert(payload.waypoint());
 			}
 		});
-		ClientPlayNetworking.registerGlobalReceiver(DeletePayload.TYPE, (payload, context) -> {
+		ClientPlayNetworking.registerGlobalReceiver(DeletePayload.TYPE, (payload, player, responseSender) -> {
 			if (accepts(payload.protocolVersion())) {
 				STATE.delete(payload.id());
 			}
@@ -136,7 +135,7 @@ public final class SharedWaypointsSync implements ClientModInitializer {
 	/** Every dimension of the current server, so stale "Shared" waypoints are removed everywhere on join. */
 	private static Set<String> serverDimensions(Minecraft client) {
 		return client.getConnection() == null ? Set.of() : client.getConnection().levels().stream()
-				.map(key -> key.identifier().toString()).collect(Collectors.toSet());
+				.map(key -> key.location().toString()).collect(Collectors.toSet());
 	}
 
 	// ------------------------------------------------------------------ for tests and troubleshooting

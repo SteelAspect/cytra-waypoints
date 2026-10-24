@@ -1,0 +1,16 @@
+{
+	"schemaVersion": 1,
+	"id": "sharedwaypoints-smoke",
+	"version": "1.0.0",
+	"name": "Alloy Waypoints (1.20.4 smoke test)",
+	"description": "Dev only, not shipped. Joins a dedicated server with and without Alloy Waypoints and opens every menu.",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"io.github.steelaspect.sharedwaypoints.client.WaypointsSmokeTest"
+		]
+	},
+	"depends": {
+		"sharedwaypoints": "*"
+	}
+}

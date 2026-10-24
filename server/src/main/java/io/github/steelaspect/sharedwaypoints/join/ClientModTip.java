@@ -37,7 +37,7 @@ public final class ClientModTip {
 	private static final URI XAERO_PAGE = URI.create("https://modrinth.com/mod/xaeros-minimap");
 
 	/** The Xaero's Minimap version the sync was tested with (see the README). */
-	static final String TESTED_XAERO = "26.5.0";
+	static final String TESTED_XAERO = "26.6.0"; // the 1.20.4 build (26.5.0 on 1.21.11)
 
 	private final ModContext mod;
 	/** Players with the mod on their game, on their first visit, and the server tick at which to check on them. */
@@ -118,15 +118,15 @@ public final class ClientModTip {
 	private static Component howItWorksButton() {
 		return Component.literal("[How it works]").withStyle(style -> style
 				.withColor(ChatFormatting.YELLOW)
-				.withClickEvent(new ClickEvent.RunCommand("/cway sync"))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Show the steps (/cway sync)"))));
+				.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/cway sync"))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Show the steps (/cway sync)"))));
 	}
 
 	private static Component xaeroButton() {
 		return Component.literal("[Get Xaero's Minimap]").withStyle(style -> style
 				.withColor(ChatFormatting.AQUA)
-				.withClickEvent(new ClickEvent.OpenUrl(XAERO_PAGE))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal(XAERO_PAGE.toString()))));
+				.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, XAERO_PAGE.toString()))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal(XAERO_PAGE.toString()))));
 	}
 
 	/** The mod is on their game but Xaero's Minimap isn't (or isn't a version it can use). */
@@ -178,7 +178,7 @@ public final class ClientModTip {
 		lines.add(step(1, "Put " + jarName() + " (the same jar as the server) in your .minecraft/mods folder. "
 				+ "It replaces any old sharedwaypoints jar."));
 		lines.add(step(2, "Also install Xaero's Minimap and Fabric API (Fabric, Minecraft "
-				+ SharedConstants.getCurrentVersion().name() + ")."));
+				+ SharedConstants.getCurrentVersion().getName() + ")."));
 		lines.add(step(3, "Rejoin. The waypoints appear in Xaero's \"Shared\" set. You also get the waypoint menu (J)."));
 		lines.add(downloadButton().<Component>map(button -> Component.empty().append(button))
 				.orElse(Component.literal("Ask a server admin for the file.").withStyle(ChatFormatting.GRAY)));
@@ -194,8 +194,8 @@ public final class ClientModTip {
 	private Optional<Component> downloadButton() {
 		return link(mod.config().clientModUrl).map(uri -> Component.literal("[Download]").withStyle(style -> style
 				.withColor(ChatFormatting.AQUA)
-				.withClickEvent(new ClickEvent.OpenUrl(uri))
-				.withHoverEvent(new HoverEvent.ShowText(Component.literal("Get " + jarName() + "\n" + uri)))));
+				.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, uri.toString()))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("Get " + jarName() + "\n" + uri)))));
 	}
 
 	static Optional<URI> link(String url) {

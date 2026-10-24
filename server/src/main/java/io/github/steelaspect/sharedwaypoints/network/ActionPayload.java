@@ -3,9 +3,9 @@ package io.github.steelaspect.sharedwaypoints.network;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.fabricmc.fabric.api.networking.v1.FabricPacket;
+import net.fabricmc.fabric.api.networking.v1.PacketType;
+import net.minecraft.resources.ResourceLocation;
 
 /**
  * Client → server: a button pressed in the client menu. The server turns it into the matching /cway command
@@ -14,10 +14,10 @@ import net.minecraft.resources.Identifier;
  * @param action what to do
  * @param args   arguments; waypoints are referred to by id (see {@link Action} for each action's arguments)
  */
-public record ActionPayload(Action action, List<String> args) implements CustomPacketPayload {
+public record ActionPayload(Action action, List<String> args) implements FabricPacket {
 	/** Versioned like {@link SyncPayload#TYPE}. */
-	public static final Type<ActionPayload> TYPE = new Type<>(Identifier.fromNamespaceAndPath("sharedwaypoints", "action3"));
-	public static final StreamCodec<FriendlyByteBuf, ActionPayload> CODEC = StreamCodec.of(ActionPayload::write, ActionPayload::read);
+	public static final PacketType<ActionPayload> TYPE =
+			PacketType.create(new ResourceLocation("sharedwaypoints", "action3"), ActionPayload::read);
 
 	private static final int MAX_ARGS = 8;
 	private static final int MAX_ARG_LENGTH = 256;
@@ -69,8 +69,13 @@ public record ActionPayload(Action action, List<String> args) implements CustomP
 	}
 
 	@Override
-	public Type<? extends CustomPacketPayload> type() {
+	public PacketType<ActionPayload> getType() {
 		return TYPE;
+	}
+
+	@Override
+	public void write(FriendlyByteBuf buf) {
+		write(buf, this);
 	}
 
 	private static void write(FriendlyByteBuf buf, ActionPayload payload) {
@@ -79,7 +84,7 @@ public record ActionPayload(Action action, List<String> args) implements CustomP
 		payload.args.forEach(arg -> buf.writeUtf(arg, MAX_ARG_LENGTH));
 	}
 
-	private static ActionPayload read(FriendlyByteBuf buf) {
+	public static ActionPayload read(FriendlyByteBuf buf) {
 		Action action = buf.readEnum(Action.class);
 		int count = buf.readVarInt();
 		if (count < 0 || count > MAX_ARGS) {
