@@ -2,6 +2,7 @@
 	"schemaVersion": 1,
 	"id": "sharedwaypoints-prodtest",
 	"version": "1.0.0",
+	"license": "MIT",
 	"name": "Alloy Waypoints install test",
 	"environment": "client",
 	"entrypoints": {

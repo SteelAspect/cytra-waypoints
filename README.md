@@ -425,4 +425,5 @@ how the code is organised. The [changelog](CHANGELOG.md) lists what changed in e
 
 ## License
 
-[MIT](LICENSE) © 2026 SteelAspect
+
+MIT, see [LICENSE](LICENSE). Anyone can use, change and share it, including in their own projects.
